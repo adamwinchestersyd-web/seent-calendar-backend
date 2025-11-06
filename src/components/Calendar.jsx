@@ -141,30 +141,51 @@ export default function Calendar() {
   const [colourMode, setColourMode] = React.useState("state"); // "state" | "case"
 
   // Load + normalize data from API
+  // Load + normalize data from API
   React.useEffect(() => {
     let cancelled = false;
-    (async () => {
+
+    async function initializeAndLoad() {
       try {
-        setLoading(true);
+        setLoading(true); // Start loading (for auth + data)
         setError(null);
+
+        // 1. --- Authentication Check ---
+        // @ts-ignore
+        if (!window.ZOHO) {
+          throw new Error("This application can only be accessed from within Zoho CRM.");
+        }
+        
+        // @ts-ignore
+        await window.ZOHO.embeddedApp.init();
+        // If init() succeeds, we are authenticated.
+
+        // 2. --- Data Loading (if auth passed) ---
         const api = import.meta.env.VITE_API_URL || "";
         const res = await fetch(`${api}/api/cases`, { cache: "no-store" });
         if (!res.ok) throw new Error(`API ${res.status}`);
+        
         const data = await res.json();
         const list = Array.isArray(data) ? data : Array.isArray(data?.events) ? data.events : [];
+        
         if (!cancelled) setEvents(list.map(normalizeEvent));
+
       } catch (e) {
+        // This will catch auth errors (like the "throw new Error" above) OR data fetch errors
         if (!cancelled) {
-          console.error("[Calendar] /api/cases failed:", e);
-          setError(String(e));
+          console.error("[Calendar] Init or Load failed:", e);
+          setError(String(e)); // This will set the error state
           setEvents([]);
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) setLoading(false); // Stop loading
       }
-    })();
+    }
+
+    initializeAndLoad(); // Run the async function
+
     return () => { cancelled = true; };
-  }, []);
+  }, []); // Empty array, runs once on mount
 
   // Admin actions: refresh/purge + reload
   async function callAdmin(path, label = "Action") {

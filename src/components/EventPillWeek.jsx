@@ -19,7 +19,6 @@ export default function EventPillWeek({ ev }) {
   const containerStyle = {
     display: "flex",
     flexDirection: "column",
-    gap: 2,
     width: "100%",
     // colours from event.colour (already mapped on server or by state)
     background: ev.colour || "#3b82f6",
