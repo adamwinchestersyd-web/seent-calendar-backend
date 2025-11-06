@@ -140,8 +140,7 @@ export default function Calendar() {
   const [filterState, setFilterState] = React.useState("");
   const [colourMode, setColourMode] = React.useState("state"); // "state" | "case"
 
-  // Load + normalize data from API
-  // Load + normalize data from API
+// Load + normalize data from API
   React.useEffect(() => {
     let cancelled = false;
 
@@ -151,14 +150,21 @@ export default function Calendar() {
         setError(null);
 
         // 1. --- Authentication Check ---
+        // We must wait for the Zoho SDK to load.
+        let attempts = 0;
         // @ts-ignore
-        if (!window.ZOHO) {
-          throw new Error("This application can only be accessed from within Zoho CRM.");
+        while (typeof window.ZOHO === "undefined" || typeof window.ZOHO.embeddedApp === "undefined") {
+          if (attempts > 50) { // Wait for a max of 5 seconds (50 * 100ms)
+            throw new Error("This application can only be accessed from within Zoho CRM.");
+          }
+          await new Promise(resolve => setTimeout(resolve, 100)); // wait 100ms
+          attempts++;
         }
         
+        // Now that ZOHO.embeddedApp exists, initialize it.
+        // This will succeed if in Zoho, and fail (reject) if outside.
         // @ts-ignore
         await window.ZOHO.embeddedApp.init();
-        // If init() succeeds, we are authenticated.
 
         // 2. --- Data Loading (if auth passed) ---
         const api = import.meta.env.VITE_API_URL || "";
@@ -171,7 +177,7 @@ export default function Calendar() {
         if (!cancelled) setEvents(list.map(normalizeEvent));
 
       } catch (e) {
-        // This will catch auth errors (like the "throw new Error" above) OR data fetch errors
+        // This will catch the timeout, the init() failure, or data fetch errors.
         if (!cancelled) {
           console.error("[Calendar] Init or Load failed:", e);
           setError(String(e)); // This will set the error state
