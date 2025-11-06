@@ -1,0 +1,183 @@
+/* ===== DARK THEME ===== */
+:root{
+  --bg: #2f3236;            /* page */
+  --panel: #2b2e32;         /* calendar surface */
+  --panel-strong:#c6d5e847;   /* header strip */
+  --grid: rgba(243, 235, 235, 0.236);      /* main grid lines */
+  --grid-soft: rgba(255, 255, 255, 0.862); /* minor grid lines */
+  --text: #e5e8ed;          /* primary text */
+  --text-muted:#a9b0b9;     /* secondary */
+  --shadow: 0 6px 14px rgba(0,0,0,.35), 0 1px 0 rgba(255,255,255,.04) inset;
+}
+
+/* page background */
+html, body { background: var(--bg); color: var(--text); }
+
+/* ===== CALENDAR CONTAINER ===== */
+.calendar-root{
+  background: var(--panel);
+  color: var(--text);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0,0,0,.35);
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
+}
+
+/* ===== HEADER ===== */
+.calendar-header{
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  background: var(--panel-strong);
+  border-bottom: 1px solid var(--grid);
+}
+.calendar-header__cell{
+  padding: 10px 12px;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: .02em;
+  color: var(--text);
+}
+
+/* ===== GRID ===== */
+.calendar-grid{ position: relative; background: var(--panel); }
+.calendar-row{
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  min-height: 56px;
+  border-bottom: 1px solid var(--grid);
+  background-image: linear-gradient(to right, var(--grid) 1px, transparent 1px);
+  background-size: calc(100% / var(--cols)) 100%;
+  background-repeat: repeat-x;
+}
+.calendar-row:last-child{ border-bottom: 0; }
+.calendar-cell{ position: relative; }
+
+/* ===== EVENT PILL (Week/Month) ===== */
+/* === Fix last-line clipping in week/month pills === */
+.event{
+  position: absolute;
+  display: flex;                 /* not inline-flex */
+  align-items: flex-start;        /* top-align text */
+  height: auto;                   /* grow to content */
+  padding: 6px 10px 10px;         /* extra bottom room */
+  box-sizing: border-box;
+  transform: none;                /* avoid GPU rounding cut-offs */
+}
+
+.event__label{
+  position: relative;
+  z-index: 1;
+  font-size: 12px;
+  line-height: 1.34;              /* taller line box */
+  color: #fff;
+  text-shadow: 0 1px 0 rgba(0,0,0,.35);
+}
+
+/* single place to clamp multi-line labels */
+.event--wrap .event__label{
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--lines, 4);
+  line-clamp: var(--lines, 4);
+  overflow: hidden;
+  padding-bottom: 2px;            /* keeps last line clear of border */
+  margin-bottom: -1px;            /* counteracts sub-pixel rounding */
+}
+
+/* tiny spacer to guarantee no visual crop */
+.event--wrap .event__label::after{
+  content: "";
+  display: block;
+  height: 2px;
+}
+
+
+/* keep single-line pills centered */
+.event:not(.event--wrap){ align-items: center; }
+
+/* gradient fill still respects padding via inset */
+.event__fill{ position:absolute; inset:0; border-radius:inherit; }
+
+/* multi-line content (Week/Month) */
+.event--wrap{
+  align-items: flex-start;       /* top-align text */
+  white-space: normal;           /* allow wrapping */
+}
+
+.event__title{ font-weight:700; display:block; }
+.event__people{ display:flex; flex-wrap:wrap; gap:10px; margin-top:5px; opacity:.95; }
+.event__notes{ display:block; margin-top:3px; opacity:.95; }
+
+/* ===== DAY CARDS (dark) ===== */
+.day-card{ background:#23262a; border:1px solid var(--grid); border-radius:10px; overflow:hidden; }
+.day-card + .day-card{ margin-top:12px; }
+.day-card__bar{ background: color-mix(in srgb, var(--c) 70%, #000 30%); color:#fff; padding:8px 10px; font-weight:700; font-size:13px; }
+.day-card__body{ padding:10px 12px 12px; display:grid; gap:8px; }
+.day-card__people{ display:flex; flex-wrap:wrap; gap:15px; font-size:13px; color:var(--text); }
+.day-card__notes{ color:var(--text); font-size:13px; }
+.day-empty{ color:var(--text-muted); font-size:13px; }
+
+/* ===== FILTERS (dark) ===== */
+.filters-bar{ background: var(--panel); border-bottom: 1px solid var(--grid); }
+.filters-row{ display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:10px 12px; }
+.filters-item{ display:grid; gap:6px; }
+.filters-label{ font-size:11px; color: var(--text-muted); }
+.filters-spacer{ flex:1; }
+
+.ui-select{
+  appearance:none;
+  background:#1f2327;
+  border:1px solid var(--grid);
+  color:var(--text);
+  border-radius:8px;
+  padding:6px 28px 6px 10px;
+  font-size:13px;
+}
+.ui-select:focus{ outline:2px solid #d1d8e2; outline-offset:1px; }
+
+.seg{ display:inline-flex; border:1px solid var(--grid); border-radius:10px; overflow:hidden; }
+.seg-btn{ padding:6px 10px; font-size:13px; background:#1f2327; color:var(--text); border:0; cursor:pointer; }
+.seg-btn + .seg-btn{ border-left:1px solid var(--grid); }
+.seg-btn.is-active{ background:#0d1116; color:#fff; }
+
+/* Buttons */
+.btn-secondary{
+  display:inline-flex; align-items:center; justify-content:center;
+  padding:6px 10px; font-size:13px; border-radius:8px;
+  background:#1f2327; border:1px solid var(--grid); color:var(--text);
+}
+.btn-secondary:hover{ background:#191d21; }
+/* page background + ensure full-height root is dark */
+html, body, #root {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  margin: 0;
+}
+
+/* give the calendar block breathing room from the page bottom */
+.calendar-root { margin-bottom: 40px; }
+
+/* ensure percentage left/width + padding never collide */
+.bars-layer { box-sizing: border-box; }
+
+/* a touch more bottom room so the last pill never “kisses” the row border */
+.calendar-root { margin-bottom: 40px; }
+
+/* compact single-day (no people/notes) */
+.event--compact { padding: 6px 10px; }   /* slightly tighter */
+
+/* ensure each row is the positioning context for its overlay */
+.calendar-row {
+  position: relative;
+}
+/* Handles sit inside the pill, ~6px wide, full height */
+.event-pill { position:relative; border-radius:8px; }
+.event-pill__inner { font-size: .875rem; line-height: 1.25rem; }
+.resize-handle { position:absolute; top:0; bottom:0; width:6px; cursor:ew-resize; }
+.resize-handle--start { left:0; } .resize-handle--end { right:0; }
+
+

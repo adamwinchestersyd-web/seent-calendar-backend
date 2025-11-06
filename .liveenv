@@ -1,0 +1,23 @@
+# .env
+
+# Zoho OAuth2 credentials
+ZOHO_CLIENT_ID=1000.RD8370Z34QCYOQBO3VO2FA1VBDGGFT
+ZOHO_CLIENT_SECRET=8500e86a18838df3341c7d47fb5965c90a014f22d3
+ZOHO_REDIRECT_URI=https://dev.adamwinchester.com/seent/oauth/callback
+VITE_API_BASE=https://dev.adamwinchester.com/seent/api
+FRONTEND_ORIGIN=https://dev.adamwinchester.com/seent
+ZOHO_ORG_ID=org640578001
+
+
+# Once you run the OAuth flow and capture refresh_token,
+# paste it here and restart the server
+ZOHO_REFRESH_TOKEN=1000.f6e45fb7e36667684806a9ca1365cc0c.7e8e092951e633680686cda070ee4d07
+#Refresh Token Auth URL: https://accounts.zoho.com/oauth/v2/auth?scope=ZohoCRM.modules.ALL&client_id=1000.RD8370Z34QCYOQBO3VO2FA1VBDGGFT&response_type=code&access_type=online&redirect_uri=http://localhost:4000/oauth/callback
+
+# Choose the Zoho domain for your account
+# .com = US, .eu = Europe, .in = India, etc.
+ZOHO_DOMAIN=https://www.zohoapis.com
+
+# Node environment
+NODE_ENV=development
+PORT=4000
