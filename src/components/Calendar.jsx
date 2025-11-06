@@ -259,7 +259,7 @@ export default function Calendar() {
   }, [filtered, colourMode]);
 
   // editor state + toast/undo
-  const [editor, setEditor] = React.useState({ open: false, ev: null, anchor: null });
+  const [editor, setEditor] = React.useState({ open: false, ev: null, clickEvent: null });
   const historyRef = React.useRef(new Map());
 
   async function saveCaseDates(id, start, end) {
@@ -324,13 +324,13 @@ export default function Calendar() {
       <WeekView
         date={date}
         events={colouredEvents}
-        onOpenEditor={(ev, rect) => setEditor({ open: true, ev, anchor: rect })}
+        onOpenEditor={(ev, clickEvent) => setEditor({ open: true, ev, clickEvent })}
       />
     ) : (
       <MonthView
         date={date}
         events={colouredEvents}
-        onOpenEditor={(ev, rect) => setEditor({ open: true, ev, anchor: rect })}
+        onOpenEditor={(ev, clickEvent) => setEditor({ open: true, ev, clickEvent })}
       />
     );
 
@@ -364,9 +364,9 @@ export default function Calendar() {
 
       <EventEditor
         open={editor.open}
-        anchor={editor.anchor}
+        clickEvent={editor.clickEvent}
         ev={editor.ev || undefined}
-        onClose={() => setEditor({ open: false, ev: null, anchor: null })}
+        onClose={() => setEditor({ open: false, ev: null, clickEvent: null })}
         onChangeDates={(id, start, end) => applyDates(id, start, end)}
       />
     </div>

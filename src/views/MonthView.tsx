@@ -14,7 +14,7 @@ type Props = {
   events: any[];
   onMove?: (evtId: string, newStart: Date) => void;
   onResize?: (evtId: string, edge: "start" | "end", targetDate: Date) => void;
-  onOpenEditor?: (ev: any, anchor: DOMRect) => void;
+  onOpenEditor?: (ev: any, clickEvent: React.MouseEvent) => void;
 };
 
 const CELL_MIN_H = 112;
@@ -215,8 +215,8 @@ const V_GUTTER = 2;
                       onDoubleClick={beginQuickResize(seg)}
                       onClick={(evt) => {
                         if (evt.ctrlKey) { beginQuickResize(seg)(evt as any); return; }
-                        const rect = row.laneRefs[li][bi].current?.getBoundingClientRect();
-                        if (rect) onOpenEditor?.(e, rect);
+                        // const rect = row.laneRefs[li][bi].current?.getBoundingClientRect(); // No longer needed
+                        if (evt) onOpenEditor?.(e, evt); // Pass the whole event
                       }}
                       title={tooltip}
                     >

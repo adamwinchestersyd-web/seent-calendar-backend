@@ -2,31 +2,57 @@ import React from "react";
 
 type Props = {
   open: boolean;
-  anchor?: DOMRect | null;
+  clickEvent?: React.MouseEvent | null; // Changed from anchor
   ev?: any;
   onClose: () => void;
   onChangeDates: (id: string, start: string, end: string, source?: "editor") => void;
 };
 
-function place(anchor?: DOMRect | null): React.CSSProperties {
-  const pad = 12;
-  const cardW = 380;
-  const cardH = 320;
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
+// This is the new positioning hook that replaces the old `place()` function
+function usePopupPosition(clickEvent: React.MouseEvent | null) {
+  const ref = React.useRef<HTMLDivElement>(null);
+  const [pos, setPos] = React.useState<React.CSSProperties>({
+    top: -9999,
+    left: -9999,
+    opacity: 0, // Start hidden
+  });
 
-  let top = (anchor?.bottom ?? 100) + 8;
-  let left = anchor?.left ?? 100;
+  React.useLayoutEffect(() => {
+    if (!clickEvent || !ref.current) {
+      setPos({ top: -9999, left: -9999, opacity: 0 }); // Hide if no event
+      return;
+    }
 
-  if (left + cardW + pad > vw) left = Math.max(pad, vw - cardW - pad);
-  if (top + cardH + pad > vh) top = Math.max(pad, (anchor?.top ?? 80) - cardH - 8);
+    const pop = ref.current.getBoundingClientRect();
+    const pad = 12;
+    const vw = window.innerWidth;
 
-  return { top, left };
+    // Calculate Y position relative to the PAGE (including scroll)
+    const clickY = clickEvent.clientY + window.scrollY;
+    const y = clickY - (pop.height / 2); // Center vertically on the click
+
+    // Calculate X position
+    const clickX = clickEvent.clientX;
+    const x = clickX - (pop.width / 2); // Center horizontally on the click
+
+    setPos({
+      // Ensure it doesn't go off-screen vertically
+      top: Math.max(pad + window.scrollY, y),
+      // Ensure it doesn't go off-screen horizontally
+      left: Math.max(pad, Math.min(x, vw - pop.width - pad)),
+      opacity: 1, // Make visible
+    });
+  }, [clickEvent]); // Recalculate if the click event changes
+
+  return { ref, style: pos };
 }
 
-export default function EventEditor({ open, anchor, ev, onClose, onChangeDates }: Props) {
+export default function EventEditor({ open, clickEvent, ev, onClose, onChangeDates }: Props) {
   const [start, setStart] = React.useState(ev?.start ?? "");
   const [end, setEnd] = React.useState(ev?.end ?? "");
+  
+  // Get the ref and style from our new hook
+  const { ref, style: positionStyle } = usePopupPosition(open ? (clickEvent || null) : null);
 
   React.useEffect(() => {
     if (ev) {
@@ -37,6 +63,8 @@ export default function EventEditor({ open, anchor, ev, onClose, onChangeDates }
 
   if (!open || !ev) return null;
 
+  // --- Styles (no changes from here down) ---
+
   const textColor =
     getComputedStyle(document.documentElement).getPropertyValue("--text").trim() || "#0f1723";
   const borderColor =
@@ -44,7 +72,7 @@ export default function EventEditor({ open, anchor, ev, onClose, onChangeDates }
 
   const card: React.CSSProperties = {
     position: "absolute",
-    ...place(anchor),
+    ...positionStyle, // Apply the calculated position here
     width: 380,
     background: "#ffffff",
     color: textColor,
@@ -53,6 +81,7 @@ export default function EventEditor({ open, anchor, ev, onClose, onChangeDates }
     boxShadow: "0 12px 32px rgba(0,0,0,.22)",
     padding: 18,
     zIndex: 9999,
+    transition: 'opacity 150ms ease-in-out', // Added for smooth fade-in
   };
 
   const row: React.CSSProperties = { display: "flex", gap: 12, alignItems: "center" };
@@ -80,7 +109,7 @@ export default function EventEditor({ open, anchor, ev, onClose, onChangeDates }
   const ghost: React.CSSProperties = { ...baseBtn, background: "transparent" };
 
   return (
-    <div style={card} role="dialog" aria-labelledby="evt-title">
+    <div ref={ref} style={card} role="dialog" aria-labelledby="evt-title">
       {/* Title */}
       <div id="evt-title" style={{ fontSize: 15, fontWeight: 700, marginBottom: 6, lineHeight: 1.25, color: "#666" }} title={ev.title}>
         {ev.title}<hr/>
@@ -94,7 +123,7 @@ export default function EventEditor({ open, anchor, ev, onClose, onChangeDates }
         </div>
         <div style={row}>
           <div style={label}>WIP Manager</div>
-          <div style={{ fontSize: 14, color: "#666" }}>{ev.wipManager || "—"}</div>
+          <div style={{ fontSize: 14, color: "#666" }}>{ev.wIP_Manager || "—"}</div>
         </div>
         <div style={row}>
           <div style={label}>Owner</div>
