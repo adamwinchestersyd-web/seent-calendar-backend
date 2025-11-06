@@ -146,38 +146,20 @@ export default function Calendar() {
 
     async function initializeAndLoad() {
       try {
-        setLoading(true); // Start loading (for auth + data)
+        setLoading(true); // Start loading
         setError(null);
 
         // 1. --- Authentication Check ---
-        console.log("[Calendar] Starting auth check...");
-        let attempts = 0;
-        
-        // @ts-ignore
-        while (typeof window.ZOHO === "undefined" || typeof window.ZOHO.embeddedApp === "undefined") {
-          if (attempts > 50) { // Wait for a max of 5 seconds (50 * 100ms)
-            console.error("[Calendar] Timeout: window.ZOHO.embeddedApp not found after 5s.");
-            throw new Error("This application can only be accessed from within Zoho CRM. (SDK Timeout)");
-          }
-          await new Promise(resolve => setTimeout(resolve, 100)); // wait 100ms
-          attempts++;
+        // Check if we are the top-level window (public access)
+        if (window.self === window.top) {
+          console.error("[Calendar] Public access blocked.");
+          throw new Error("This application can only be accessed from within Zoho CRM.");
         }
         
-        console.log("[Calendar] SDK found! Initializing...");
+        // We are inside an iframe (Zoho), so proceed.
+        console.log("[Calendar] Auth check passed (loaded in iframe).");
         
-        // @ts-ignore
-        await window.ZOHO.embeddedApp.init(); // This is the initialization call
-
-        console.log("[Calendar] SDK initialized successfully.");
-
-        // *** THIS IS YOUR NEW CODE, PLACED AFTER INIT() ***
-        // @ts-ignore
-        window.ZOHO.embeddedApp.on("PageLoad", function() {
-          console.log("[Calendar] Zoho PageLoad Event Fired");
-        });
-        // *************************************************
-
-        // 2. --- Data Loading (if auth passed) ---
+        // 2. --- Data Loading ---
         const api = import.meta.env.VITE_API_URL || "";
         console.log(`[Calendar] Fetching data from ${api}/api/cases`);
         const res = await fetch(`${api}/api/cases`, { cache: "no-store" });
@@ -190,9 +172,9 @@ export default function Calendar() {
         console.log("[Calendar] Data loaded successfully.");
 
       } catch (e) {
-        // This will catch the timeout, the init() failure, or data fetch errors.
+        // This will catch the auth error or data fetch errors.
         if (!cancelled) {
-          console.error("[Calendar] Init or Load failed:", e);
+          console.error("[Calendar] Load failed:", e);
           setError(String(e)); // This will set the error state
           setEvents([]);
         }
