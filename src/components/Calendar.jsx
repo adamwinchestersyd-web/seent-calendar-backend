@@ -159,16 +159,23 @@ export default function Calendar() {
             console.error("[Calendar] Timeout: window.ZOHO.embeddedApp not found after 5s.");
             throw new Error("This application can only be accessed from within Zoho CRM. (SDK Timeout)");
           }
-          // @ts-ignore
-          console.log(`[Calendar] Auth attempt ${attempts}: window.ZOHO is ${typeof window.ZOHO}`);
           await new Promise(resolve => setTimeout(resolve, 100)); // wait 100ms
           attempts++;
         }
         
         console.log("[Calendar] SDK found! Initializing...");
+        
         // @ts-ignore
-        await window.ZOHO.embeddedApp.init();
+        await window.ZOHO.embeddedApp.init(); // This is the initialization call
+
         console.log("[Calendar] SDK initialized successfully.");
+
+        // *** THIS IS YOUR NEW CODE, PLACED AFTER INIT() ***
+        // @ts-ignore
+        window.ZOHO.embeddedApp.on("PageLoad", function() {
+          console.log("[Calendar] Zoho PageLoad Event Fired");
+        });
+        // *************************************************
 
         // 2. --- Data Loading (if auth passed) ---
         const api = import.meta.env.VITE_API_URL || "";
