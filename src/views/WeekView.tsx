@@ -61,7 +61,7 @@ const V_GUTTER = 2;   // top/bottom gap around each pill
     return c;
   }, [segs]);
 
-  const LANE_GAP = 38;
+  const LANE_GAP = 4;
   const BAR_MIN = 40;
 
   const laneRefs = React.useMemo(

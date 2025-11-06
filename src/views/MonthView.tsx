@@ -19,7 +19,7 @@ type Props = {
 
 const CELL_MIN_H = 112;
 const DATE_PAD = 20;
-const GAP = 55;
+const GAP = 4;
 
 type WeekRow = {
   week: Date[];
