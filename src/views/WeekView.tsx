@@ -1,5 +1,5 @@
 import React from "react";
-import EventPill from "../components/EventPill";
+import EventPillWeek from "../components/EventPillWeek.jsx";
 import {
   addDays,
   startOfWeek,
@@ -222,13 +222,7 @@ const V_GUTTER = 2;   // top/bottom gap around each pill
                   }}
                   title={tooltip}
                 >
-                  <EventPill
-                    ev={e}
-                    isMultiDay={!isSingle}
-                    className={e.colorClass || "event--blue"}
-                    style={{ width: "100%" }}
-                    onOpenEditor={onOpenEditor}
-                  />
+                <EventPillWeek ev={e} />
                 </div>
               );
             })

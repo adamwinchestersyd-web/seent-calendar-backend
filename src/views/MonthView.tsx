@@ -1,5 +1,5 @@
 import React from "react";
-import EventPill from "../components/EventPill";
+import EventPillWeek from "../components/EventPillWeek.jsx";
 import {
   addDays,
   startOfMonthGrid,
@@ -220,13 +220,7 @@ const V_GUTTER = 2;
                       }}
                       title={tooltip}
                     >
-                      <EventPill
-                        ev={e}
-                        isMultiDay={!isSingleDay}
-                        className={e.colorClass || "event--blue"}
-                        style={{ width: "100%" }}
-                        onOpenEditor={onOpenEditor}
-                      />
+                     <EventPillWeek ev={e} />
                     </div>
                   );
                 })
