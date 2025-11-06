@@ -517,7 +517,7 @@ app.get("/debug/case/:id/raw", async (req, res) => {
   }
 });
 
-const PORT = 4000;  // 🔒 hard-code to 4000
+const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`[api] listening on http://localhost:${PORT}`);
 });
