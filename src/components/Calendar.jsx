@@ -150,24 +150,29 @@ export default function Calendar() {
         setError(null);
 
         // 1. --- Authentication Check ---
-        // We must wait for the Zoho SDK to load.
+        console.log("[Calendar] Starting auth check...");
         let attempts = 0;
+        
         // @ts-ignore
         while (typeof window.ZOHO === "undefined" || typeof window.ZOHO.embeddedApp === "undefined") {
           if (attempts > 50) { // Wait for a max of 5 seconds (50 * 100ms)
-            throw new Error("This application can only be accessed from within Zoho CRM.");
+            console.error("[Calendar] Timeout: window.ZOHO.embeddedApp not found after 5s.");
+            throw new Error("This application can only be accessed from within Zoho CRM. (SDK Timeout)");
           }
+          // @ts-ignore
+          console.log(`[Calendar] Auth attempt ${attempts}: window.ZOHO is ${typeof window.ZOHO}`);
           await new Promise(resolve => setTimeout(resolve, 100)); // wait 100ms
           attempts++;
         }
         
-        // Now that ZOHO.embeddedApp exists, initialize it.
-        // This will succeed if in Zoho, and fail (reject) if outside.
+        console.log("[Calendar] SDK found! Initializing...");
         // @ts-ignore
         await window.ZOHO.embeddedApp.init();
+        console.log("[Calendar] SDK initialized successfully.");
 
         // 2. --- Data Loading (if auth passed) ---
         const api = import.meta.env.VITE_API_URL || "";
+        console.log(`[Calendar] Fetching data from ${api}/api/cases`);
         const res = await fetch(`${api}/api/cases`, { cache: "no-store" });
         if (!res.ok) throw new Error(`API ${res.status}`);
         
@@ -175,6 +180,7 @@ export default function Calendar() {
         const list = Array.isArray(data) ? data : Array.isArray(data?.events) ? data.events : [];
         
         if (!cancelled) setEvents(list.map(normalizeEvent));
+        console.log("[Calendar] Data loaded successfully.");
 
       } catch (e) {
         // This will catch the timeout, the init() failure, or data fetch errors.
