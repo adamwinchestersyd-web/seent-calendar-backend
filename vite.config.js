@@ -8,5 +8,5 @@ export default defineConfig(({ command }) => ({
   plugins: [react()],
   // When running `vite`/`npm run dev` keep base at '/',
   // but when building for cPanel subfolder /seent/, point assets there.
-  base: command === 'build' ? '/seent/' : '/',
+  base: command === 'build' ? '/' : '/',
 }))
