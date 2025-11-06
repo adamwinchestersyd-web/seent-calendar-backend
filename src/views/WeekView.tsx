@@ -12,7 +12,7 @@ import {
 type Props = {
   date: Date;
   events: any[];
-  onOpenEditor?: (ev: any, anchor: DOMRect) => void;
+  onOpenEditor?: (ev: any, clickEvent: React.MouseEvent) => void; // <-- UPDATED
 };
 
 function useElementWidth(ref: React.RefObject<HTMLDivElement>) {
@@ -215,10 +215,9 @@ const V_GUTTER = 2;   // top/bottom gap around each pill
                   onDragStart={onDragStart(seg)}
                   onDragEnd={onDragEnd}
                   onDoubleClick={beginQuickResize(seg)}
-                  onClick={(evt) => {
+                  onClick={(evt) => { // <-- UPDATED BLOCK
                     if (evt.ctrlKey) { beginQuickResize(seg)(evt as any); return; }
-                    const rect = laneRefs[li][bi].current?.getBoundingClientRect();
-                    if (rect) onOpenEditor?.(e, rect);
+                    if (evt) onOpenEditor?.(e, evt);
                   }}
                   title={tooltip}
                 >
