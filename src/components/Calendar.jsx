@@ -147,7 +147,7 @@ export default function Calendar() {
       try {
         setLoading(true);
         setError(null);
-        const api = import.meta.env.VITE_API_BASE || "";
+        const api = import.meta.env.VITE_API_URL || "";
         const res = await fetch(`${api}/api/cases`, { cache: "no-store" });
         if (!res.ok) throw new Error(`API ${res.status}`);
         const data = await res.json();

@@ -49,7 +49,7 @@ let   ZOHO_DOMAIN   = process.env.ZOHO_DOMAIN || "https://www.zohoapis.com";
 
 const CLIENT_ID     = process.env.ZOHO_CLIENT_ID;
 const CLIENT_SECRET = process.env.ZOHO_CLIENT_SECRET;
-const REDIRECT_URI  = process.env.ZOHO_REDIRECT_URI || "http://localhost:4000/oauth/callback";
+const REDIRECT_URI  = process.env.ZOHO_REDIRECT_URI;
 
 let REFRESH_TOKEN     = process.env.ZOHO_REFRESH_TOKEN || null;
 let ACCESS_TOKEN      = null;
