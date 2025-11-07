@@ -62,15 +62,29 @@ function toYMD(v) {
   return Number.isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
 }
 
-function firstName(full) {
-  const s = typeof full === "string" ? full.trim() : "";
-  if (!s) return "";
-  // split on whitespace; hyphenated names stay intact
-  return s.split(/\s+/)[0];
-}
+// Return the display string for a Zoho lookup or string field
+const toStringSafe = (v) => {
+  if (v == null) return "";
+  if (Array.isArray(v)) return toStringSafe(v[0]);
+  if (typeof v === "object") {
+    const fullName =
+      [v.first_name, v.last_name].filter(Boolean).join(" ").trim();
+    return (
+      (typeof v.name === "string" && v.name) ||
+      (typeof v.display_value === "string" && v.display_value) ||
+      (fullName && fullName) ||
+      ""
+    );
+  }
+  return String(v);
+};
+
+const asName = (v) => toStringSafe(v).trim();
+const firstWord = (v) => toStringSafe(v).trim().split(/\s+/)[0] || "";
 
 
-async function getAccessToken() {
+// --- UPDATED to accept scope ---
+async function getAccessToken(scope) {
   if (!REFRESH_TOKEN) {
     throw new Error("No REFRESH_TOKEN available. Run OAuth with access_type=offline & prompt=consent.");
   }
@@ -85,6 +99,7 @@ async function getAccessToken() {
       client_id: CLIENT_ID,
       client_secret: CLIENT_SECRET,
       grant_type: "refresh_token",
+      scope: scope, // <-- UPDATED
     }).toString(),
   });
 
@@ -107,6 +122,104 @@ async function getAccessToken() {
 
   console.log("[token] ok", ACCESS_TOKEN.slice(0, 12), "… api:", ZOHO_DOMAIN, "exp(s):", expiresIn);
   return ACCESS_TOKEN;
+}
+// -----------------------------------------------------------------
+
+
+// --- ZOHO CREATOR HELPERS (NEW) ---
+const { 
+  CREATOR_APP_OWNER, 
+  CREATOR_APP_NAME, 
+  CREATOR_FORM_NAME, 
+  CREATOR_REPORT_NAME 
+} = process.env;
+
+/**
+ * Fetches all records from the Creator "All_Manual_Entries" report.
+ */
+async function fetchManualEntries() {
+  const scope = 'ZohoCreator.report.ALL';
+  const accessToken = await getAccessToken(scope); // Uses your existing getAccessToken
+  if (!accessToken) return [];
+
+  // Use the .com domain for Creator API
+  const creatorApiUrl = `${ZOHO_DOMAIN.replace('www.', 'creator.')}/api/v2/${CREATOR_APP_OWNER}/${CREATOR_APP_NAME}/report/${CREATOR_REPORT_NAME}`;
+
+  try {
+    const res = await fetch(creatorApiUrl, {
+      headers: { 'Authorization': `Zoho-oauthtoken ${accessToken}` }
+    });
+    const data = await res.json();
+
+    // Map Creator fields to our standard event fields
+    return (data.data || []).map(item => ({
+      id: `creator_${item.ID}`, // Prefix ID to avoid collisions
+      title: item.Title,
+      start: item.Start_Date ? item.Start_Date.split(' ')[0] : '', // Format YYYY-MM-DD
+      end: item.End_Date ? item.End_Date.split(' ')[0] : '',     // Format YYYY-MM-DD
+      startTime: item.Start_Time,
+      wipManager: item.WIP_Manager,
+      caseOwner: item.Owner,
+      installer: item.Installer,
+      pmNotes: item.PM_Notes,
+      isManual: true, // Flag for frontend
+      colour: '#8b5cf6', // Assign a default color for manual entries
+      created_time: item.Added_Time, // Use Creator's built-in timestamp
+      modified_time: item.Modified_Time,
+    }));
+  } catch (e) {
+    console.error('[creator] fetch error:', e.message);
+    return [];
+  }
+}
+
+/**
+ * Creates a new record in the Creator "Manual_Entry" form.
+ */
+async function createManualEntry(eventData) {
+  const scope = 'ZohoCreator.form.ALL';
+  const accessToken = await getAccessToken(scope); // Uses your existing getAccessToken
+  if (!accessToken) return { error: 'Could not get access token' };
+
+  // Use the .com domain for Creator API
+  const creatorApiUrl = `${ZOHO_DOMAIN.replace('www.', 'creator.')}/api/v2/${CREATOR_APP_OWNER}/${CREATOR_APP_NAME}/form/${CREATOR_FORM_NAME}`;
+
+  // Map our event data to the Creator form's field names
+  const body = JSON.stringify({
+    data: {
+      "Title": eventData.title,
+      "WIP_Manager": eventData.wipManager,
+      "Owner": eventData.caseOwner,
+      "Installer": eventData.installer,
+      "PM_Notes": eventData.pmNotes,
+      "Start_Date": eventData.start,
+      "End_Date": eventData.end,
+      "Start_Time": eventData.startTime,
+    }
+  });
+
+  try {
+    const res = await fetch(creatorApiUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Zoho-oauthtoken ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: body,
+    });
+    const data = await res.json();
+    
+    if (data.code === 3000) { // 3000 is Creator's success code
+      console.log('[creator] Created new entry:', data.data.ID);
+      return { success: true, id: data.data.ID };
+    } else {
+      console.error('[creator] Create error:', data);
+      return { error: 'Failed to create entry in Creator', details: data };
+    }
+  } catch (e) {
+    console.error('[creator] create fetch error:', e.message);
+    return { error: e.message };
+  }
 }
 // -----------------------------------------------------------------
 
@@ -159,7 +272,7 @@ const STATE_COLOURS = {
 
 // ----- Fetch from Zoho with the exact API names you gave -----
 async function fetchCasesFromZoho() {
-  const token = await getAccessToken();
+  const token = await getAccessToken("ZohoCRM.modules.ALL,ZohoCRM.users.READ"); // <-- UPDATED
 
   const fields = [
     "id",
@@ -173,7 +286,7 @@ async function fetchCasesFromZoho() {
     "Description",
     "WIP_Manager",
     "WIP_Manager1",
-    "Installer",            // <— add this
+    "Installer",
     "Modified_Time",
     "Created_Time",
   ].join(",");
@@ -186,56 +299,33 @@ async function fetchCasesFromZoho() {
 
   const { data: rows = [] } = JSON.parse(text);
 
-const events = rows.map((row) => {
-  const wipMgrName = asName(row.WIP_Manager1) || asName(row.WIP_Manager);
-  const installerName = asName(row.Installer) || asName(row.WIP_Manager);
-  const ownerFirst = firstWord(row.Owner); // Owner is a user object
+  const events = rows.map((row) => {
+    const wipMgrName = asName(row.WIP_Manager1) || asName(row.WIP_Manager);
+    const installerName = asName(row.Installer) || asName(row.WIP_Manager);
+    const ownerFirst = firstWord(row.Owner); // Owner is a user object
 
-  return {
-    id: row.id,
-    title: row.Subject || `Case ${row.Case_Number || ""}`,
-    start: toYMD(row.Install_Date || row.Created_Time),
-    end: toYMD(row.Install_End_Date || row.Install_Date || row.Modified_Time || row.Created_Time),
-    startTime: row.Install_Start_Time || "",
-    state: row.State || "",
-    wipManager: wipMgrName,        // <-- string
-    installer: installerName,      // <-- string
-    caseOwner: ownerFirst,         // <-- string
-    pmNotes: (row.Description || "").slice(0, 200),
-    caseUrl: row.id ? `https://crm.zoho.com/crm/${ZOHO_ORG_ID}/tab/Cases/${row.id}` : "",
-    created_time: row.Created_Time,
-    modified_time: row.Modified_Time,
-  };
-});
+    return {
+      id: row.id,
+      title: row.Subject || `Case ${row.Case_Number || ""}`,
+      start: toYMD(row.Install_Date || row.Created_Time),
+      end: toYMD(row.Install_End_Date || row.Install_Date || row.Modified_Time || row.Created_Time),
+      startTime: row.Install_Start_Time || "",
+      state: row.State || "",
+      wipManager: wipMgrName,        // <-- string
+      installer: installerName,      // <-- string
+      caseOwner: ownerFirst,         // <-- string
+      pmNotes: (row.Description || "").slice(0, 200),
+      caseUrl: row.id ? `https://crm.zoho.com/crm/${ZOHO_ORG_ID}/tab/Cases/${row.id}` : "",
+      created_time: row.Created_Time,
+      modified_time: row.Modified_Time,
+      isManual: false, // Flag for CRM entries
+    };
+  });
 
   return events;
 }
 
-
-
-// Return the display string for a Zoho lookup or string field
-// wherever you map a Zoho Case -> event DTO
-
-const toStringSafe = (v) => {
-  if (v == null) return "";
-  if (Array.isArray(v)) return toStringSafe(v[0]);
-  if (typeof v === "object") {
-    const fullName =
-      [v.first_name, v.last_name].filter(Boolean).join(" ").trim();
-    return (
-      (typeof v.name === "string" && v.name) ||
-      (typeof v.display_value === "string" && v.display_value) ||
-      (fullName && fullName) ||
-      ""
-    );
-  }
-  return String(v);
-};
-
-const asName = (v) => toStringSafe(v).trim();
-const firstWord = (v) => toStringSafe(v).trim().split(/\s+/)[0] || "";
-
-// ----- mapper -----
+// ----- mapper (no longer used by fetchCasesFromZoho but kept just in case) -----
 function mapZohoCase(z) {
   return {
     id: String(z.id),
@@ -243,22 +333,16 @@ function mapZohoCase(z) {
     start: z.Install_Date || "",
     end: z.Install_End_Date || z.Install_Date || "",
     startTime: toStringSafe(z.Install_Start_Time),
-
     state: toStringSafe(z.State),
-
-    // names (robust to objects/arrays/strings)
     wipManager: asName(z.WIP_Manager1) || asName(z.WIP_Manager), // Uditha etc.
     installer:  asName(z.Installer)    || asName(z.WIP_Manager), // "King IT Hervey Bay"
     caseOwner:  firstWord(z.Owner),                               // "Adam", "Renee", ...
-
     pmNotes: toStringSafe(z.Description).slice(0, 200),
-
     caseUrl: `https://crm.zoho.com/crm/org640578001/tab/Cases/${z.id}`,
     created_time: toStringSafe(z.Created_Time),
     modified_time: toStringSafe(z.Modified_Time),
   };
 }
-
 
 
 // load cache on boot
@@ -278,16 +362,31 @@ async function persistCache() {
   CASES_CACHE.lastUpdated = payload.lastUpdated;
 }
 
-// refresh job (pull from Zoho → prune → save)
-// refresh job (pull from Zoho → prune → save)
+// --- UPDATED refreshCases ---
+// refresh job (pull from Zoho CRM AND Creator → prune → save)
 async function refreshCases(reason = "manual") {
+  console.log(`[cases] refresh starting (${reason})`);
   try {
-    const fresh = await fetchCasesFromZoho();
-    const pruned = pruneOld(fresh);
-    CASES_CACHE.events = pruned;
+    // Fetch both data sources in parallel
+    const [crmCases, manualEntries] = await Promise.all([
+      fetchCasesFromZoho(),
+      fetchManualEntries()
+    ]);
+
+    console.log(`[cases] Fetched ${crmCases.length} CRM cases.`);
+    console.log(`[cases] Fetched ${manualEntries.length} Creator entries.`);
+
+    // Prune old CRM cases
+    const prunedCrm = pruneOld(crmCases);
+    // Prune old Creator entries
+    const prunedCreator = pruneOld(manualEntries);
+
+    // Merge and update cache
+    CASES_CACHE.events = [...prunedCrm, ...prunedCreator];
     await persistCache();
-    console.log(`[cases] refresh ok (${reason}) events=${pruned.length}`);
-    return { ok: true, count: pruned.length, lastUpdated: CASES_CACHE.lastUpdated };
+    
+    console.log(`[cases] refresh ok (${reason}) events=${CASES_CACHE.events.length}`);
+    return { ok: true, count: CASES_CACHE.events.length, lastUpdated: CASES_CACHE.lastUpdated };
   } catch (e) {
     console.error("[cases] refresh error:", e);
     return { ok: false, error: String(e) };
@@ -329,7 +428,7 @@ app.get("/oauth/callback", async (req, res) => {
 // Force a refresh and show a trimmed token + expiry
 app.get("/debug/refresh", async (req, res) => {
   try {
-    const tok = await getAccessToken();
+    const tok = await getAccessToken("ZohoCRM.users.READ"); // <-- UPDATED
     res.json({
       ok: true,
       access_token_trim: tok ? tok.slice(0, 12) + "…" : null,
@@ -345,7 +444,7 @@ app.get("/debug/refresh", async (req, res) => {
 
 app.get("/debug/ping", async (req, res) => {
   try {
-    const token = await getAccessToken();
+    const token = await getAccessToken("ZohoCRM.users.READ"); // <-- UPDATED
     const r = await fetch(`${ZOHO_DOMAIN}/crm/v2/users`, {
       headers: { Authorization: `Zoho-oauthtoken ${token}` },
     });
@@ -366,8 +465,6 @@ app.post("/api/cases/purge", async (_req, res) => {
     res.status(500).json({ ok: false, error: String(e) });
   }
 });
-
-
 
 // schedule: every 10 minutes (tweak as needed)
 cron.schedule("*/10 * * * *", () => refreshCases("cron"));
@@ -406,7 +503,7 @@ app.get("/debug/case/:id/raw", (req, res) => {
   // We don't have raw Zoho rows in cache, so fetch a fresh record straight from Zoho:
   (async () => {
     try {
-      const token = await getAccessToken();
+      const token = await getAccessToken("ZohoCRM.modules.Cases.READ"); // <-- UPDATED
       const r = await fetch(`${ZOHO_DOMAIN}/crm/v2/Cases/${req.params.id}`, {
         headers: { Authorization: `Zoho-oauthtoken ${token}` }
       });
@@ -428,7 +525,7 @@ app.get("/debug/case/:id/raw", (req, res) => {
 // Token probe
 app.get("/debug/refresh", async (_req, res) => {
   try {
-    const tok = await getAccessToken();
+    const tok = await getAccessToken("ZohoCRM.users.READ"); // <-- UPDATED
     res.json({
       ok: true,
       access_token_trim: tok ? tok.slice(0, 12) + "…" : null,
@@ -445,7 +542,7 @@ app.get("/debug/refresh", async (_req, res) => {
 // Lightweight Zoho ping
 app.get("/debug/ping", async (_req, res) => {
   try {
-    const token = await getAccessToken();
+    const token = await getAccessToken("ZohoCRM.users.READ"); // <-- UPDATED
     const r = await fetch(`${ZOHO_DOMAIN}/crm/v2/users`, {
       headers: { Authorization: `Zoho-oauthtoken ${token}` },
     });
@@ -466,6 +563,8 @@ app.patch("/api/cases/:id", async (req, res) => {
     const { start, end, title, state } = req.body || {};
     let found = false;
 
+    // TODO: Add logic here to update Creator records if id starts with 'creator_'
+    
     CASES_CACHE.events = CASES_CACHE.events.map((e) => {
       if (e.id !== id) return e;
       found = true;
@@ -479,7 +578,33 @@ app.patch("/api/cases/:id", async (req, res) => {
       };
     });
 
-    app.get("/debug/case/:id", (_req, res) => {
+    if (!found) return res.status(4404).json({ ok: false, error: "Not found" });
+
+    await persistCache();
+    // (Optional) enqueue a background task to PATCH back to Zoho here.
+
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: String(e) });
+  }
+});
+
+// --- NEW ENDPOINT for CREATOR ---
+app.post("/api/manual-entry", async (req, res) => {
+  const eventData = req.body;
+  
+  const result = await createManualEntry(eventData);
+
+  if (result.success) {
+    // Refresh cache in the background so the new item appears
+    refreshCases("post-create");
+    res.status(201).json({ status: 'success', id: result.id });
+  } else {
+    res.status(500).json({ error: 'Failed to create manual entry', details: result.details });
+  }
+});
+
+app.get("/debug/case/:id", (_req, res) => {
   const { id } = _req.params;
   const ev = CASES_CACHE.events.find(e => e.id === id);
   res.json(ev || { error: "not found", id });
@@ -487,7 +612,7 @@ app.patch("/api/cases/:id", async (req, res) => {
 
 app.get("/debug/case/:id/raw", async (req, res) => {
   try {
-    const token = await getAccessToken();
+    const token = await getAccessToken("ZohoCRM.modules.Cases.READ"); // <-- UPDATED
     const r = await fetch(`${ZOHO_DOMAIN}/crm/v2/Cases/${req.params.id}`, {
       headers: { Authorization: `Zoho-oauthtoken ${token}` },
     });
@@ -505,20 +630,7 @@ app.get("/debug/case/:id/raw", async (req, res) => {
   }
 });
 
-
-    if (!found) return res.status(404).json({ ok: false, error: "Not found" });
-
-    await persistCache();
-    // (Optional) enqueue a background task to PATCH back to Zoho here.
-
-    res.json({ ok: true });
-  } catch (e) {
-    res.status(500).json({ ok: false, error: String(e) });
-  }
-});
-
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`[api] listening on http://localhost:${PORT}`);
 });
-

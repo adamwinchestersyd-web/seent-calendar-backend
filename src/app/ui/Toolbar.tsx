@@ -8,6 +8,7 @@ type Props = {
   onViewChange: (v: View) => void;
   date: Date;
   onNav: (dir: -1 | 0 | 1) => void;
+  onAddNew: () => void;
   onRefresh?: () => void; // admin action
   onPurge?: () => void;   // admin action
 };
@@ -94,6 +95,7 @@ export default function Toolbar({
   onViewChange,
   date,
   onNav,
+  onAddNew, // <-- Added prop
   onRefresh,
   onPurge,
 }: Props) {
@@ -124,8 +126,12 @@ export default function Toolbar({
 
         {/* Right: actions + view toggles */}
         <div style={styles.right}>
-          {onRefresh && <Btn title="Refresh from Zoho" onClick={onRefresh}>Refresh</Btn>}
-          {onPurge && <Btn title="Purge local cache" onClick={onPurge}>Purge</Btn>}
+          {/* REFRESH AND PURGE BUTTONS REMOVED */}
+          {/* {onRefresh && <Btn title="Refresh from Zoho" onClick={onRefresh}>Refresh</Btn>} */}
+          {/* {onPurge && <Btn title="Purge local cache" onClick={onPurge}>Purge</Btn>} */}
+
+          {/* "ADD NEW" BUTTON ADDED */}
+          <Btn title="Add New Manual Entry" onClick={onAddNew}>Add New</Btn>
 
           <Btn active={view === "day"} onClick={() => onViewChange("day")}>Day</Btn>
           <Btn active={view === "week"} onClick={() => onViewChange("week")}>Week</Btn>
