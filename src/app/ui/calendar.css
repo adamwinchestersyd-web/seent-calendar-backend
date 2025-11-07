@@ -206,3 +206,123 @@ html,body{ background:var(--bg); color:var(--text); }
   background:#1f2327; border:1px solid var(--grid); color:var(--text);
 }
 .calendar-root .btn-secondary:hover{ background:#191d21; }
+
+/* ==========================================================================
+   MODAL OVERRIDES (Fixes light text and dropdowns)
+   ========================================================================== */
+
+/* This is the modal itself. We force a light color scheme */
+.calendar-editor-modal {
+  position: absolute;
+  width: 380px;
+  background: #ffffff;
+  color: #0f1723; /* Dark text */
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0,0,0,.22);
+  padding: 18px;
+  z-index: 9999;
+  transition: opacity 150ms ease-in-out;
+  color-scheme: light; /* <-- THIS IS THE MAIN FIX */
+}
+
+/* Add the green test bar */
+.calendar-editor-modal {
+  border-top: 6px solid #22c55e;
+}
+
+/* Style all inputs, selects, and textareas inside */
+.calendar-editor-modal input,
+.calendar-editor-modal select,
+.calendar-editor-modal textarea {
+  flex: 1;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #0f1723; /* Ensure dark text */
+  color-scheme: light; /* Ensure dark text on date/select */
+  width: 100%; /* Fix for selects */
+  box-sizing: border-box; /* Fix for selects */
+}
+
+.calendar-editor-modal textarea {
+  height: auto;
+  padding: 8px 10px;
+}
+
+/* Title input */
+.calendar-editor-modal .modal-title-input {
+  height: 40px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* Row and Label helpers */
+.calendar-editor-modal .modal-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.calendar-editor-modal .modal-label {
+  font-size: 13px;
+  width: 110px;
+  color: #1f2937;
+  opacity: 0.9;
+  flex-shrink: 0; /* Prevents label from shrinking */
+}
+
+/* Grid wrappers */
+.calendar-editor-modal .modal-grid {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.calendar-editor-modal .modal-grid-gap-sm {
+  display: grid;
+  gap: 6px;
+}
+
+/* Read-only info text */
+.calendar-editor-modal .modal-info-text {
+  font-size: 14px;
+  color: #666;
+}
+.calendar-editor-modal .modal-notes-box {
+  color: #666;
+  font-size: 13.5px;
+  line-height: 1.35;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+/* Action button styles */
+.calendar-editor-modal .modal-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.calendar-editor-modal .modal-btn {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  font-size: 14px;
+  cursor: pointer;
+  user-select: none;
+}
+.calendar-editor-modal .modal-btn-primary {
+  background: #111827;
+  color: #fff;
+  border-color: #111827;
+}
+.calendar-editor-modal .modal-btn-subtle {
+  background: #f3f4f6;
+  color: #111827;
+}
+.calendar-editor-modal .modal-btn-ghost {
+  background: transparent;
+}

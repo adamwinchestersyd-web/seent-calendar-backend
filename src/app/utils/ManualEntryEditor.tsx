@@ -1,4 +1,4 @@
-// CACHE BUST v3
+// CACHE BUST v4
 import React from "react";
 
 type Props = {
@@ -12,48 +12,40 @@ type Props = {
   ownerOptions: string[];
 };
 
-// This hook is updated to fix the "Add New" positioning
+// Positioning hook
 function usePopupPosition(clickEvent: React.MouseEvent | null) {
   const ref = React.useRef<HTMLDivElement>(null);
   const [pos, setPos] = React.useState<React.CSSProperties>({
     top: -9999,
     left: -9999,
-    opacity: 0, // Start hidden
+    opacity: 0,
   });
 
   React.useLayoutEffect(() => {
     const pop = ref.current?.getBoundingClientRect();
-    if (!pop) return; // Don't calculate if the popup isn't rendered yet
+    if (!pop) return; 
 
     const pad = 12;
     const vw = window.innerWidth;
-
     let y, x;
 
     if (!clickEvent) {
-      // --- "Add New" Mode (No Click) ---
-      // Position it at the top-center of the current scroll view
-      y = window.scrollY + 50; // 50px from the top of the viewport
-      x = (vw / 2) - (pop.width / 2); // Centered horizontally
+      y = window.scrollY + 50;
+      x = (vw / 2) - (pop.width / 2);
     } else {
-      // --- Click Mode ---
-      // Calculate Y position relative to the PAGE (including scroll)
       const clickY = clickEvent.clientY + window.scrollY;
-      y = clickY - (pop.height / 2); // Center vertically on the click
-
-      // Calculate X position
+      y = clickY - (pop.height / 2);
       const clickX = clickEvent.clientX;
-      x = clickX - (pop.width / 2); // Center horizontally on the click
+      x = clickX - (pop.width / 2);
     }
-
     setPos({
-      position: 'absolute', // Always use absolute positioning
-      top: Math.max(pad + window.scrollY, y), // Ensure it's on screen vertically
-      left: Math.max(pad, Math.min(x, vw - pop.width - pad)), // On screen horizontally
+      position: 'absolute',
+      top: Math.max(pad + window.scrollY, y),
+      left: Math.max(pad, Math.min(x, vw - pop.width - pad)),
       opacity: 1,
       transform: 'none',
     });
-  }, [clickEvent, open]); // Recalculate if the click event or open state changes
+  }, [clickEvent, open]);
 
   return { ref, style: pos };
 }
@@ -61,7 +53,7 @@ function usePopupPosition(clickEvent: React.MouseEvent | null) {
 interface EventState {
   title: string;
   wipManager: string;
-  caseOwner: string; // 'Owner' in the form
+  caseOwner: string;
   installer: string;
   pmNotes: string;
   startTime: string;
@@ -98,7 +90,7 @@ export default function ManualEntryEditor({
       setFields({
         title: ev.title || "",
         wipManager: ev.wipManager || "",
-        caseOwner: ev.caseOwner || "", // 'Owner'
+        caseOwner: ev.caseOwner || "",
         installer: ev.installer || "",
         pmNotes: ev.pmNotes || "",
         startTime: ev.startTime || "",
@@ -128,58 +120,6 @@ export default function ManualEntryEditor({
   
   const isNewEvent = !!ev.isNew;
 
-  const textColor =
-    getComputedStyle(document.documentElement).getPropertyValue("--text").trim() || "#0f1723";
-  const borderColor =
-    getComputedStyle(document.documentElement).getPropertyValue("--border").trim() || "#e5e7eb";
-
-  const card: React.CSSProperties = {
-    ...positionStyle, // Apply the calculated position here
-    width: 380,
-    background: "#ffffff",
-    borderTop: '6px solid #22c55e', // <-- ADDED GREEN LINE
-    color: textColor,
-    border: `1px solid ${borderColor}`,
-    borderRadius: 12,
-    boxShadow: "0 12px 32px rgba(0,0,0,.22)",
-    padding: 18,
-    zIndex: 9999,
-    transition: 'opacity 150ms ease-in-out',
-  };
-
-  const row: React.CSSProperties = { display: "flex", gap: 12, alignItems: "center" };
-  const label: React.CSSProperties = { fontSize: 13, width: 110, color: "#1f2937", opacity: 0.9 };
-  
-  // --- UPDATED: Added colorScheme ---
-  const input: React.CSSProperties = {
-    flex: 1,
-    height: 36,
-    padding: "0 10px",
-    borderRadius: 8,
-    border: `1px solid ${borderColor}`,
-    background: "#fff",
-    color: textColor, 
-    colorScheme: 'light',
-  };
-  const textArea: React.CSSProperties = {
-    ...input,
-    height: 'auto',
-    padding: '8px 10px',
-  };
-
-  const baseBtn: React.CSSProperties = {
-    height: 36,
-    padding: "0 14px",
-    borderRadius: 10,
-    border: `1px solid ${borderColor}`,
-    fontSize: 14,
-    cursor: "pointer",
-    userSelect: "none",
-  };
-  const primary: React.CSSProperties = { ...baseBtn, background: "#111827", color: "#fff", borderColor: "#111827" };
-  const subtle: React.CSSProperties = { ...baseBtn, background: "#f3f4f6", color: "#111827" };
-  const ghost: React.CSSProperties = { ...baseBtn, background: "transparent" };
-
   const handleSave = () => {
     const updatedEvent = { ...ev, ...fields };
     onChangeDates(ev.id, updatedEvent);
@@ -187,7 +127,7 @@ export default function ManualEntryEditor({
   };
 
   return (
-    <div ref={ref} style={card} role="dialog" aria-labelledby="evt-title">
+    <div ref={ref} style={positionStyle} className="calendar-editor-modal" role="dialog" aria-labelledby="evt-title">
       
       {/* Title (input) */}
       <div id="evt-title" style={{ marginBottom: 12 }}>
@@ -197,34 +137,31 @@ export default function ManualEntryEditor({
           placeholder="Event Title"
           value={fields.title}
           onChange={handleChange}
-          style={{...input, height: 40, fontSize: 15, fontWeight: 700 }}
-          // Only allow editing title for new events OR existing manual events
+          className="modal-title-input" // Use class
           disabled={!isNewEvent && !ev.isManual}
         />
       </div>
 
       {/* Meta grid - all fields are now editable */}
-      <div style={{ display: "grid", gap: 12, marginBottom: 16 }}>
-        <div style={row}>
-          <div style={label}>Time</div>
+      <div className="modal-grid">
+        <div className="modal-row">
+          <div className="modal-label">Time</div>
           <input
             type="text"
             name="startTime"
             placeholder="e.g. 09:00"
             value={fields.startTime}
             onChange={handleChange}
-            style={input}
           />
         </div>
         
         {/* WIP Manager Dropdown */}
-        <div style={row}>
-          <div style={label}>WIP Manager</div>
+        <div className="modal-row">
+          <div className="modal-label">WIP Manager</div>
           <select
             name="wipManager"
             value={fields.wipManager}
             onChange={handleChange}
-            style={input}
           >
             <option value="">Select WIP Manager...</option>
             {wipOptions.map(name => (
@@ -234,13 +171,12 @@ export default function ManualEntryEditor({
         </div>
         
         {/* Owner Dropdown */}
-        <div style={row}>
-          <div style={label}>Owner</div>
+        <div className="modal-row">
+          <div className="modal-label">Owner</div>
           <select
             name="caseOwner"
             value={fields.caseOwner}
             onChange={handleChange}
-            style={input}
           >
             <option value="">Select Owner...</option>
             {ownerOptions.map(name => (
@@ -250,13 +186,12 @@ export default function ManualEntryEditor({
         </div>
         
         {/* Installer Dropdown */}
-        <div style={row}>
-          <div style={label}>Installer</div>
+        <div className="modal-row">
+          <div className="modal-label">Installer</div>
           <select
             name="installer"
             value={fields.installer}
             onChange={handleChange}
-            style={input}
           >
             <option value="">Select Installer...</option>
             {installerOptions.map(name => (
@@ -266,47 +201,44 @@ export default function ManualEntryEditor({
         </div>
         
         {/* PM Notes (textarea) */}
-        <div style={{ display: "grid", gap: 6 }}>
-          <div style={{ fontSize: 13, color: "#1f2937", opacity: 0.9 }}>PM Notes</div>
+        <div className="modal-grid-gap-sm">
+          <div className="modal-label" style={{width: 'auto'}}>PM Notes</div>
           <textarea
             name="pmNotes"
             rows={3}
             value={fields.pmNotes}
             onChange={handleChange}
-            style={textArea}
           />
         </div>
       </div>
       
       {/* Dates */}
-      <div style={{ display: "grid", gap: 12, marginBottom: 16 }}>
-        <div style={row}>
-          <div style={label}>Start Date</div>
+      <div className="modal-grid">
+        <div className="modal-row">
+          <div className="modal-label">Start Date</div>
           <input
             type="date"
             name="start"
             value={fields.start}
             onChange={handleDateChange}
-            style={input}
           />
         </div>
-        <div style={row}>
-          <div style={label}>End Date</div>
+        <div className="modal-row">
+          <div className="modal-label">End Date</div>
           <input
             type="date"
             name="end"
             value={fields.end}
             onChange={handleDateChange}
-            style={input}
           />
         </div>
       </div>
 
       {/* Actions */}
-      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+      <div className="modal-actions">
         <button
           type="button"
-          style={primary}
+          className="modal-btn modal-btn-primary"
           onClick={handleSave}
         >
           {isNewEvent ? "Save Event" : "Save Changes"}
@@ -316,7 +248,7 @@ export default function ManualEntryEditor({
         {!isNewEvent && !ev.isManual && (
           <button
             type="button"
-            style={subtle}
+            className="modal-btn modal-btn-subtle"
             onClick={() => {
               const url = ev.caseUrl || ev.url || (ev.caseId ? `https.crm.zoho.com/crm/org640578001/tab/Cases/${ev.caseId}` : "");
               if (url) window.open(url, "_blank");
@@ -326,7 +258,7 @@ export default function ManualEntryEditor({
           </button>
         )}
         
-        <button type="button" style={ghost} onClick={onClose}>
+        <button type="button" className="modal-btn modal-btn-ghost" onClick={onClose}>
           Cancel
         </button>
       </div>
