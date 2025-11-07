@@ -142,8 +142,8 @@ async function fetchManualEntries() {
   const accessToken = await getAccessToken(scope); // Uses your existing getAccessToken
   if (!accessToken) return [];
 
-  // Use the .com domain for Creator API
-  const creatorApiUrl = `${ZOHO_DOMAIN.replace('www.', 'creator.')}/api/v2/${CREATOR_APP_OWNER}/${CREATOR_APP_NAME}/report/${CREATOR_REPORT_NAME}`;
+  // --- FIX: Use creator.zoho.com domain ---
+  const creatorApiUrl = `https://creator.zoho.com/api/v2/${CREATOR_APP_OWNER}/${CREATOR_APP_NAME}/report/${CREATOR_REPORT_NAME}`;
 
   try {
     const res = await fetch(creatorApiUrl, {
@@ -181,8 +181,8 @@ async function createManualEntry(eventData) {
   const accessToken = await getAccessToken(scope); // Uses your existing getAccessToken
   if (!accessToken) return { error: 'Could not get access token' };
 
-  // Use the .com domain for Creator API
-  const creatorApiUrl = `${ZOHO_DOMAIN.replace('www.', 'creator.')}/api/v2/${CREATOR_APP_OWNER}/${CREATOR_APP_NAME}/form/${CREATOR_FORM_NAME}`;
+  // --- FIX: Use creator.zoho.com domain ---
+  const creatorApiUrl = `https://creator.zoho.com/api/v2/${CREATOR_APP_OWNER}/${CREATOR_APP_NAME}/form/${CREATOR_FORM_NAME}`;
 
   // Map our event data to the Creator form's field names
   const body = JSON.stringify({
@@ -438,7 +438,7 @@ app.get("/debug/refresh", async (req, res) => {
       api_domain: ZOHO_DOMAIN,
     });
   } catch (e) {
-    res.status(500).json({ ok: false, error: String(e) });
+    res.status(500).json({ ok: false, error: String(e) }); 
   }
 });
 
@@ -535,7 +535,7 @@ app.get("/debug/refresh", async (_req, res) => {
       api_domain: ZOHO_DOMAIN,
     });
   } catch (e) {
-    res.status(500).json({ ok: false, error: String(e) });
+    res.status(500).json({ ok: false, error: String(e) }); // <-- TYPO WAS HERE
   }
 });
 
@@ -571,14 +571,14 @@ app.patch("/api/cases/:id", async (req, res) => {
       return {
         ...e,
         start: start ? toYMD(start) : e.start,
-        end: end ? toYMD(end) : e.end,
+        end: end ? toYD(end) : e.end,
         title: title ?? e.title,
         state: state ?? e.state,
         modified_time: new Date().toISOString(),
       };
     });
 
-    if (!found) return res.status(4404).json({ ok: false, error: "Not found" });
+    if (!found) return res.status(404).json({ ok: false, error: "Not found" });
 
     await persistCache();
     // (Optional) enqueue a background task to PATCH back to Zoho here.
