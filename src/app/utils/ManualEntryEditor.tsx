@@ -1,5 +1,6 @@
-// CACHE BUST v5
+// CACHE BUST v4
 import React from "react";
+import { useEscapeKey } from "../../hooks/useEscapeKey";
 
 type Props = {
   open: boolean;
@@ -10,51 +11,43 @@ type Props = {
   wipOptions: string[];
   installerOptions: string[];
   ownerOptions: string[];
-  stateOptions: string[]; // <-- ADDED
+  stateOptions: string[];
 };
 
-// This hook is updated to fix the "Add New" positioning
+// Positioning hook
 function usePopupPosition(clickEvent: React.MouseEvent | null) {
   const ref = React.useRef<HTMLDivElement>(null);
   const [pos, setPos] = React.useState<React.CSSProperties>({
     top: -9999,
     left: -9999,
-    opacity: 0, // Start hidden
+    opacity: 0,
   });
 
   React.useLayoutEffect(() => {
     const pop = ref.current?.getBoundingClientRect();
-    if (!pop) return; // Don't calculate if the popup isn't rendered yet
+    if (!pop) return; 
 
     const pad = 12;
     const vw = window.innerWidth;
-
     let y, x;
 
     if (!clickEvent) {
-      // --- "Add New" Mode (No Click) ---
-      // Position it at the top-center of the current scroll view
-      y = window.scrollY + 50; // 50px from the top of the viewport
-      x = (vw / 2) - (pop.width / 2); // Centered horizontally
+      y = window.scrollY + 50;
+      x = (vw / 2) - (pop.width / 2);
     } else {
-      // --- Click Mode ---
-      // Calculate Y position relative to the PAGE (including scroll)
       const clickY = clickEvent.clientY + window.scrollY;
-      y = clickY - (pop.height / 2); // Center vertically on the click
-
-      // Calculate X position
+      y = clickY - (pop.height / 2);
       const clickX = clickEvent.clientX;
-      x = clickX - (pop.width / 2); // Center horizontally on the click
+      x = clickX - (pop.width / 2);
     }
-
     setPos({
-      position: 'absolute', // Always use absolute positioning
-      top: Math.max(pad + window.scrollY, y), // Ensure it's on screen vertically
-      left: Math.max(pad, Math.min(x, vw - pop.width - pad)), // On screen horizontally
+      position: 'absolute',
+      top: Math.max(pad + window.scrollY, y),
+      left: Math.max(pad, Math.min(x, vw - pop.width - pad)),
       opacity: 1,
       transform: 'none',
     });
-  }, [clickEvent, open]); // Recalculate if the click event or open state changes
+  }, [clickEvent, open]);
 
   return { ref, style: pos };
 }
@@ -62,9 +55,9 @@ function usePopupPosition(clickEvent: React.MouseEvent | null) {
 interface EventState {
   title: string;
   wipManager: string;
-  caseOwner: string; // 'Owner' in the form
+  caseOwner: string;
   installer: string;
-  state: string; // <-- ADDED
+  state: string;
   pmNotes: string;
   startTime: string;
   start: string;
@@ -80,7 +73,7 @@ export default function ManualEntryEditor({
   wipOptions,
   installerOptions,
   ownerOptions,
-  stateOptions, // <-- ADDED
+  stateOptions,
 }: Props) {
   
   const [fields, setFields] = React.useState<EventState>({
@@ -88,7 +81,7 @@ export default function ManualEntryEditor({
     wipManager: "",
     caseOwner: "",
     installer: "",
-    state: "", // <-- ADDED
+    state: "",
     pmNotes: "",
     startTime: "",
     start: "",
@@ -97,14 +90,16 @@ export default function ManualEntryEditor({
 
   const { ref, style: positionStyle } = usePopupPosition(open ? (clickEvent || null) : null);
 
+  useEscapeKey(onClose); // Close on Escape key
+
   React.useEffect(() => {
     if (ev) {
       setFields({
         title: ev.title || "",
         wipManager: ev.wipManager || "",
-        caseOwner: ev.caseOwner || "", // 'Owner'
+        caseOwner: ev.caseOwner || "",
         installer: ev.installer || "",
-        state: ev.state || "", // <-- ADDED
+        state: ev.state || "",
         pmNotes: ev.pmNotes || "",
         startTime: ev.startTime || "",
         start: ev.start || "",
@@ -151,12 +146,13 @@ export default function ManualEntryEditor({
           value={fields.title}
           onChange={handleChange}
           className="modal-title-input" // Use class
+          // Only allow editing title for new events OR existing manual events
           disabled={!isNewEvent && !ev.isManual}
         />
       </div>
 
       {/* Meta grid - all fields are now editable */}
-      <div className="modal-grid" style={{gap: 12, marginBottom: 16}}>
+      <div className="modal-grid">
         <div className="modal-row">
           <div className="modal-label">Time</div>
           <input
@@ -213,7 +209,7 @@ export default function ManualEntryEditor({
           </select>
         </div>
 
-        {/* --- NEW: State Dropdown --- */}
+        {/* State Dropdown */}
         <div className="modal-row">
           <div className="modal-label">State</div>
           <select
@@ -278,7 +274,7 @@ export default function ManualEntryEditor({
             type="button"
             className="modal-btn modal-btn-subtle"
             onClick={() => {
-              const url = ev.caseUrl || ev.url || (ev.caseId ? `https.crm.zoho.com/crm/org640578001/tab/Cases/${ev.caseId}` : "");
+              const url = ev.caseUrl || ev.url || (ev.caseId ? `https://crm.zoho.com/crm/org640578001/tab/Cases/${ev.caseId}` : "");
               if (url) window.open(url, "_blank");
             }}
           >

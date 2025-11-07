@@ -1,5 +1,6 @@
+// CACHE BUST v4
 import React from "react";
-import { useEscapeKey } from "../../hooks/useEscapeKey"; 
+import { useEscapeKey } from "../../hooks/useEscapeKey";
 
 type Props = {
   open: boolean;
@@ -47,8 +48,9 @@ export default function EventEditor({ open, clickEvent, ev, onClose, onChangeDat
   const [start, setStart] = React.useState(ev?.start ?? "");
   const [end, setEnd] = React.useState(ev?.end ?? "");
   const { ref, style: positionStyle } = usePopupPosition(open ? (clickEvent || null) : null);
-  useEscapeKey(onClose);
 
+  useEscapeKey(onClose); // Close on Escape key
+  
   React.useEffect(() => {
     if (ev) {
       setStart(ev.start ?? "");
@@ -59,6 +61,7 @@ export default function EventEditor({ open, clickEvent, ev, onClose, onChangeDat
   if (!open || !ev) return null;
   
   const handleSave = () => {
+    // Pass the full event object back, just with new dates
     onChangeDates(ev.id, { ...ev, start, end });
     onClose();
   };
@@ -124,7 +127,7 @@ export default function EventEditor({ open, clickEvent, ev, onClose, onChangeDat
           type="button"
           className="modal-btn modal-btn-subtle"
           onClick={() => {
-            const url = ev.caseUrl || ev.url || (ev.caseId ? `https.crm.zoho.com/crm/org640578001/tab/Cases/${ev.caseId}` : "");
+            const url = ev.caseUrl || ev.url || (ev.caseId ? `https://crm.zoho.com/crm/org640578001/tab/Cases/${ev.caseId}` : "");
             if (url) window.open(url, "_blank");
           }}
         >
