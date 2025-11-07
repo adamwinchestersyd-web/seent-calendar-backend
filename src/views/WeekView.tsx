@@ -1,6 +1,6 @@
+// CACHE BUST v8
 import React from "react";
-// --- UPDATED: Reverted to original EventPill ---
-import EventPill from "../components/EventPill";
+import EventPill from "../components/EventPill"; // <-- Using the correct pill
 import {
   addDays,
   startOfWeek,
@@ -39,13 +39,19 @@ function useElementWidth(ref: React.RefObject<HTMLDivElement>) {
 
 export default function WeekView({ date, events, onOpenEditor }: Props) {
   const weekStart = startOfWeek(date);
-  const weekEnd = endOfWeek(weekStart);
+  const weekEnd = endOfWeek(weekStart); // This is Sunday
   const days = [...Array(7)].map((_, i) => addDays(weekStart, i));
 
   const segs = React.useMemo(
     () =>
       (events || [])
-        .filter((e) => !(new Date(e.end) < weekStart || new Date(e.start) > weekEnd))
+        // --- UPDATED: Inclusive date filter for Sunday ---
+        .filter((e) => {
+          const start = new Date(e.start);
+          const end = new Date(e.end);
+          // Check if event ends *before* Monday OR starts *after* next Monday
+          return !(end < weekStart || start >= addDays(weekEnd, 1)); 
+        })
         .flatMap((e) => segmentEventAcrossRange(e, weekStart, weekEnd))
         .sort((a, b) => a.start.getTime() - b.start.getTime() || b.span - a.span),
     [events, weekStart, weekEnd]
@@ -55,15 +61,6 @@ const H_GUTTER = 4;
 const V_GUTTER = 2;
 
   const lanes = React.useMemo(() => packLanes(segs), [segs]);
-
-  const singleDayCounts = React.useMemo(() => {
-    const c = Array(7).fill(0);
-    segs.forEach((s) => { if (s.span === 1) c[s.offset]++; });
-    return c;
-  }, [segs]);
-
-  const LANE_GAP = 4;
-  const BAR_MIN = 40;
 
   const laneRefs = React.useMemo(
     () => lanes.map((lane) => lane.map(() => React.createRef<HTMLDivElement>())),
@@ -78,6 +75,8 @@ const V_GUTTER = 2;
   const rowRef = React.useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>;
   const rowWidth = useElementWidth(rowRef);
 
+  const BAR_MIN = 40; // Default height
+  
   React.useLayoutEffect(() => {
     if (!rowWidth) return;
     const raf = requestAnimationFrame(() => {
@@ -86,8 +85,11 @@ const V_GUTTER = 2;
         lane.forEach((_, bi) => {
           const el = laneRefs[li][bi]?.current;
           if (el) {
-            const h = Math.ceil(el.getBoundingClientRect().height);
-            if (h > maxH) maxH = h;
+            const pillEl = el.querySelector('.event-pill') as HTMLDivElement;
+            if (pillEl) {
+              const h = Math.ceil(pillEl.getBoundingClientRect().height);
+              if (h > maxH) maxH = h;
+            }
           }
         });
         return maxH;
@@ -101,7 +103,7 @@ const V_GUTTER = 2;
       if (nextSectionH !== sectionH) setSectionH(nextSectionH);
     });
     return () => cancelAnimationFrame(raf);
-  }, [rowWidth, lanes.length]);
+  }, [rowWidth, lanes, laneRefs]); // Added laneRefs
 
   const laneTops: number[] = [];
   laneHeights.reduce((acc, h, i) => {
@@ -214,21 +216,19 @@ const V_GUTTER = 2;
                   onDragStart={onDragStart(seg)}
                   onDragEnd={onDragEnd}
                   onDoubleClick={beginQuickResize(seg)}
-                  onClick={(evt) => {
+                  onClick={(evt) => { 
                     if (evt.ctrlKey) { beginQuickResize(seg)(evt as any); return; }
                     if (evt) onOpenEditor?.(e, evt);
                   }}
                   title={tooltip}
                 >
-                {/* --- UPDATED: Reverted to original EventPill --- */}
                 <EventPill
                   ev={e}
                   isMultiDay={!isSingle}
                   className={e.colorClass || "event--blue"}
                   style={{ width: "100%", ...e.colour ? {["--c"]: e.colour} : {} }}
-                  onOpenEditor={(ev) => {
-                     const rect = laneRefs[li][bi].current?.getBoundingClientRect();
-                     if (rect) onOpenEditor?.(ev, rect as any);
+                  onOpenEditor={(ev, rect) => {
+                     if (rect) onOpenEditor?.(ev, { clientY: rect.top, clientX: rect.left } as any);
                   }}
                 />
                 </div>

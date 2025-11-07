@@ -33,9 +33,8 @@ app.use(cors({
   maxAge: 600,
 }));
 
-// Use express.json() for pop-ups, but urlencoded for webhooks
 app.use(express.json());
-app.use(express.urlencoded({ extended: true })); // <-- ADD THIS for webhook forms
+app.use(express.urlencoded({ extended: true })); 
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const CASES_PATH = path.join(DATA_DIR, "cases.json");
@@ -50,6 +49,7 @@ const CLIENT_ID     = process.env.ZOHO_CLIENT_ID;
 const CLIENT_SECRET = process.env.ZOHO_CLIENT_SECRET;
 const REDIRECT_URI  = process.env.ZOHO_REDIRECT_URI;
 
+// --- UPDATED: Define all scopes in one place ---
 const ZOHO_FULL_SCOPE = "ZohoCRM.modules.ALL,ZohoCRM.users.READ,ZohoProjects.projects.ALL,ZohoCreator.report.READ,ZohoCreator.form.CREATE";
 const ZOHO_WEBHOOK_SECRET = process.env.ZOHO_WEBHOOK_SECRET; 
 
@@ -94,6 +94,7 @@ const asName = (v) => toStringSafe(v).trim();
 const firstWord = (v) => toStringSafe(v).trim().split(/\s+/)[0] || "";
 
 
+// --- UPDATED: No longer accepts a scope argument ---
 async function getAccessToken() {
   if (!REFRESH_TOKEN) {
     throw new Error("No REFRESH_TOKEN available. Run OAuth with access_type=offline & prompt=consent.");
@@ -109,7 +110,7 @@ async function getAccessToken() {
       client_id: CLIENT_ID,
       client_secret: CLIENT_SECRET,
       grant_type: "refresh_token",
-      scope: ZOHO_FULL_SCOPE, 
+      scope: ZOHO_FULL_SCOPE, // <-- UPDATED: Always use full scope
     }).toString(),
   });
 
@@ -143,7 +144,7 @@ const {
 } = process.env;
 
 async function fetchManualEntries() {
-  const accessToken = await getAccessToken();
+  const accessToken = await getAccessToken(); // <-- UPDATED
   if (!accessToken) return [];
 
   const creatorApiUrl = `https://creator.zoho.com/api/v2/${CREATOR_APP_OWNER}/${CREATOR_APP_NAME}/report/${CREATOR_REPORT_NAME}`;
@@ -154,7 +155,6 @@ async function fetchManualEntries() {
     });
     const data = await res.json();
 
-    // --- UPDATED: Now includes 'State' field ---
     return (data.data || []).map(item => ({
       id: `creator_${item.ID}`, 
       title: item.Title,
@@ -165,9 +165,9 @@ async function fetchManualEntries() {
       caseOwner: item.Owner,
       installer: item.Installer,
       pmNotes: item.PM_Notes,
-      state: item.State || "", // <-- ADDED
+      state: item.State || "", // <-- Reads State
       isManual: true, 
-      colour: '#8b5cf6', // This will be overridden by state color
+      colour: '#8b5cf6', 
       created_time: item.Added_Time, 
       modified_time: item.Modified_Time,
     }));
@@ -178,12 +178,11 @@ async function fetchManualEntries() {
 }
 
 async function createManualEntry(eventData) {
-  const accessToken = await getAccessToken();
+  const accessToken = await getAccessToken(); // <-- UPDATED
   if (!accessToken) return { error: 'Could not get access token' };
 
   const creatorApiUrl = `https://creator.zoho.com/api/v2/${CREATOR_APP_OWNER}/${CREATOR_APP_NAME}/form/${CREATOR_FORM_NAME}`;
 
-  // --- UPDATED: Now includes 'State' field ---
   const body = JSON.stringify({
     data: {
       "Title": eventData.title,
@@ -194,7 +193,7 @@ async function createManualEntry(eventData) {
       "Start_Date": toCreatorDate(eventData.start), 
       "End_Date": toCreatorDate(eventData.end),   
       "Start_Time": eventData.startTime,
-      "State": eventData.state, // <-- ADDED
+      "State": eventData.state, // <-- Saves State
     }
   });
 
@@ -228,11 +227,6 @@ async function createManualEntry(eventData) {
 async function updateProjectsTask(caseData) {
   console.log(`[Projects Sync] Received update for Case ID: ${caseData.case_id}`);
   console.log('[Projects Sync] Data:', caseData);
-
-  // Placeholder for future logic
-  // We would find the matching Task and update it here,
-  // setting its Sync_Source to "crm".
-
   return { success: true };
 }
 
@@ -596,7 +590,7 @@ app.patch("/api/cases/:id", async (req, res) => {
 
     res.json({ ok: true });
   } catch (e) {
-    res.status(500).json({ ok: false, error: String(e) });
+    res.status(5m00).json({ ok: false, error: String(e) });
   }
 });
 
