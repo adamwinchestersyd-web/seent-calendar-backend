@@ -1,5 +1,6 @@
 import React from "react";
-import EventPillWeek from "../components/EventPillWeek.jsx";
+// --- UPDATED: Reverted to original EventPill ---
+import EventPill from "../components/EventPill";
 import {
   addDays,
   startOfMonthGrid,
@@ -19,7 +20,7 @@ type Props = {
 
 const CELL_MIN_H = 112;
 const DATE_PAD = 20;
-const GAP = 4;
+const GAP = 4; // Was 55
 
 type WeekRow = {
   week: Date[];
@@ -205,7 +206,7 @@ const V_GUTTER = 2;
                             top,
                             left: `${left}%`,
                             width: `${width}%`,
-                            padding: `${V_GUTTER}px ${H_GUTTER}px`,  // 👈 gutters included in measurement
+                            padding: `${V_GUTTER}px ${H_GUTTER}px`,
                             boxSizing: "border-box",
                           }}
 
@@ -215,12 +216,21 @@ const V_GUTTER = 2;
                       onDoubleClick={beginQuickResize(seg)}
                       onClick={(evt) => {
                         if (evt.ctrlKey) { beginQuickResize(seg)(evt as any); return; }
-                        // const rect = row.laneRefs[li][bi].current?.getBoundingClientRect(); // No longer needed
-                        if (evt) onOpenEditor?.(e, evt); // Pass the whole event
+                        if (evt) onOpenEditor?.(e, evt);
                       }}
                       title={tooltip}
                     >
-                     <EventPillWeek ev={e} />
+                      {/* --- UPDATED: Reverted to original EventPill --- */}
+                      <EventPill
+                        ev={e}
+                        isMultiDay={!isSingleDay}
+                        className={e.colorClass || "event--blue"}
+                        style={{ width: "100%", ...e.colour ? {["--c"]: e.colour} : {} }}
+                        onOpenEditor={(ev) => {
+                          const rect = row.laneRefs[li][bi].current?.getBoundingClientRect();
+                          if (rect) onOpenEditor?.(ev, rect as any);
+                        }}
+                      />
                     </div>
                   );
                 })

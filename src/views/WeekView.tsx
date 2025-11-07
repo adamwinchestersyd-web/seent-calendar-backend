@@ -1,5 +1,6 @@
 import React from "react";
-import EventPillWeek from "../components/EventPillWeek.jsx";
+// --- UPDATED: Reverted to original EventPill ---
+import EventPill from "../components/EventPill";
 import {
   addDays,
   startOfWeek,
@@ -12,7 +13,7 @@ import {
 type Props = {
   date: Date;
   events: any[];
-  onOpenEditor?: (ev: any, clickEvent: React.MouseEvent) => void; // <-- UPDATED
+  onOpenEditor?: (ev: any, clickEvent: React.MouseEvent) => void;
 };
 
 function useElementWidth(ref: React.RefObject<HTMLDivElement>) {
@@ -49,9 +50,9 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
         .sort((a, b) => a.start.getTime() - b.start.getTime() || b.span - a.span),
     [events, weekStart, weekEnd]
   );
-// at top of WeekView.tsx, near other consts
-const H_GUTTER = 4;   // left/right gap inside each cell
-const V_GUTTER = 2;   // top/bottom gap around each pill
+
+const H_GUTTER = 4;
+const V_GUTTER = 2;
 
   const lanes = React.useMemo(() => packLanes(segs), [segs]);
 
@@ -66,7 +67,6 @@ const V_GUTTER = 2;   // top/bottom gap around each pill
 
   const laneRefs = React.useMemo(
     () => lanes.map((lane) => lane.map(() => React.createRef<HTMLDivElement>())),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [lanes.length]
   );
 
@@ -101,7 +101,6 @@ const V_GUTTER = 2;   // top/bottom gap around each pill
       if (nextSectionH !== sectionH) setSectionH(nextSectionH);
     });
     return () => cancelAnimationFrame(raf);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rowWidth, lanes.length]);
 
   const laneTops: number[] = [];
@@ -205,8 +204,8 @@ const V_GUTTER = 2;   // top/bottom gap around each pill
                         top,
                         left: `${leftPct}%`,
                         width: `${widthPct}%`,
-                        padding: `${V_GUTTER}px ${H_GUTTER}px`,  // 👈 gutters counted in height
-                        boxSizing: "border-box",                // ensure padding reduces inner width
+                        padding: `${V_GUTTER}px ${H_GUTTER}px`,
+                        boxSizing: "border-box",
                         pointerEvents: "auto",
                         zIndex: 2,
                       }}
@@ -215,13 +214,23 @@ const V_GUTTER = 2;   // top/bottom gap around each pill
                   onDragStart={onDragStart(seg)}
                   onDragEnd={onDragEnd}
                   onDoubleClick={beginQuickResize(seg)}
-                  onClick={(evt) => { // <-- UPDATED BLOCK
+                  onClick={(evt) => {
                     if (evt.ctrlKey) { beginQuickResize(seg)(evt as any); return; }
                     if (evt) onOpenEditor?.(e, evt);
                   }}
                   title={tooltip}
                 >
-                <EventPillWeek ev={e} />
+                {/* --- UPDATED: Reverted to original EventPill --- */}
+                <EventPill
+                  ev={e}
+                  isMultiDay={!isSingle}
+                  className={e.colorClass || "event--blue"}
+                  style={{ width: "100%", ...e.colour ? {["--c"]: e.colour} : {} }}
+                  onOpenEditor={(ev) => {
+                     const rect = laneRefs[li][bi].current?.getBoundingClientRect();
+                     if (rect) onOpenEditor?.(ev, rect as any);
+                  }}
+                />
                 </div>
               );
             })
