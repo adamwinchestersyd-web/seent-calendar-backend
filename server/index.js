@@ -535,7 +535,7 @@ app.get("/debug/refresh", async (_req, res) => {
       api_domain: ZOHO_DOMAIN,
     });
   } catch (e) {
-    res.status(500).json({ ok: false, error: String(e) });
+    res.status(500).json({ ok: false, error: String(e) }); // <-- TYPO WAS HERE
   }
 });
 
@@ -626,7 +626,7 @@ app.get("/debug/case/:id/raw", async (req, res) => {
       Installer: row.Installer,
     });
   } catch (e) {
-    res.status(5Example0).json({ error: String(e) });
+    res.status(500).json({ error: String(e) }); // <-- THIS IS THE LINE (629)
   }
 });
 
