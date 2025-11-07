@@ -77,6 +77,7 @@ function createNewEvent() {
     wipManager: "",
     installer: "",
     caseOwner: "",
+    state: "", // <-- Added state
     pmNotes: "",
     isNew: true,
     isManual: true,
@@ -257,7 +258,8 @@ export default function Calendar() {
     if (colourMode === "case") {
       return filtered.map(e => ({ ...e, colour: e.colour || colourForKeyStable(e.caseManager || e.id) }));
     }
-    return filtered.map(e => ({ ...e, colour: e.colour || STATE_COLOURS[e.state] || STATE_COLOURS.Other }));
+    // Prioritize manual event color, then state color
+    return filtered.map(e => ({ ...e, colour: e.isManual ? (STATE_COLOURS[e.state] || e.colour) : (STATE_COLOURS[e.state] || STATE_COLOURS.Other) }));
   }, [filtered, colourMode]);
 
   // --- UPDATED: Editor state now includes a 'mode' ---
@@ -337,7 +339,8 @@ export default function Calendar() {
     if (isNew) {
       try {
         await saveEvent(updatedEventData);
-        setEvents(prev => [...prev, normalizeEvent(updatedEventData)]);
+        // We now reload all data to get the new event from the server
+        await loadData("manual-save"); 
         push({ message: `Event "${updatedEventData.title}" created.`, timeoutMs: 3000 });
       } catch (e) {
         push({ message: `Failed to create event: ${e.message}`, timeoutMs: 4000 });
@@ -378,7 +381,7 @@ export default function Calendar() {
       setEvents(prevEvents => prevEvents.map(e => (e.id === id ? prev : e)));
       push({ message: `Failed to save changes: ${e.message}`, timeoutMs: 4000 });
     }
-  }, [events, push, api]);
+  }, [events, push, api, loadData]); // Added loadData
 
   // Reset filters
   const handleReset = React.useCallback(() => {
@@ -398,13 +401,13 @@ export default function Calendar() {
       <WeekView
         date={date}
         events={colouredEvents}
-        onOpenEditor={handleOpenEditor} // <-- UPDATED
+        onOpenEditor={handleOpenEditor}
       />
     ) : (
       <MonthView
         date={date}
         events={colouredEvents}
-        onOpenEditor={handleOpenEditor} // <-- UPDATED
+        onOpenEditor={handleOpenEditor}
       />
     );
 
@@ -416,8 +419,7 @@ export default function Calendar() {
         date={date}
         onNav={onNav}
         onAddNew={handleAddNew}
-        onRefresh={() => callAdmin("/api/cases/refresh", "Refresh")}
-        onPurge={() => callAdmin("/api/cases/purge", "Purge")}
+        onRefresh={() => loadData("manual_refresh")} // <-- UPDATED
       />
 
       <FiltersBar
@@ -436,8 +438,6 @@ export default function Calendar() {
       />
 
       <div className="flex-1">{viewNode}</div>
-
-      {/* --- UPDATED: Conditionally render the correct editor --- */}
       
       {/* 1. Read-only Editor for CRM Cases */}
       {editor.open && editor.mode === 'view' && (
@@ -463,6 +463,7 @@ export default function Calendar() {
           wipOptions={wipOptions}
           installerOptions={installerOptions}
           ownerOptions={ownerOptions}
+          stateOptions={stateOptions} // <-- PASS STATE OPTIONS
         />
       )}
     </div>

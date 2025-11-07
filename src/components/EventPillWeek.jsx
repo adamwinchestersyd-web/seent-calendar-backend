@@ -19,15 +19,16 @@ export default function EventPillWeek({ ev }) {
   const containerStyle = {
     display: "flex",
     flexDirection: "column",
+    gap: 2,
     width: "100%",
     // colours from event.colour (already mapped on server or by state)
     background: ev.colour || "#3b82f6",
     color: "white",
     borderRadius: 8,
     padding: "6px 8px",
-    // ensure max-height ~ 3 lines; line-height ≈ 1.2em → 3 * 1.2em ~= 3.6em
     lineHeight: 1.2,
-    maxHeight: isMultiDay ? "none" : "3.6em",
+    // --- MAXHEIGHT REMOVED ---
+    // This will now default to the 4-line limit in your calendar.css
   };
 
   const titleStyle = { fontWeight: 600, ...clampStyle(1) };

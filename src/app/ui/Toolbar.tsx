@@ -95,7 +95,7 @@ export default function Toolbar({
   onViewChange,
   date,
   onNav,
-  onAddNew, // <-- Added prop
+  onAddNew,
   onRefresh,
   onPurge,
 }: Props) {
@@ -126,11 +126,10 @@ export default function Toolbar({
 
         {/* Right: actions + view toggles */}
         <div style={styles.right}>
-          {/* REFRESH AND PURGE BUTTONS REMOVED */}
-          {/* {onRefresh && <Btn title="Refresh from Zoho" onClick={onRefresh}>Refresh</Btn>} */}
-          {/* {onPurge && <Btn title="Purge local cache" onClick={onPurge}>Purge</Btn>} */}
-
-          {/* "ADD NEW" BUTTON ADDED */}
+          
+          {/* --- REFRESH BUTTON RE-ADDED --- */}
+          {onRefresh && <Btn title="Refresh from Zoho" onClick={onRefresh}>Refresh</Btn>}
+          
           <Btn title="Add New Manual Entry" onClick={onAddNew}>Add New</Btn>
 
           <Btn active={view === "day"} onClick={() => onViewChange("day")}>Day</Btn>
