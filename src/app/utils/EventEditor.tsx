@@ -1,3 +1,4 @@
+// CACHE BUST v3
 import React from "react";
 
 type Props = {
@@ -68,7 +69,7 @@ export default function EventEditor({ open, clickEvent, ev, onClose, onChangeDat
     ...positionStyle,
     width: 380,
     background: "#ffffff",
-    borderTop: '6px solid #22c55e',
+    borderTop: '6px solid #22c55e', // <-- ADDED GREEN LINE
     color: textColor,
     border: `1px solid ${borderColor}`,
     borderRadius: 12,

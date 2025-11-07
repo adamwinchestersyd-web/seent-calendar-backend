@@ -1,3 +1,4 @@
+// CACHE BUST v3
 import React from "react";
 
 type Props = {
@@ -11,7 +12,7 @@ type Props = {
   ownerOptions: string[];
 };
 
-// --- UPDATED: This hook now positions the "Add New" modal simply ---
+// This hook is updated to fix the "Add New" positioning
 function usePopupPosition(clickEvent: React.MouseEvent | null) {
   const ref = React.useRef<HTMLDivElement>(null);
   const [pos, setPos] = React.useState<React.CSSProperties>({
@@ -136,9 +137,9 @@ export default function ManualEntryEditor({
     ...positionStyle, // Apply the calculated position here
     width: 380,
     background: "#ffffff",
+    borderTop: '6px solid #22c55e', // <-- ADDED GREEN LINE
     color: textColor,
     border: `1px solid ${borderColor}`,
-    borderTop: '6px solid #22c55e',
     borderRadius: 12,
     boxShadow: "0 12px 32px rgba(0,0,0,.22)",
     padding: 18,
