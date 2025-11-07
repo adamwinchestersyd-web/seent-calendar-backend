@@ -497,7 +497,7 @@ app.post("/api/cases/purge", async (_req, res) => {
 // Inspect raw keys & the three lookups for one record from the cache
 app.get("/debug/case/:id/raw", (req, res) => {
   const ev = CASES_CACHE.events.find(e => e.id === req.params.id);
-  if (!ev) return res.status(4ZOHO_DOMAIN4).json({ error: "not found", id: req.params.id });
+  if (!ev) return res.status(404).json({ error: "not found", id: req.params.id }); // <-- TYPO WAS HERE
 
   // We don't have raw Zoho rows in cache, so fetch a fresh record straight from Zoho:
   (async () => {
@@ -625,7 +625,7 @@ app.get("/debug/case/:id/raw", async (req, res) => {
       Installer: row.Installer,
     });
   } catch (e) {
-    res.status(500).json({ error: String(e) });
+    res.status(500).json({ error: String(e) }); 
   }
 });
 
