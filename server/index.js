@@ -17,17 +17,14 @@ function parseAllowlist(raw) {
     .filter(Boolean);
 }
 
-const allowList = parseAllowlist(process.env.FRONTEND_ORIGIN) // e.g. "http://localhost:5173,https://dev.adamwinchester.com"
+const allowList = parseAllowlist(process.env.FRONTEND_ORIGIN)
 const devFallback = "http://localhost:5173";
 if (allowList.length === 0) allowList.push(devFallback);
 
 app.use(cors({
   origin: (origin, cb) => {
-    // origin may be undefined for curl or same-origin requests
     if (!origin) return cb(null, true);
-    // exact match on allowed list
     if (allowList.includes(origin)) return cb(null, true);
-    // optionally allow localhost:5173 in dev even if not listed
     if (origin.startsWith("http://localhost:5173")) return cb(null, true);
     return cb(new Error(`Not allowed by CORS: ${origin}`));
   },
@@ -36,12 +33,14 @@ app.use(cors({
   maxAge: 600,
 }));
 
+// Use express.json() for pop-ups, but urlencoded for webhooks
 app.use(express.json());
+app.use(express.urlencoded({ extended: true })); // <-- ADD THIS for webhook forms
+
 const DATA_DIR = path.join(process.cwd(), "data");
 const CASES_PATH = path.join(DATA_DIR, "cases.json");
-const CACHE_TTL_MS = 5 * 60 * 1000; // serve instantly; refresh separately
 const PRUNE_DAYS = 30;
-const ZOHO_ORG_ID = process.env.ZOHO_ORG_ID || "org640578001"; // <-- put the real org id here or in .env
+const ZOHO_ORG_ID = process.env.ZOHO_ORG_ID || "org640578001"; 
 
 // ---- Zoho OAuth config + in-memory tokens -----------------------
 const ACCOUNTS_HOST = process.env.ZOHO_ACCOUNTS_HOST || "https://accounts.zoho.com";
@@ -52,6 +51,7 @@ const CLIENT_SECRET = process.env.ZOHO_CLIENT_SECRET;
 const REDIRECT_URI  = process.env.ZOHO_REDIRECT_URI;
 
 const ZOHO_FULL_SCOPE = "ZohoCRM.modules.ALL,ZohoCRM.users.READ,ZohoProjects.projects.ALL,ZohoCreator.report.READ,ZohoCreator.form.CREATE";
+const ZOHO_WEBHOOK_SECRET = process.env.ZOHO_WEBHOOK_SECRET; // <-- NEW: Load secret
 
 let REFRESH_TOKEN     = process.env.ZOHO_REFRESH_TOKEN || null;
 let ACCESS_TOKEN      = null;
@@ -64,20 +64,16 @@ function toYMD(v) {
   return Number.isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
 }
 
-// --- NEW: Helper to format date for Creator ---
 function toCreatorDate(ymdString) {
   if (!ymdString) return "";
-  const d = new Date(ymdString); // Parses YYYY-MM-DD
+  const d = new Date(ymdString); 
   if (Number.isNaN(d.getTime())) return "";
-
   const day = String(d.getDate()).padStart(2, '0');
-  const month = d.toLocaleString('en-US', { month: 'short' }); // e.g., "Nov"
+  const month = d.toLocaleString('en-US', { month: 'short' });
   const year = d.getFullYear();
-  
-  return `${day}-${month}-${year}`; // e.g., 07-Nov-2025
+  return `${day}-${month}-${year}`; 
 }
 
-// Return the display string for a Zoho lookup or string field
 const toStringSafe = (v) => {
   if (v == null) return "";
   if (Array.isArray(v)) return toStringSafe(v[0]);
@@ -138,7 +134,7 @@ async function getAccessToken() {
 // -----------------------------------------------------------------
 
 
-// --- ZOHO CREATOR HELPERS (NEW) ---
+// --- ZOHO CREATOR HELPERS ---
 const { 
   CREATOR_APP_OWNER, 
   CREATOR_APP_NAME, 
@@ -146,9 +142,6 @@ const {
   CREATOR_REPORT_NAME 
 } = process.env;
 
-/**
- * Fetches all records from the Creator "All_Manual_Entries" report.
- */
 async function fetchManualEntries() {
   const accessToken = await getAccessToken();
   if (!accessToken) return [];
@@ -161,12 +154,11 @@ async function fetchManualEntries() {
     });
     const data = await res.json();
 
-    // Map Creator fields to our standard event fields
     return (data.data || []).map(item => ({
       id: `creator_${item.ID}`, 
       title: item.Title,
-      start: item.Start_Date ? toYMD(item.Start_Date) : '', // Convert dd-MMM-yyyy to YYYY-MM-DD
-      end: item.End_Date ? toYMD(item.End_Date) : '',     // Convert dd-MMM-yyyy to YYYY-MM-DD
+      start: item.Start_Date ? toYMD(item.Start_Date) : '', 
+      end: item.End_Date ? toYMD(item.End_Date) : '',     
       startTime: item.Start_Time,
       wipManager: item.WIP_Manager,
       caseOwner: item.Owner,
@@ -183,16 +175,12 @@ async function fetchManualEntries() {
   }
 }
 
-/**
- * Creates a new record in the Creator "Manual_Entry" form.
- */
 async function createManualEntry(eventData) {
   const accessToken = await getAccessToken();
   if (!accessToken) return { error: 'Could not get access token' };
 
   const creatorApiUrl = `https://creator.zoho.com/api/v2/${CREATOR_APP_OWNER}/${CREATOR_APP_NAME}/form/${CREATOR_FORM_NAME}`;
 
-  // --- UPDATED: Apply date formatting ---
   const body = JSON.stringify({
     data: {
       "Title": eventData.title,
@@ -200,8 +188,8 @@ async function createManualEntry(eventData) {
       "Owner": eventData.caseOwner,
       "Installer": eventData.installer,
       "PM_Notes": eventData.pmNotes,
-      "Start_Date": toCreatorDate(eventData.start), // <-- FIX
-      "End_Date": toCreatorDate(eventData.end),   // <-- FIX
+      "Start_Date": toCreatorDate(eventData.start), 
+      "End_Date": toCreatorDate(eventData.end),   
       "Start_Time": eventData.startTime,
     }
   });
@@ -230,6 +218,52 @@ async function createManualEntry(eventData) {
   }
 }
 // -----------------------------------------------------------------
+
+
+// --- ZOHO PROJECTS HELPER (NEW) ---
+async function updateProjectsTask(caseData) {
+  // caseData will contain { case_id, install_start, install_end, ... }
+  console.log(`[Projects Sync] Received update for Case ID: ${caseData.case_id}`);
+  
+  // 1. FIND THE PROJECT
+  // We need logic to find the correct Project (or Task) associated with this Case.
+  // For now, we'll just log the data.
+  console.log('[Projects Sync] Data:', caseData);
+
+  // 2. GET ACCESS TOKEN
+  // const accessToken = await getAccessToken();
+  // if (!accessToken) throw new Error("Could not get token for Projects");
+
+  // 3. FIND/UPDATE TASK
+  // const portalId = "YOUR_PORTAL_ID"; // We need this
+  // const projectId = "YOUR_PROJECT_ID"; // We need to find this
+  // const taskId = "YOUR_TASK_ID"; // We need to find this
+  // const projectsApiUrl = `https://projects.zoho.com/restapi/portal/${portalId}/projects/${projectId}/tasks/${taskId}/`;
+  
+  // const body = JSON.stringify({
+  //   "task": {
+  //     "start_date": caseData.install_start,
+  //     "end_date": caseData.install_end,
+  //     "owner": caseData.wip_manager_id, 
+  //     "custom_fields": {
+  //       "Sync_Source": "crm" // This is the loop protection
+  //     }
+  //   }
+  // });
+  
+  // const res = await fetch(projectsApiUrl, {
+  //   method: 'POST',
+  //   headers: {
+  //     'Authorization': `Zoho-oauthtoken ${accessToken}`,
+  //     'Content-Type': 'application/json',
+  //   },
+  //   body: body,
+  // });
+  // const data = await res.json();
+  // console.log('[Projects Sync] Update result:', data);
+
+  return { success: true };
+}
 
 
 // in-memory snapshot
@@ -262,7 +296,6 @@ function pruneOld(events) {
   });
 }
 
-// ---- your existing Zoho fetch for cases (use the working call you have) ----
 // ----- State → colour map (match your Zoho picklist dots) -----
 const STATE_COLOURS = {
   VIC: "#666666", // grey
@@ -371,11 +404,9 @@ async function persistCache() {
 }
 
 // --- UPDATED refreshCases ---
-// refresh job (pull from Zoho CRM AND Creator → prune → save)
 async function refreshCases(reason = "manual") {
   console.log(`[cases] refresh starting (${reason})`);
   try {
-    // Fetch both data sources in parallel
     const [crmCases, manualEntries] = await Promise.all([
       fetchCasesFromZoho(),
       fetchManualEntries()
@@ -384,12 +415,9 @@ async function refreshCases(reason = "manual") {
     console.log(`[cases] Fetched ${crmCases.length} CRM cases.`);
     console.log(`[cases] Fetched ${manualEntries.length} Creator entries.`);
 
-    // Prune old CRM cases
     const prunedCrm = pruneOld(crmCases);
-    // Prune old Creator entries
     const prunedCreator = pruneOld(manualEntries);
 
-    // Merge and update cache
     CASES_CACHE.events = [...prunedCrm, ...prunedCreator];
     await persistCache();
     
@@ -401,7 +429,7 @@ async function refreshCases(reason = "manual") {
   }
 }
 
-// Exchange auth code -> refresh token (visit the auth URL first)
+// Exchange auth code -> refresh token
 app.get("/oauth/callback", async (req, res) => {
   const { code } = req.query;
   if (!code) return res.status(400).send("Missing ?code param");
@@ -557,14 +585,13 @@ app.get("/debug/ping", async (_req, res) => {
     const body = await r.text();
     res.status(r.status).send(body);
   } catch (e) {
-    res.status(500).send(String(e));
+    res.status(5D0).send(String(e));
   }
 });
 
 app.get("/healthz", (req, res) => res.json({ ok: true }));
 
 // ---- API: optimistic update from UI ----
-// e.g. user drags/resizes → update local JSON immediately
 app.patch("/api/cases/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -604,13 +631,47 @@ app.post("/api/manual-entry", async (req, res) => {
   const result = await createManualEntry(eventData);
 
   if (result.success) {
-    // Refresh cache in the background so the new item appears
     refreshCases("post-create");
     res.status(201).json({ status: 'success', id: result.id });
   } else {
     res.status(500).json({ error: 'Failed to create manual entry', details: result.details });
   }
 });
+
+// --- NEW WEBHOOK ENDPOINT for CRM ---
+app.post("/api/webhook/crm-case-updated", async (req, res) => {
+  console.log('[Webhook CRM] Received a request...');
+
+  // 1. Check security
+  const secret = req.headers['x-webhook-secret'];
+  if (!ZOHO_WEBHOOK_SECRET || secret !== ZOHO_WEBHOOK_SECRET) {
+    console.warn('[Webhook CRM] Failed security check. Invalid secret.');
+    return res.status(401).send('Unauthorized');
+  }
+
+  // 2. Get data (Zoho sends as form-data)
+  const data = req.body;
+  
+  // 3. Check for loops
+  // If the 'sync_source' is 'projects', this change came from Projects.
+  // We must NOT send it back, or we'll start an infinite loop.
+  if (data.sync_source === 'projects') {
+    console.log(`[Webhook CRM] Loop protection: Ignoring update for Case ${data.case_id} (source=projects).`);
+    return res.status(200).send('Loop prevented');
+  }
+
+  // 4. Process the update
+  try {
+    console.log(`[Webhook CRM] Processing update for Case ${data.case_id}...`);
+    // This function will eventually push the update to Projects
+    await updateProjectsTask(data);
+    res.status(200).send('Webhook received');
+  } catch (e) {
+    console.error(`[Webhook CRM] Error processing update for Case ${data.case_id}:`, e.message);
+    res.status(500).send('Error processing webhook');
+  }
+});
+
 
 app.get("/debug/case/:id", (_req, res) => {
   const { id } = _req.params;
