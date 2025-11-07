@@ -51,6 +51,9 @@ const CLIENT_ID     = process.env.ZOHO_CLIENT_ID;
 const CLIENT_SECRET = process.env.ZOHO_CLIENT_SECRET;
 const REDIRECT_URI  = process.env.ZOHO_REDIRECT_URI;
 
+// --- UPDATED: Define all scopes in one place ---
+const ZOHO_FULL_SCOPE = "ZohoCRM.modules.ALL,ZohoCRM.users.READ,ZohoProjects.projects.ALL,ZohoCreator.report.READ,ZohoCreator.form.CREATE";
+
 let REFRESH_TOKEN     = process.env.ZOHO_REFRESH_TOKEN || null;
 let ACCESS_TOKEN      = null;
 let ACCESS_EXPIRES_AT = 0;
@@ -83,8 +86,8 @@ const asName = (v) => toStringSafe(v).trim();
 const firstWord = (v) => toStringSafe(v).trim().split(/\s+/)[0] || "";
 
 
-// --- UPDATED to accept scope ---
-async function getAccessToken(scope) {
+// --- UPDATED: No longer accepts a scope argument ---
+async function getAccessToken() {
   if (!REFRESH_TOKEN) {
     throw new Error("No REFRESH_TOKEN available. Run OAuth with access_type=offline & prompt=consent.");
   }
@@ -99,7 +102,7 @@ async function getAccessToken(scope) {
       client_id: CLIENT_ID,
       client_secret: CLIENT_SECRET,
       grant_type: "refresh_token",
-      scope: scope, // <-- UPDATED
+      scope: ZOHO_FULL_SCOPE, // <-- UPDATED: Always use full scope
     }).toString(),
   });
 
@@ -138,9 +141,7 @@ const {
  * Fetches all records from the Creator "All_Manual_Entries" report.
  */
 async function fetchManualEntries() {
-  // --- UPDATED: Using granular scope ---
-  const scope = 'ZohoCreator.report.READ';
-  const accessToken = await getAccessToken(scope);
+  const accessToken = await getAccessToken(); // <-- UPDATED: No scope
   if (!accessToken) return [];
 
   const creatorApiUrl = `https://creator.zoho.com/api/v2/${CREATOR_APP_OWNER}/${CREATOR_APP_NAME}/report/${CREATOR_REPORT_NAME}`;
@@ -177,9 +178,7 @@ async function fetchManualEntries() {
  * Creates a new record in the Creator "Manual_Entry" form.
  */
 async function createManualEntry(eventData) {
-  // --- UPDATED: Using granular scope ---
-  const scope = 'ZohoCreator.form.CREATE';
-  const accessToken = await getAccessToken(scope);
+  const accessToken = await getAccessToken(); // <-- UPDATED: No scope
   if (!accessToken) return { error: 'Could not get access token' };
 
   const creatorApiUrl = `https://creator.zoho.com/api/v2/${CREATOR_APP_OWNER}/${CREATOR_APP_NAME}/form/${CREATOR_FORM_NAME}`;
@@ -272,7 +271,7 @@ const STATE_COLOURS = {
 
 // ----- Fetch from Zoho with the exact API names you gave -----
 async function fetchCasesFromZoho() {
-  const token = await getAccessToken("ZohoCRM.modules.ALL,ZohoCRM.users.READ"); // <-- UPDATED
+  const token = await getAccessToken(); // <-- UPDATED: No scope
 
   const fields = [
     "id",
@@ -428,7 +427,7 @@ app.get("/oauth/callback", async (req, res) => {
 // Force a refresh and show a trimmed token + expiry
 app.get("/debug/refresh", async (req, res) => {
   try {
-    const tok = await getAccessToken("ZohoCRM.users.READ"); // <-- UPDATED
+    const tok = await getAccessToken(); // <-- UPDATED: No scope
     res.json({
       ok: true,
       access_token_trim: tok ? tok.slice(0, 12) + "…" : null,
@@ -444,7 +443,7 @@ app.get("/debug/refresh", async (req, res) => {
 
 app.get("/debug/ping", async (req, res) => {
   try {
-    const token = await getAccessToken("ZohoCRM.users.READ"); // <-- UPDATED
+    const token = await getAccessToken(); // <-- UPDATED: No scope
     const r = await fetch(`${ZOHO_DOMAIN}/crm/v2/users`, {
       headers: { Authorization: `Zoho-oauthtoken ${token}` },
     });
@@ -498,12 +497,12 @@ app.post("/api/cases/purge", async (_req, res) => {
 // Inspect raw keys & the three lookups for one record from the cache
 app.get("/debug/case/:id/raw", (req, res) => {
   const ev = CASES_CACHE.events.find(e => e.id === req.params.id);
-  if (!ev) return res.status(404).json({ error: "not found", id: req.params.id });
+  if (!ev) return res.status(4ZOHO_DOMAIN4).json({ error: "not found", id: req.params.id });
 
   // We don't have raw Zoho rows in cache, so fetch a fresh record straight from Zoho:
   (async () => {
     try {
-      const token = await getAccessToken("ZohoCRM.modules.Cases.READ"); // <-- UPDATED
+      const token = await getAccessToken(); // <-- UPDATED: No scope
       const r = await fetch(`${ZOHO_DOMAIN}/crm/v2/Cases/${req.params.id}`, {
         headers: { Authorization: `Zoho-oauthtoken ${token}` }
       });
@@ -525,7 +524,7 @@ app.get("/debug/case/:id/raw", (req, res) => {
 // Token probe
 app.get("/debug/refresh", async (_req, res) => {
   try {
-    const tok = await getAccessToken("ZohoCRM.users.READ"); // <-- UPDATED
+    const tok = await getAccessToken(); // <-- UPDATED: No scope
     res.json({
       ok: true,
       access_token_trim: tok ? tok.slice(0, 12) + "…" : null,
@@ -535,14 +534,14 @@ app.get("/debug/refresh", async (_req, res) => {
       api_domain: ZOHO_DOMAIN,
     });
   } catch (e) {
-    res.status(500).json({ ok: false, error: String(e) }); // <-- TYPO WAS HERE
+    res.status(500).json({ ok: false, error: String(e) });
   }
 });
 
 // Lightweight Zoho ping
 app.get("/debug/ping", async (_req, res) => {
   try {
-    const token = await getAccessToken("ZohoCRM.users.READ"); // <-- UPDATED
+    const token = await getAccessToken(); // <-- UPDATED: No scope
     const r = await fetch(`${ZOHO_DOMAIN}/crm/v2/users`, {
       headers: { Authorization: `Zoho-oauthtoken ${token}` },
     });
@@ -612,7 +611,7 @@ app.get("/debug/case/:id", (_req, res) => {
 
 app.get("/debug/case/:id/raw", async (req, res) => {
   try {
-    const token = await getAccessToken("ZohoCRM.modules.Cases.READ"); // <-- UPDATED
+    const token = await getAccessToken(); // <-- UPDATED: No scope
     const r = await fetch(`${ZOHO_DOMAIN}/crm/v2/Cases/${req.params.id}`, {
       headers: { Authorization: `Zoho-oauthtoken ${token}` },
     });
@@ -626,7 +625,7 @@ app.get("/debug/case/:id/raw", async (req, res) => {
       Installer: row.Installer,
     });
   } catch (e) {
-    res.status(500).json({ error: String(e) }); // <-- THIS IS THE LINE (629)
+    res.status(500).json({ error: String(e) });
   }
 });
 
