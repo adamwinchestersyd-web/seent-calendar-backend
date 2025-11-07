@@ -5,7 +5,6 @@ type Props = {
   clickEvent?: React.MouseEvent | null;
   ev?: any;
   onClose: () => void;
-  // This prop is changed to pass the whole event object back
   onChangeDates: (id: string, eventData: any) => void;
 };
 
@@ -80,6 +79,8 @@ export default function EventEditor({ open, clickEvent, ev, onClose, onChangeDat
 
   const row: React.CSSProperties = { display: "flex", gap: 12, alignItems: "center" };
   const label: React.CSSProperties = { fontSize: 13, width: 110, color: "#1f2937", opacity: 0.9 };
+  
+  // --- UPDATED: Added colorScheme ---
   const input: React.CSSProperties = {
     flex: 1,
     height: 36,
@@ -88,6 +89,7 @@ export default function EventEditor({ open, clickEvent, ev, onClose, onChangeDat
     border: `1px solid ${borderColor}`,
     background: "#fff",
     color: textColor,
+    colorScheme: 'light', // <-- FIX: Forces dark text on date fields
   };
 
   const baseBtn: React.CSSProperties = {

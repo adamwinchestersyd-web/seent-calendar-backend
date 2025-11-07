@@ -11,7 +11,7 @@ type Props = {
   ownerOptions: string[];
 };
 
-// This hook is updated to fix the "Add New" positioning
+// --- UPDATED: This hook now positions the "Add New" modal simply ---
 function usePopupPosition(clickEvent: React.MouseEvent | null) {
   const ref = React.useRef<HTMLDivElement>(null);
   const [pos, setPos] = React.useState<React.CSSProperties>({
@@ -32,8 +32,8 @@ function usePopupPosition(clickEvent: React.MouseEvent | null) {
     if (!clickEvent) {
       // --- "Add New" Mode (No Click) ---
       // Position it at the top-center of the current scroll view
-      y = window.scrollY + (window.innerHeight / 2) - (pop.height / 2);
-      x = (vw / 2) - (pop.width / 2);
+      y = window.scrollY + 50; // 50px from the top of the viewport
+      x = (vw / 2) - (pop.width / 2); // Centered horizontally
     } else {
       // --- Click Mode ---
       // Calculate Y position relative to the PAGE (including scroll)
@@ -148,6 +148,7 @@ export default function ManualEntryEditor({
   const row: React.CSSProperties = { display: "flex", gap: 12, alignItems: "center" };
   const label: React.CSSProperties = { fontSize: 13, width: 110, color: "#1f2937", opacity: 0.9 };
   
+  // --- UPDATED: Added colorScheme ---
   const input: React.CSSProperties = {
     flex: 1,
     height: 36,
@@ -156,6 +157,7 @@ export default function ManualEntryEditor({
     border: `1px solid ${borderColor}`,
     background: "#fff",
     color: textColor, 
+    colorScheme: 'light', // <-- FIX: Forces dark text on all fields
   };
   const textArea: React.CSSProperties = {
     ...input,
