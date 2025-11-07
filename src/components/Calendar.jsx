@@ -77,7 +77,7 @@ function createNewEvent() {
     wipManager: "",
     installer: "",
     caseOwner: "",
-    state: "", // <-- Added state
+    state: "", 
     pmNotes: "",
     isNew: true,
     isManual: true,
@@ -159,6 +159,7 @@ export default function Calendar() {
   // Load + normalize data from API
   const api = import.meta.env.VITE_API_URL || "";
 
+  // --- UPDATED: Added push notifications ---
   const loadData = React.useCallback(async (reason = "init") => {
     if (reason === "init") setLoading(true);
     if (reason === "manual_refresh") setBusy(true); // Show visual feedback for refresh
@@ -182,16 +183,23 @@ export default function Calendar() {
       
       setEvents(list.map(normalizeEvent));
       console.log("[Calendar] Data loaded successfully.");
+
+      // --- ADDED: Success notification ---
       if (reason === "manual_refresh") {
-        push({ message: `Refresh complete`, timeoutMs: 2500 });
+        push({ message: `Refresh complete. Loaded ${list.length} events.`, timeoutMs: 2500 });
       }
 
     } catch (e) {
       console.error("[Calendar] Load failed:", e);
       setError(String(e));
       setEvents([]);
+      
+      // --- ADDED: Error notification ---
+      if (reason === "manual_refresh") {
+        push({ message: `Refresh failed: ${e.message}`, timeoutMs: 4000 });
+      }
     } finally {
-      setLoading(false);
+      if (reason === "init") setLoading(false);
       if (reason === "manual_refresh") setBusy(false);
     }
   }, [api, push]); // Added `push`

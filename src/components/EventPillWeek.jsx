@@ -10,14 +10,9 @@ const clampStyle = (lines) => ({
 });
 
 export default function EventPillWeek({ ev }) {
-  // --- STYLING REMOVED ---
-  // We now use the 'event-pill' class from calendar.css
-  // to ensure the 4-line limit is respected.
-
+  // 1 line for title, 1 for meta, 2 for notes = 4 lines total
   const titleStyle = { fontWeight: 600, ...clampStyle(1) };
   const metaStyle  = { opacity: 0.9, fontSize: 12, ...clampStyle(1) };
-  
-  // Use 2 lines for notes to fit within the 4-line total
   const notesStyle = { opacity: 0.9, fontSize: 12, ...clampStyle(2) };
 
   const wip = ev.wipManager || "";
@@ -25,16 +20,20 @@ export default function EventPillWeek({ ev }) {
   const own = ev.caseOwner || "";
   const line2 = [wip, ins, own].filter(Boolean).join(" | ");
 
-  // The custom --c variable is for the background color
-  const cssVars = ev.colour ? { ["--c"]: ev.colour } : {};
+  // Get the background color from the event
+  const colorStyle = {
+    background: ev.colour || "#3b82f6",
+  };
 
   return (
     <div 
       className="event-pill" 
-      style={cssVars} 
+      style={colorStyle} // Apply background color
       title={ev.title}
     >
-      <div className="event__fill" />
+      {/* The original CSS file uses event__fill, so we keep it for the gradient */}
+      <div className="event__fill" style={{ background: ev.colour || "#3b82f6" }} /> 
+      
       <div className="event__label">
         <div style={titleStyle}>{ev.title}</div>
         {line2 && <div style={metaStyle}>{line2}</div>}
