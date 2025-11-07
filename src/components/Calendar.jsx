@@ -10,8 +10,10 @@ import DayView from "../views/DayView";
 import Toolbar from "../app/ui/Toolbar";
 import FiltersBar from "../filters/FiltersBar";
 
-// Editor + toast
-import EventEditor from "../app/utils/EventEditor";
+// --- UPDATED: Import both editors ---
+import EventEditor from "../app/utils/EventEditor"; // The read-only one
+import ManualEntryEditor from "../app/utils/ManualEntryEditor"; // The editable one
+
 import { useToast } from "../app/utils/useToast";
 
 /* ---------------- helpers ---------------- */
@@ -22,7 +24,6 @@ function first(obj, keys, fallback = undefined) {
   return fallback;
 }
 
-// like first(), but ignores '' and '   '
 function firstNonEmpty(obj, keys, fallback = undefined) {
   for (const k of keys) {
     if (!obj) continue;
@@ -34,7 +35,6 @@ function firstNonEmpty(obj, keys, fallback = undefined) {
   return fallback;
 }
 
-// Normalize Zoho lookup (object or string) to a plain string name.
 function asName(v) {
   if (!v) return "";
   if (typeof v === "string") return v.trim();
@@ -69,7 +69,7 @@ function toYMD(input) {
 function createNewEvent() {
   const today = new Date().toISOString().slice(0, 10);
   return {
-    id: `new_${Date.now()}`, // Temporary ID for a new event
+    id: `new_${Date.now()}`,
     title: "",
     start: today,
     end: today,
@@ -78,7 +78,7 @@ function createNewEvent() {
     installer: "",
     caseOwner: "",
     pmNotes: "",
-    isNew: true, // Flag to identify new manual entries
+    isNew: true,
     isManual: true,
   };
 }
@@ -87,7 +87,6 @@ function normalizeEvent(raw, idx = 0) {
   const id = String(firstNonEmpty(raw, ["id", "Id", "ID", "_id"], `evt-${idx}`));
   const title = String(firstNonEmpty(raw, ["title", "Subject", "name", "Title"], "Untitled"));
 
-  // Dates from Zoho (fallback end → start)
   const start = toYMD(firstNonEmpty(raw, [
     "start", "Install_Date", "startDate", "StartDate", "dateStart", "start_date"
   ]));
@@ -95,10 +94,9 @@ function normalizeEvent(raw, idx = 0) {
     "end", "Install_End_Date", "endDate", "EndDate", "dateEnd", "end_date"
   ]) || start);
 
-  // Names / labels — use firstNonEmpty so empty strings don’t mask real values
   const wipManager = asName(firstNonEmpty(raw, ["wipManager", "WIP_Manager1", "WIP", "wip"]));
   const installer = asName(firstNonEmpty(raw, ["installer", "Installer", "WIP_Manager", "tech", "Technician"]));
-  const caseOwner = firstWord(firstNonEmpty(raw, ["caseOwner", "Owner", "owner"])); // <-- USES firstWord
+  const caseOwner = firstWord(firstNonEmpty(raw, ["caseOwner", "Owner", "owner"]));
 
   const pmNotesRaw = first(raw, ["pmNotes", "Description", "notes", "Notes"]) || "";
   const pmNotes = (typeof pmNotesRaw === "string" ? pmNotesRaw : String(pmNotesRaw)).slice(0, 200);
@@ -110,7 +108,6 @@ function normalizeEvent(raw, idx = 0) {
   const state = firstNonEmpty(raw, ["state", "State", "jobState", "region", "Region"]) || "";
   const caseManager = firstNonEmpty(raw, ["caseManager", "CaseManager", "manager", "Manager"]) || "";
 
-  // Keep colour if server already set one; otherwise we assign below
   const colour = firstNonEmpty(raw, ["colour", "color", "colourHex", "Color"]);
   const colorClass = firstNonEmpty(raw, ["colorClass", "className"], "event--blue");
 
@@ -121,6 +118,7 @@ function normalizeEvent(raw, idx = 0) {
     caseId, caseUrl,
     state, caseManager,
     colour, colorClass,
+    // isManual is set by the backend
   };
 }
 
@@ -145,7 +143,7 @@ export default function Calendar() {
 
   // Page state
   const [date, setDate] = React.useState(new Date());
-  const [view, setView] = React.useState("week"); // "day" | "week" | "month"
+  const [view, setView] = React.useState("week");
   const [events, setEvents] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState(null);
@@ -155,7 +153,7 @@ export default function Calendar() {
   const [filterWip, setFilterWip] = React.useState("");
   const [filterInstaller, setFilterInstaller] = React.useState("");
   const [filterState, setFilterState] = React.useState("");
-  const [colourMode, setColourMode] = React.useState("state"); // "state" | "case"
+  const [colourMode, setColourMode] = React.useState("state");
 
   // Load + normalize data from API
   const api = import.meta.env.VITE_API_URL || "";
@@ -166,7 +164,6 @@ export default function Calendar() {
     
     try {
       if (reason === "init") {
-        // --- Authentication Check ---
         if (window.self === window.top) {
           console.error("[Calendar] Public access blocked.");
           throw new Error("This application can only be accessed from within Zoho CRM.");
@@ -174,7 +171,6 @@ export default function Calendar() {
         console.log("[Calendar] Auth check passed (loaded in iframe).");
       }
       
-      // --- Data Loading ---
       console.log(`[Calendar] Fetching data from ${api}/api/cases`);
       const res = await fetch(`${api}/api/cases`, { cache: "no-store" });
       if (!res.ok) throw new Error(`API ${res.status}`);
@@ -192,23 +188,19 @@ export default function Calendar() {
     } finally {
       setLoading(false);
     }
-  }, [api]); // Dependency on `api`
+  }, [api]);
 
   React.useEffect(() => {
-    loadData("init"); // Initial load
-  }, [loadData]); // Run once on mount
+    loadData("init");
+  }, [loadData]);
 
-  // Admin actions: refresh/purge + reload
   async function callAdmin(path, label = "Action") {
     if (busy) return;
     setBusy(true);
     try {
       const post = await fetch(`${api}${path}`, { method: "POST", cache: "no-store" });
       if (!post.ok) throw new Error(`${label} ${post.status}`);
-      
-      // Manually trigger a reload of data from the frontend
       await loadData("manual_refresh");
-      
       push({ message: `${label} complete`, timeoutMs: 2500 });
     } catch (e) {
       console.error("[Calendar] admin action failed:", e);
@@ -229,20 +221,20 @@ export default function Calendar() {
     setDate(d);
   }, [date, view]);
 
-  // --- UPDATED: options for dropdowns (derived from current dataset) ---
+  // options for dropdowns
   const { wipOptions, installerOptions, stateOptions, ownerOptions } = React.useMemo(() => {
     const wipSet = new Set(), instSet = new Set(), stateSet = new Set(), ownerSet = new Set();
     events.forEach((e) => {
       if (e.wipManager) wipSet.add(e.wipManager);
       if (e.installer) instSet.add(e.installer);
       if (e.state) stateSet.add(e.state);
-      if (e.caseOwner) ownerSet.add(e.caseOwner); // <-- ADDED
+      if (e.caseOwner) ownerSet.add(e.caseOwner);
     });
     return {
       wipOptions: Array.from(wipSet).sort(),
       installerOptions: Array.from(instSet).sort(),
       stateOptions: Array.from(stateSet).sort(),
-      ownerOptions: Array.from(ownerSet).sort(), // <-- ADDED
+      ownerOptions: Array.from(ownerSet).sort(),
     };
   }, [events]);
 
@@ -259,30 +251,51 @@ export default function Calendar() {
     });
   }, [events, filterWip, filterInstaller, filterState]);
 
-  // apply colouring (State by default; stable-by-case on demand)
+  // apply colouring
   const colouredEvents = React.useMemo(() => {
     if (!filtered?.length) return filtered;
     if (colourMode === "case") {
       return filtered.map(e => ({ ...e, colour: e.colour || colourForKeyStable(e.caseManager || e.id) }));
     }
-    // Prioritize manual event color, then state color
     return filtered.map(e => ({ ...e, colour: e.colour || STATE_COLOURS[e.state] || STATE_COLOURS.Other }));
   }, [filtered, colourMode]);
 
-  // editor state + toast/undo
-  const [editor, setEditor] = React.useState({ open: false, ev: null, clickEvent: null });
+  // --- UPDATED: Editor state now includes a 'mode' ---
+  const [editor, setEditor] = React.useState({
+    open: false,
+    mode: 'view', // 'view' | 'edit' | 'new'
+    ev: null,
+    clickEvent: null
+  });
   const historyRef = React.useRef(new Map());
 
-  // Opens the editor with a new, blank event
+  // --- UPDATED: Handler for "Add New" button ---
   const handleAddNew = React.useCallback(() => {
     setEditor({
       open: true,
+      mode: 'new', // Set mode to 'new'
       ev: createNewEvent(),
-      clickEvent: null, // Open in center (default position)
+      clickEvent: null, // Open in center
     });
   }, []);
+  
+  // --- NEW: Handler for clicking on an event ---
+  const handleOpenEditor = React.useCallback((ev, clickEvent) => {
+    setEditor({
+      open: true,
+      // If it's manual, open 'edit' mode. If CRM, open 'view' mode.
+      mode: ev.isManual ? 'edit' : 'view',
+      ev: ev,
+      clickEvent: clickEvent,
+    });
+  }, []);
+  
+  // --- NEW: Handler to close the editor ---
+  const handleCloseEditor = React.useCallback(() => {
+    setEditor({ open: false, mode: 'view', ev: null, clickEvent: null });
+  }, []);
 
-  // --- UPDATED saveCase logic ---
+  // API save logic
   async function saveEvent(eventData) {
     const { id, start, end, isNew, isManual } = eventData;
     const api = import.meta.env.VITE_API_URL || "";
@@ -293,7 +306,7 @@ export default function Calendar() {
         const res = await fetch(`${api}/api/manual-entry`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(eventData), // Send the whole event
+          body: JSON.stringify(eventData),
         });
         if (!res.ok) throw new Error(await res.text());
         
@@ -301,29 +314,22 @@ export default function Calendar() {
         // --- UPDATE existing manual entry ---
         // TODO: Build PATCH /api/manual-entry/:id endpoint
         console.warn("Update logic for Creator entries is not built yet.");
-        // For now, we'll just update the CRM one as a fallback.
-        await fetch(`${api}/api/cases/${id.replace('creator_', '')}`, { // Fallback to PATCH crm
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ start, end }),
-        });
-
+        
       } else {
         // --- UPDATE existing CRM entry ---
         await fetch(`${api}/api/cases/${id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ start, end }),
+          body: JSON.stringify({ start, end }), // Only send dates
         });
       }
     } catch (e) {
       console.warn("[Calendar] saveEvent failed:", e);
-      // Re-throw to notify applyDates
       throw e;
     }
   }
 
-  // Handles saving dates from the editor
+  // Handles saving data from either editor
   const applyDates = React.useCallback(async (id, updatedEventData) => {
     const { start, end, isNew } = updatedEventData;
 
@@ -331,27 +337,22 @@ export default function Calendar() {
     if (isNew) {
       try {
         await saveEvent(updatedEventData);
-        // Add to local state
         setEvents(prev => [...prev, normalizeEvent(updatedEventData)]);
         push({ message: `Event "${updatedEventData.title}" created.`, timeoutMs: 3000 });
       } catch (e) {
         push({ message: `Failed to create event: ${e.message}`, timeoutMs: 4000 });
       }
-      return; // Stop here
+      return;
     }
 
     // --- Logic for EXISTING event ---
     const prev = events.find((e) => e.id === id);
     if (!prev) return;
 
-    // Store old dates for undo
     historyRef.current.set(id, { start: prev.start, end: prev.end });
-
-    // Update local state optimistically
     const next = events.map((e) => (e.id === id ? { ...e, ...updatedEventData } : e));
     setEvents(next);
 
-    // Persist in the background
     try {
       await saveEvent(updatedEventData);
       
@@ -363,22 +364,21 @@ export default function Calendar() {
         if (!prior) return;
         const revert = events.map((e) => (e.id === id ? { ...e, ...prior } : e));
         setEvents(revert);
-        saveEvent({ ...prev, ...prior }); // Re-save the undone dates
+        saveEvent({ ...prev, ...prior });
       };
   
       push({
-        message: `Dates changed to ${start} → ${end}`,
+        message: `Dates changed for "${updatedEventData.title}"`,
         actionLabel: "Undo",
         onAction: undo,
         timeoutMs: 5000,
       });
 
     } catch (e) {
-      // Save failed, roll back the optimistic update
       setEvents(prevEvents => prevEvents.map(e => (e.id === id ? prev : e)));
       push({ message: `Failed to save changes: ${e.message}`, timeoutMs: 4000 });
     }
-  }, [events, push, api]); // Added `api` to dependency array
+  }, [events, push, api]);
 
   // Reset filters
   const handleReset = React.useCallback(() => {
@@ -398,13 +398,13 @@ export default function Calendar() {
       <WeekView
         date={date}
         events={colouredEvents}
-        onOpenEditor={(ev, clickEvent) => setEditor({ open: true, ev, clickEvent })}
+        onOpenEditor={handleOpenEditor} // <-- UPDATED
       />
     ) : (
       <MonthView
         date={date}
         events={colouredEvents}
-        onOpenEditor={(ev, clickEvent) => setEditor({ open: true, ev, clickEvent })}
+        onOpenEditor={handleOpenEditor} // <-- UPDATED
       />
     );
 
@@ -415,9 +415,9 @@ export default function Calendar() {
         onViewChange={onViewChange}
         date={date}
         onNav={onNav}
-        onAddNew={handleAddNew} // Connect "Add New" button handler
-        onRefresh={() => callAdmin("/api/cases/refresh", "Refresh")} // (no longer visible)
-        onPurge={() => callAdmin("/api/cases/purge", "Purge")}     // (no-GIST:)
+        onAddNew={handleAddNew}
+        onRefresh={() => callAdmin("/api/cases/refresh", "Refresh")}
+        onPurge={() => callAdmin("/api/cases/purge", "Purge")}
       />
 
       <FiltersBar
@@ -437,17 +437,34 @@ export default function Calendar() {
 
       <div className="flex-1">{viewNode}</div>
 
-      <EventEditor
-        open={editor.open}
-        clickEvent={editor.clickEvent}
-        ev={editor.ev || undefined}
-        onClose={() => setEditor({ open: false, ev: null, clickEvent: null })}
-        onChangeDates={(id, updatedEvent) => applyDates(id, updatedEvent)}
-        // --- UPDATED: Pass the lists to the editor ---
-        wipOptions={wipOptions}
-        installerOptions={installerOptions}
-        ownerOptions={ownerOptions}
-      />
+      {/* --- UPDATED: Conditionally render the correct editor --- */}
+      
+      {/* 1. Read-only Editor for CRM Cases */}
+      {editor.open && editor.mode === 'view' && (
+        <EventEditor
+          key={editor.ev.id}
+          open={true}
+          ev={editor.ev}
+          clickEvent={editor.clickEvent}
+          onClose={handleCloseEditor}
+          onChangeDates={applyDates}
+        />
+      )}
+      
+      {/* 2. Editable Form for New or Manual Events */}
+      {editor.open && (editor.mode === 'new' || editor.mode === 'edit') && (
+        <ManualEntryEditor
+          key={editor.ev.id}
+          open={true}
+          ev={editor.ev}
+          clickEvent={editor.clickEvent}
+          onClose={handleCloseEditor}
+          onChangeDates={applyDates}
+          wipOptions={wipOptions}
+          installerOptions={installerOptions}
+          ownerOptions={ownerOptions}
+        />
+      )}
     </div>
   );
 }

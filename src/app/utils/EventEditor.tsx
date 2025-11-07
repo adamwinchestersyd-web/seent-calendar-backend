@@ -5,147 +5,68 @@ type Props = {
   clickEvent?: React.MouseEvent | null;
   ev?: any;
   onClose: () => void;
+  // This prop is changed to pass the whole event object back
   onChangeDates: (id: string, eventData: any) => void;
-  // --- NEW: Props for dropdown options ---
-  wipOptions: string[];
-  installerOptions: string[];
-  ownerOptions: string[];
 };
 
-// This is the new positioning hook that replaces the old `place()` function
+// Positioning hook
 function usePopupPosition(clickEvent: React.MouseEvent | null) {
   const ref = React.useRef<HTMLDivElement>(null);
   const [pos, setPos] = React.useState<React.CSSProperties>({
     top: -9999,
     left: -9999,
-    opacity: 0, // Start hidden
+    opacity: 0,
   });
 
   React.useLayoutEffect(() => {
-    if (!clickEvent) {
-      // If no click event (like 'Add New'), center it.
-      setPos({
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        opacity: 1,
-        position: 'fixed', // Use fixed positioning for centered modal
-      });
-      return;
+    if (!clickEvent || !ref.current) {
+       setPos({ top: -9999, left: -9999, opacity: 0 });
+       return;
     }
 
-    const pop = ref.current?.getBoundingClientRect();
-    if (!pop) return; // Don't calculate if the popup isn't rendered yet
-
+    const pop = ref.current.getBoundingClientRect();
     const pad = 12;
     const vw = window.innerWidth;
 
-    // Calculate Y position relative to the PAGE (including scroll)
     const clickY = clickEvent.clientY + window.scrollY;
-    const y = clickY - (pop.height / 2); // Center vertically on the click
-
-    // Calculate X position
+    const y = clickY - (pop.height / 2);
     const clickX = clickEvent.clientX;
-    const x = clickX - (pop.width / 2); // Center horizontally on the click
+    const x = clickX - (pop.width / 2);
 
     setPos({
-      position: 'absolute', // Use absolute positioning for click-based
+      position: 'absolute',
       top: Math.max(pad + window.scrollY, y),
       left: Math.max(pad, Math.min(x, vw - pop.width - pad)),
       opacity: 1,
       transform: 'none',
     });
-  }, [clickEvent, open]); // Recalculate if the click event or open state changes
+  }, [clickEvent, open]);
 
   return { ref, style: pos };
 }
 
-// --- NEW STATE INTERFACE ---
-// We'll manage all event fields in state
-interface EventState {
-  title: string;
-  wipManager: string;
-  caseOwner: string; // 'Owner' in the form
-  installer: string;
-  pmNotes: string;
-  startTime: string;
-  start: string;
-  end: string;
-}
 
-export default function EventEditor({
-  open,
-  clickEvent,
-  ev,
-  onClose,
-  onChangeDates,
-  // --- NEW: Destructure options props ---
-  wipOptions,
-  installerOptions,
-  ownerOptions,
-}: Props) {
-  
-  // --- NEW: State for all fields ---
-  const [fields, setFields] = React.useState<EventState>({
-    title: "",
-    wipManager: "",
-    caseOwner: "",
-    installer: "",
-    pmNotes: "",
-    startTime: "",
-    start: "",
-    end: "",
-  });
-
-  // Get the ref and style from our new hook
+export default function EventEditor({ open, clickEvent, ev, onClose, onChangeDates }: Props) {
+  const [start, setStart] = React.useState(ev?.start ?? "");
+  const [end, setEnd] = React.useState(ev?.end ?? "");
   const { ref, style: positionStyle } = usePopupPosition(open ? (clickEvent || null) : null);
 
-  // --- UPDATED: Load full event into state ---
   React.useEffect(() => {
     if (ev) {
-      setFields({
-        title: ev.title || "",
-        wipManager: ev.wipManager || "",
-        caseOwner: ev.caseOwner || "", // 'Owner'
-        installer: ev.installer || "",
-        pmNotes: ev.pmNotes || "",
-        startTime: ev.startTime || "",
-        start: ev.start || "",
-        end: ev.end || "",
-      });
+      setStart(ev.start ?? "");
+      setEnd(ev.end ?? "");
     }
-  }, [ev]); // This runs when 'ev' changes
-
-  // --- UPDATED: Generic handler for text AND select inputs ---
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFields(prev => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-  
-  // --- UPDATED: Handler for date inputs ---
-  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFields(prev => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
+  }, [ev]);
 
   if (!open || !ev) return null;
-  
-  const isNewEvent = !!ev.isNew; // Check if this is a new manual entry
 
-  // --- Styles (no changes from here down) ---
   const textColor =
     getComputedStyle(document.documentElement).getPropertyValue("--text").trim() || "#0f1723";
   const borderColor =
     getComputedStyle(document.documentElement).getPropertyValue("--border").trim() || "#e5e7eb";
 
   const card: React.CSSProperties = {
-    ...positionStyle, // Apply the calculated position here
+    ...positionStyle,
     width: 380,
     background: "#ffffff",
     color: textColor,
@@ -154,7 +75,7 @@ export default function EventEditor({
     boxShadow: "0 12px 32px rgba(0,0,0,.22)",
     padding: 18,
     zIndex: 9999,
-    transition: 'opacity 150ms ease-in-out', // Added for smooth fade-in
+    transition: 'opacity 150ms ease-in-out',
   };
 
   const row: React.CSSProperties = { display: "flex", gap: 12, alignItems: "center" };
@@ -166,12 +87,7 @@ export default function EventEditor({
     borderRadius: 8,
     border: `1px solid ${borderColor}`,
     background: "#fff",
-    color: 'inherit', // Ensure select text is visible
-  };
-  const textArea: React.CSSProperties = {
-    ...input,
-    height: 'auto',
-    padding: '8px 10px',
+    color: textColor,
   };
 
   const baseBtn: React.CSSProperties = {
@@ -186,127 +102,58 @@ export default function EventEditor({
   const primary: React.CSSProperties = { ...baseBtn, background: "#111827", color: "#fff", borderColor: "#111827" };
   const subtle: React.CSSProperties = { ...baseBtn, background: "#f3f4f6", color: "#111827" };
   const ghost: React.CSSProperties = { ...baseBtn, background: "transparent" };
-
-  // --- UPDATED: Handle Save button click ---
+  
   const handleSave = () => {
-    // Merge the original event data with the new fields
-    const updatedEvent = { ...ev, ...fields };
-    onChangeDates(ev.id, updatedEvent);
+    // Pass the full event object back, just with new dates
+    onChangeDates(ev.id, { ...ev, start, end });
     onClose();
   };
 
   return (
     <div ref={ref} style={card} role="dialog" aria-labelledby="evt-title">
-      
-      {/* Title (input) */}
-      <div id="evt-title" style={{ marginBottom: 12 }}>
-        <input
-          type="text"
-          name="title"
-          placeholder="Event Title"
-          value={fields.title}
-          onChange={handleChange}
-          style={{...input, height: 40, fontSize: 15, fontWeight: 700 }}
-          disabled={!isNewEvent} // Only allow editing title for new events
-        />
+      {/* Title (Read-only) */}
+      <div id="evt-title" style={{ fontSize: 15, fontWeight: 700, marginBottom: 6, lineHeight: 1.25, color: "#666" }} title={ev.title}>
+        {ev.title}<hr/>
       </div>
 
-      {/* Meta grid - all fields are now editable */}
-      <div style={{ display: "grid", gap: 12, marginBottom: 16 }}>
+      {/* Meta grid (Read-only) */}
+      <div style={{ display: "grid", gap: 8, marginBottom: 12 }}>
         <div style={row}>
           <div style={label}>Time</div>
-          <input
-            type="text"
-            name="startTime"
-            placeholder="e.g. 09:00"
-            value={fields.startTime}
-            onChange={handleChange}
-            style={input}
-          />
+          <div style={{ fontSize: 14, color: "#666" }}>{ev.startTime || "—"}</div>
         </div>
-        
-        {/* --- UPDATED: WIP Manager Dropdown --- */}
         <div style={row}>
           <div style={label}>WIP Manager</div>
-          <select
-            name="wipManager"
-            value={fields.wipManager}
-            onChange={handleChange}
-            style={input}
-          >
-            <option value="">Select WIP Manager...</option>
-            {wipOptions.map(name => (
-              <option key={name} value={name}>{name}</option>
-            ))}
-          </select>
+          <div style={{ fontSize: 14, color: "#666" }}>{ev.wipManager || "—"}</div>
         </div>
-        
-        {/* --- UPDATED: Owner Dropdown --- */}
         <div style={row}>
           <div style={label}>Owner</div>
-          <select
-            name="caseOwner"
-            value={fields.caseOwner}
-            onChange={handleChange}
-            style={input}
-          >
-            <option value="">Select Owner...</option>
-            {ownerOptions.map(name => (
-              <option key={name} value={name}>{name}</option>
-            ))}
-          </select>
+          <div style={{ fontSize: 14, color: "#666" }}>{ev.caseOwner || "—"}</div>
         </div>
-        
-        {/* --- UPDATED: Installer Dropdown --- */}
         <div style={row}>
           <div style={label}>Installer</div>
-          <select
-            name="installer"
-            value={fields.installer}
-            onChange={handleChange}
-            style={input}
-          >
-            <option value="">Select Installer...</option>
-            {installerOptions.map(name => (
-              <option key={name} value={name}>{name}</option>
-            ))}
-          </select>
+          <div style={{ fontSize: 14, color: "#666" }}>{ev.installer || "—"}</div>
         </div>
-        
-        {/* PM Notes (textarea) */}
-        <div style={{ display: "grid", gap: 6 }}>
-          <div style={{ fontSize: 13, color: "#1f2937", opacity: 0.9 }}>PM Notes</div>
-          <textarea
-            name="pmNotes"
-            rows={3}
-            value={fields.pmNotes}
-            onChange={handleChange}
-            style={textArea}
-          />
-        </div>
+        {ev.pmNotes ? (
+          <div style={{ display: "grid", gap: 6 }}>
+            <div style={{ fontSize: 13, color: "#1f2937", opacity: 0.9 }}>PM Notes</div>
+            <div style={{ color: "#666", fontSize: 13.5, lineHeight: 1.35, background: "#f9fafb", border: `1px solid ${borderColor}`, borderRadius: 8, padding: "8px 10px" }}>
+              {ev.pmNotes}
+            </div>
+          </div>
+        ) : null}
       </div>
-      
-      {/* Dates */}
+      <hr/>
+
+      {/* Dates (Editable) */}
       <div style={{ display: "grid", gap: 12, marginBottom: 16 }}>
         <div style={row}>
           <div style={label}>Start Date</div>
-          <input
-            type="date"
-            name="start"
-            value={fields.start}
-            onChange={handleDateChange}
-            style={input}
-          />
+          <input type="date" value={start} onChange={(e) => setStart(e.target.value)} style={input} />
         </div>
         <div style={row}>
           <div style={label}>End Date</div>
-          <input
-            type="date"
-            name="end"
-            value={fields.end}
-            onChange={handleDateChange}
-            style={input}
-          />
+          <input type="date" value={end} onChange={(e) => setEnd(e.target.value)} style={input} />
         </div>
       </div>
 
@@ -317,23 +164,18 @@ export default function EventEditor({
           style={primary}
           onClick={handleSave}
         >
-          {isNewEvent ? "Save Event" : "Save Changes"}
+          Change Date
         </button>
-        
-        {/* Hide "Go to Case" for new events */}
-        {!isNewEvent && (
-          <button
-            type="button"
-            style={subtle}
-            onClick={() => {
-              const url = ev.caseUrl || ev.url || (ev.caseId ? `https.crm.zoho.com/crm/org640578001/tab/Cases/${ev.caseId}` : "");
-              if (url) window.open(url, "_blank");
-            }}
-          >
-            Go to Case
-          </button>
-        )}
-        
+        <button
+          type="button"
+          style={subtle}
+          onClick={() => {
+            const url = ev.caseUrl || ev.url || (ev.caseId ? `https.crm.zoho.com/crm/org640578001/tab/Cases/${ev.caseId}` : "");
+            if (url) window.open(url, "_blank");
+          }}
+        >
+          Go to Case
+        </button>
         <button type="button" style={ghost} onClick={onClose}>
           Cancel
         </button>
