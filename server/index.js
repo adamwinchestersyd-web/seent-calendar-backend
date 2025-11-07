@@ -138,11 +138,11 @@ const {
  * Fetches all records from the Creator "All_Manual_Entries" report.
  */
 async function fetchManualEntries() {
-  const scope = 'ZohoCreator.report.ALL';
-  const accessToken = await getAccessToken(scope); // Uses your existing getAccessToken
+  // --- UPDATED: Using granular scope ---
+  const scope = 'ZohoCreator.report.READ';
+  const accessToken = await getAccessToken(scope);
   if (!accessToken) return [];
 
-  // --- FIX: Use creator.zoho.com domain ---
   const creatorApiUrl = `https://creator.zoho.com/api/v2/${CREATOR_APP_OWNER}/${CREATOR_APP_NAME}/report/${CREATOR_REPORT_NAME}`;
 
   try {
@@ -177,11 +177,11 @@ async function fetchManualEntries() {
  * Creates a new record in the Creator "Manual_Entry" form.
  */
 async function createManualEntry(eventData) {
-  const scope = 'ZohoCreator.form.ALL';
-  const accessToken = await getAccessToken(scope); // Uses your existing getAccessToken
+  // --- UPDATED: Using granular scope ---
+  const scope = 'ZohoCreator.form.CREATE';
+  const accessToken = await getAccessToken(scope);
   if (!accessToken) return { error: 'Could not get access token' };
 
-  // --- FIX: Use creator.zoho.com domain ---
   const creatorApiUrl = `https://creator.zoho.com/api/v2/${CREATOR_APP_OWNER}/${CREATOR_APP_NAME}/form/${CREATOR_FORM_NAME}`;
 
   // Map our event data to the Creator form's field names
@@ -535,7 +535,7 @@ app.get("/debug/refresh", async (_req, res) => {
       api_domain: ZOHO_DOMAIN,
     });
   } catch (e) {
-    res.status(500).json({ ok: false, error: String(e) }); // <-- TYPO WAS HERE
+    res.status(500).json({ ok: false, error: String(e) });
   }
 });
 
@@ -571,7 +571,7 @@ app.patch("/api/cases/:id", async (req, res) => {
       return {
         ...e,
         start: start ? toYMD(start) : e.start,
-        end: end ? toYD(end) : e.end,
+        end: end ? toYMD(end) : e.end,
         title: title ?? e.title,
         state: state ?? e.state,
         modified_time: new Date().toISOString(),
@@ -626,7 +626,7 @@ app.get("/debug/case/:id/raw", async (req, res) => {
       Installer: row.Installer,
     });
   } catch (e) {
-    res.status(500).json({ error: String(e) });
+    res.status(5Example0).json({ error: String(e) });
   }
 });
 
