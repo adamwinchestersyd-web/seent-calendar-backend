@@ -68,6 +68,7 @@ export default function EventEditor({ open, clickEvent, ev, onClose, onChangeDat
     ...positionStyle,
     width: 380,
     background: "#ffffff",
+    borderTop: '6px solid #22c55e',
     color: textColor,
     border: `1px solid ${borderColor}`,
     borderRadius: 12,
