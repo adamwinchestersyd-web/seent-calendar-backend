@@ -1,3 +1,4 @@
+// src/components/EventPillWeek.jsx
 import React from "react";
 
 // utility: clamp text to N lines using CSS-only (no JS measuring)
@@ -9,42 +10,36 @@ const clampStyle = (lines) => ({
 });
 
 export default function EventPillWeek({ ev }) {
-  // decide whether it's multi-day (end after start)
-  const isMultiDay = ev && ev.start && ev.end && ev.end !== ev.start;
-
-  // allow more PM notes if multi-day
-  const notesLines = isMultiDay ? 6 : 1; // 1 line inside the 3-line total; container enforces height
-
-  // container: max 3 lines height for single-day
-  const containerStyle = {
-    display: "flex",
-    flexDirection: "column",
-    gap: 2,
-    width: "100%",
-    // colours from event.colour (already mapped on server or by state)
-    background: ev.colour || "#3b82f6",
-    color: "white",
-    borderRadius: 8,
-    padding: "6px 8px",
-    lineHeight: 1.2,
-    // --- MAXHEIGHT REMOVED ---
-    // This will now default to the 4-line limit in your calendar.css
-  };
+  // --- STYLING REMOVED ---
+  // We now use the 'event-pill' class from calendar.css
+  // to ensure the 4-line limit is respected.
 
   const titleStyle = { fontWeight: 600, ...clampStyle(1) };
   const metaStyle  = { opacity: 0.9, fontSize: 12, ...clampStyle(1) };
-  const notesStyle = { opacity: 0.9, fontSize: 12, ...clampStyle(notesLines) };
+  
+  // Use 2 lines for notes to fit within the 4-line total
+  const notesStyle = { opacity: 0.9, fontSize: 12, ...clampStyle(2) };
 
   const wip = ev.wipManager || "";
   const ins = ev.installer || "";
   const own = ev.caseOwner || "";
   const line2 = [wip, ins, own].filter(Boolean).join(" | ");
 
+  // The custom --c variable is for the background color
+  const cssVars = ev.colour ? { ["--c"]: ev.colour } : {};
+
   return (
-    <div style={containerStyle} title={ev.title}>
-      <div style={titleStyle}>{ev.title}</div>
-      {line2 && <div style={metaStyle}>{line2}</div>}
-      {ev.pmNotes ? <div style={notesStyle}>{ev.pmNotes}</div> : null}
+    <div 
+      className="event-pill" 
+      style={cssVars} 
+      title={ev.title}
+    >
+      <div className="event__fill" />
+      <div className="event__label">
+        <div style={titleStyle}>{ev.title}</div>
+        {line2 && <div style={metaStyle}>{line2}</div>}
+        {ev.pmNotes ? <div style={notesStyle}>{ev.pmNotes}</div> : null}
+      </div>
     </div>
   );
 }

@@ -161,6 +161,7 @@ export default function Calendar() {
 
   const loadData = React.useCallback(async (reason = "init") => {
     if (reason === "init") setLoading(true);
+    if (reason === "manual_refresh") setBusy(true); // Show visual feedback for refresh
     setError(null);
     
     try {
@@ -181,6 +182,9 @@ export default function Calendar() {
       
       setEvents(list.map(normalizeEvent));
       console.log("[Calendar] Data loaded successfully.");
+      if (reason === "manual_refresh") {
+        push({ message: `Refresh complete`, timeoutMs: 2500 });
+      }
 
     } catch (e) {
       console.error("[Calendar] Load failed:", e);
@@ -188,29 +192,14 @@ export default function Calendar() {
       setEvents([]);
     } finally {
       setLoading(false);
+      if (reason === "manual_refresh") setBusy(false);
     }
-  }, [api]);
+  }, [api, push]); // Added `push`
 
   React.useEffect(() => {
     loadData("init");
   }, [loadData]);
-
-  async function callAdmin(path, label = "Action") {
-    if (busy) return;
-    setBusy(true);
-    try {
-      const post = await fetch(`${api}${path}`, { method: "POST", cache: "no-store" });
-      if (!post.ok) throw new Error(`${label} ${post.status}`);
-      await loadData("manual_refresh");
-      push({ message: `${label} complete`, timeoutMs: 2500 });
-    } catch (e) {
-      console.error("[Calendar] admin action failed:", e);
-      push({ message: `${label} failed`, timeoutMs: 3500 });
-    } finally {
-      setBusy(false);
-    }
-  }
-
+  
   // Toolbar handlers
   const onViewChange = React.useCallback((v) => setView(v), []);
   const onNav = React.useCallback((dir) => {
@@ -262,7 +251,7 @@ export default function Calendar() {
     return filtered.map(e => ({ ...e, colour: e.isManual ? (STATE_COLOURS[e.state] || e.colour) : (STATE_COLOURS[e.state] || STATE_COLOURS.Other) }));
   }, [filtered, colourMode]);
 
-  // --- UPDATED: Editor state now includes a 'mode' ---
+  // Editor state
   const [editor, setEditor] = React.useState({
     open: false,
     mode: 'view', // 'view' | 'edit' | 'new'
@@ -271,7 +260,7 @@ export default function Calendar() {
   });
   const historyRef = React.useRef(new Map());
 
-  // --- UPDATED: Handler for "Add New" button ---
+  // Handler for "Add New" button
   const handleAddNew = React.useCallback(() => {
     setEditor({
       open: true,
@@ -281,18 +270,17 @@ export default function Calendar() {
     });
   }, []);
   
-  // --- NEW: Handler for clicking on an event ---
+  // Handler for clicking on an event
   const handleOpenEditor = React.useCallback((ev, clickEvent) => {
     setEditor({
       open: true,
-      // If it's manual, open 'edit' mode. If CRM, open 'view' mode.
       mode: ev.isManual ? 'edit' : 'view',
       ev: ev,
       clickEvent: clickEvent,
     });
   }, []);
   
-  // --- NEW: Handler to close the editor ---
+  // Handler to close the editor
   const handleCloseEditor = React.useCallback(() => {
     setEditor({ open: false, mode: 'view', ev: null, clickEvent: null });
   }, []);
@@ -339,8 +327,7 @@ export default function Calendar() {
     if (isNew) {
       try {
         await saveEvent(updatedEventData);
-        // We now reload all data to get the new event from the server
-        await loadData("manual-save"); 
+        await loadData("manual-save"); // Reload all data
         push({ message: `Event "${updatedEventData.title}" created.`, timeoutMs: 3000 });
       } catch (e) {
         push({ message: `Failed to create event: ${e.message}`, timeoutMs: 4000 });
@@ -354,7 +341,7 @@ export default function Calendar() {
 
     historyRef.current.set(id, { start: prev.start, end: prev.end });
     const next = events.map((e) => (e.id === id ? { ...e, ...updatedEventData } : e));
-    setEvents(next);
+    setEvents(next); // Optimistic update
 
     try {
       await saveEvent(updatedEventData);
@@ -381,7 +368,7 @@ export default function Calendar() {
       setEvents(prevEvents => prevEvents.map(e => (e.id === id ? prev : e)));
       push({ message: `Failed to save changes: ${e.message}`, timeoutMs: 4000 });
     }
-  }, [events, push, api, loadData]); // Added loadData
+  }, [events, push, api, loadData]);
 
   // Reset filters
   const handleReset = React.useCallback(() => {
@@ -419,7 +406,7 @@ export default function Calendar() {
         date={date}
         onNav={onNav}
         onAddNew={handleAddNew}
-        onRefresh={() => loadData("manual_refresh")} // <-- UPDATED
+        onRefresh={() => loadData("manual_refresh")} // <-- WIRED UP
       />
 
       <FiltersBar
@@ -463,7 +450,7 @@ export default function Calendar() {
           wipOptions={wipOptions}
           installerOptions={installerOptions}
           ownerOptions={ownerOptions}
-          stateOptions={stateOptions} // <-- PASS STATE OPTIONS
+          stateOptions={stateOptions} // <-- PROP IS PASSED
         />
       )}
     </div>
