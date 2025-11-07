@@ -1,3 +1,4 @@
+// CACHE BUST v8
 import dotenv from "dotenv";
 dotenv.config();
 import fs from "fs/promises";
@@ -49,7 +50,6 @@ const CLIENT_ID     = process.env.ZOHO_CLIENT_ID;
 const CLIENT_SECRET = process.env.ZOHO_CLIENT_SECRET;
 const REDIRECT_URI  = process.env.ZOHO_REDIRECT_URI;
 
-// --- UPDATED: Define all scopes in one place ---
 const ZOHO_FULL_SCOPE = "ZohoCRM.modules.ALL,ZohoCRM.users.READ,ZohoProjects.projects.ALL,ZohoCreator.report.READ,ZohoCreator.form.CREATE";
 const ZOHO_WEBHOOK_SECRET = process.env.ZOHO_WEBHOOK_SECRET; 
 
@@ -94,7 +94,6 @@ const asName = (v) => toStringSafe(v).trim();
 const firstWord = (v) => toStringSafe(v).trim().split(/\s+/)[0] || "";
 
 
-// --- UPDATED: No longer accepts a scope argument ---
 async function getAccessToken() {
   if (!REFRESH_TOKEN) {
     throw new Error("No REFRESH_TOKEN available. Run OAuth with access_type=offline & prompt=consent.");
@@ -110,7 +109,7 @@ async function getAccessToken() {
       client_id: CLIENT_ID,
       client_secret: CLIENT_SECRET,
       grant_type: "refresh_token",
-      scope: ZOHO_FULL_SCOPE, // <-- UPDATED: Always use full scope
+      scope: ZOHO_FULL_SCOPE, 
     }).toString(),
   });
 
@@ -144,7 +143,7 @@ const {
 } = process.env;
 
 async function fetchManualEntries() {
-  const accessToken = await getAccessToken(); // <-- UPDATED
+  const accessToken = await getAccessToken();
   if (!accessToken) return [];
 
   const creatorApiUrl = `https://creator.zoho.com/api/v2/${CREATOR_APP_OWNER}/${CREATOR_APP_NAME}/report/${CREATOR_REPORT_NAME}`;
@@ -165,7 +164,7 @@ async function fetchManualEntries() {
       caseOwner: item.Owner,
       installer: item.Installer,
       pmNotes: item.PM_Notes,
-      state: item.State || "", // <-- Reads State
+      state: item.State || "", // <-- Read State
       isManual: true, 
       colour: '#8b5cf6', 
       created_time: item.Added_Time, 
@@ -178,7 +177,7 @@ async function fetchManualEntries() {
 }
 
 async function createManualEntry(eventData) {
-  const accessToken = await getAccessToken(); // <-- UPDATED
+  const accessToken = await getAccessToken();
   if (!accessToken) return { error: 'Could not get access token' };
 
   const creatorApiUrl = `https://creator.zoho.com/api/v2/${CREATOR_APP_OWNER}/${CREATOR_APP_NAME}/form/${CREATOR_FORM_NAME}`;
@@ -193,7 +192,7 @@ async function createManualEntry(eventData) {
       "Start_Date": toCreatorDate(eventData.start), 
       "End_Date": toCreatorDate(eventData.end),   
       "Start_Time": eventData.startTime,
-      "State": eventData.state, // <-- Saves State
+      "State": eventData.state, // <-- Save State
     }
   });
 
@@ -317,14 +316,14 @@ async function fetchCasesFromZoho() {
       end: toYMD(row.Install_End_Date || row.Install_Date || row.Modified_Time || row.Created_Time),
       startTime: row.Install_Start_Time || "",
       state: row.State || "",
-      wipManager: wipMgrName,        // <-- string
-      installer: installerName,      // <-- string
-      caseOwner: ownerFirst,         // <-- string
+      wipManager: wipMgrName,
+      installer: installerName,
+      caseOwner: ownerFirst,
       pmNotes: (row.Description || "").slice(0, 200),
       caseUrl: row.id ? `https://crm.zoho.com/crm/${ZOHO_ORG_ID}/tab/Cases/${row.id}` : "",
       created_time: row.Created_Time,
       modified_time: row.Modified_Time,
-      isManual: false, // Flag for CRM entries
+      isManual: false,
     };
   });
 
@@ -340,9 +339,9 @@ function mapZohoCase(z) {
     end: z.Install_End_Date || z.Install_Date || "",
     startTime: toStringSafe(z.Install_Start_Time),
     state: toStringSafe(z.State),
-    wipManager: asName(z.WIP_Manager1) || asName(z.WIP_Manager), // Uditha etc.
-    installer:  asName(z.Installer)    || asName(z.WIP_Manager), // "King IT Hervey Bay"
-    caseOwner:  firstWord(z.Owner),                               // "Adam", "Renee", ...
+    wipManager: asName(z.WIP_Manager1) || asName(z.WIP_Manager),
+    installer:  asName(z.Installer)    || asName(z.WIP_Manager),
+    caseOwner:  firstWord(z.Owner),
     pmNotes: toStringSafe(z.Description).slice(0, 200),
     caseUrl: `https://crm.zoho.com/crm/org640578001/tab/Cases/${z.id}`,
     created_time: toStringSafe(z.Created_Time),
@@ -590,7 +589,7 @@ app.patch("/api/cases/:id", async (req, res) => {
 
     res.json({ ok: true });
   } catch (e) {
-    res.status(5m00).json({ ok: false, error: String(e) });
+    res.status(500).json({ ok: false, error: String(e) });
   }
 });
 
