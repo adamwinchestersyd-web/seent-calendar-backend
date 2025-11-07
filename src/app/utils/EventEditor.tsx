@@ -5,8 +5,11 @@ type Props = {
   clickEvent?: React.MouseEvent | null;
   ev?: any;
   onClose: () => void;
-  // This prop is changed to pass the whole event object back
   onChangeDates: (id: string, eventData: any) => void;
+  // --- NEW: Props for dropdown options ---
+  wipOptions: string[];
+  installerOptions: string[];
+  ownerOptions: string[];
 };
 
 // This is the new positioning hook that replaces the old `place()` function
@@ -21,12 +24,12 @@ function usePopupPosition(clickEvent: React.MouseEvent | null) {
   React.useLayoutEffect(() => {
     if (!clickEvent) {
       // If no click event (like 'Add New'), center it.
-      // We set a default position, but it will be centered by the effect below.
       setPos({
         top: '50%',
         left: '50%',
         transform: 'translate(-50%, -50%)',
         opacity: 1,
+        position: 'fixed', // Use fixed positioning for centered modal
       });
       return;
     }
@@ -46,12 +49,11 @@ function usePopupPosition(clickEvent: React.MouseEvent | null) {
     const x = clickX - (pop.width / 2); // Center horizontally on the click
 
     setPos({
-      // Ensure it doesn't go off-screen vertically
+      position: 'absolute', // Use absolute positioning for click-based
       top: Math.max(pad + window.scrollY, y),
-      // Ensure it doesn't go off-screen horizontally
       left: Math.max(pad, Math.min(x, vw - pop.width - pad)),
-      opacity: 1, // Make visible
-      transform: 'none', // Reset transform
+      opacity: 1,
+      transform: 'none',
     });
   }, [clickEvent, open]); // Recalculate if the click event or open state changes
 
@@ -71,7 +73,17 @@ interface EventState {
   end: string;
 }
 
-export default function EventEditor({ open, clickEvent, ev, onClose, onChangeDates }: Props) {
+export default function EventEditor({
+  open,
+  clickEvent,
+  ev,
+  onClose,
+  onChangeDates,
+  // --- NEW: Destructure options props ---
+  wipOptions,
+  installerOptions,
+  ownerOptions,
+}: Props) {
   
   // --- NEW: State for all fields ---
   const [fields, setFields] = React.useState<EventState>({
@@ -104,8 +116,8 @@ export default function EventEditor({ open, clickEvent, ev, onClose, onChangeDat
     }
   }, [ev]); // This runs when 'ev' changes
 
-  // --- NEW: Generic handler for text inputs ---
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  // --- UPDATED: Generic handler for text AND select inputs ---
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFields(prev => ({
       ...prev,
@@ -113,7 +125,7 @@ export default function EventEditor({ open, clickEvent, ev, onClose, onChangeDat
     }));
   };
   
-  // --- NEW: Handler for date inputs ---
+  // --- UPDATED: Handler for date inputs ---
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFields(prev => ({
@@ -133,7 +145,6 @@ export default function EventEditor({ open, clickEvent, ev, onClose, onChangeDat
     getComputedStyle(document.documentElement).getPropertyValue("--border").trim() || "#e5e7eb";
 
   const card: React.CSSProperties = {
-    position: "absolute",
     ...positionStyle, // Apply the calculated position here
     width: 380,
     background: "#ffffff",
@@ -155,6 +166,7 @@ export default function EventEditor({ open, clickEvent, ev, onClose, onChangeDat
     borderRadius: 8,
     border: `1px solid ${borderColor}`,
     background: "#fff",
+    color: 'inherit', // Ensure select text is visible
   };
   const textArea: React.CSSProperties = {
     ...input,
@@ -186,7 +198,7 @@ export default function EventEditor({ open, clickEvent, ev, onClose, onChangeDat
   return (
     <div ref={ref} style={card} role="dialog" aria-labelledby="evt-title">
       
-      {/* --- UPDATED: Title is now an input --- */}
+      {/* Title (input) */}
       <div id="evt-title" style={{ marginBottom: 12 }}>
         <input
           type="text"
@@ -195,6 +207,7 @@ export default function EventEditor({ open, clickEvent, ev, onClose, onChangeDat
           value={fields.title}
           onChange={handleChange}
           style={{...input, height: 40, fontSize: 15, fontWeight: 700 }}
+          disabled={!isNewEvent} // Only allow editing title for new events
         />
       </div>
 
@@ -211,38 +224,56 @@ export default function EventEditor({ open, clickEvent, ev, onClose, onChangeDat
             style={input}
           />
         </div>
+        
+        {/* --- UPDATED: WIP Manager Dropdown --- */}
         <div style={row}>
           <div style={label}>WIP Manager</div>
-          <input
-            type="text"
+          <select
             name="wipManager"
             value={fields.wipManager}
             onChange={handleChange}
             style={input}
-          />
+          >
+            <option value="">Select WIP Manager...</option>
+            {wipOptions.map(name => (
+              <option key={name} value={name}>{name}</option>
+            ))}
+          </select>
         </div>
+        
+        {/* --- UPDATED: Owner Dropdown --- */}
         <div style={row}>
           <div style={label}>Owner</div>
-          <input
-            type="text"
+          <select
             name="caseOwner"
             value={fields.caseOwner}
             onChange={handleChange}
             style={input}
-          />
+          >
+            <option value="">Select Owner...</option>
+            {ownerOptions.map(name => (
+              <option key={name} value={name}>{name}</option>
+            ))}
+          </select>
         </div>
+        
+        {/* --- UPDATED: Installer Dropdown --- */}
         <div style={row}>
           <div style={label}>Installer</div>
-          <input
-            type="text"
+          <select
             name="installer"
             value={fields.installer}
             onChange={handleChange}
             style={input}
-          />
+          >
+            <option value="">Select Installer...</option>
+            {installerOptions.map(name => (
+              <option key={name} value={name}>{name}</option>
+            ))}
+          </select>
         </div>
         
-        {/* --- UPDATED: PM Notes is now a textarea --- */}
+        {/* PM Notes (textarea) */}
         <div style={{ display: "grid", gap: 6 }}>
           <div style={{ fontSize: 13, color: "#1f2937", opacity: 0.9 }}>PM Notes</div>
           <textarea
@@ -289,7 +320,7 @@ export default function EventEditor({ open, clickEvent, ev, onClose, onChangeDat
           {isNewEvent ? "Save Event" : "Save Changes"}
         </button>
         
-        {/* --- UPDATED: Hide "Go to Case" for new events --- */}
+        {/* Hide "Go to Case" for new events */}
         {!isNewEvent && (
           <button
             type="button"

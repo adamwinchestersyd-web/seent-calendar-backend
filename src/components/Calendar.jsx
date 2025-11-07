@@ -98,7 +98,7 @@ function normalizeEvent(raw, idx = 0) {
   // Names / labels — use firstNonEmpty so empty strings don’t mask real values
   const wipManager = asName(firstNonEmpty(raw, ["wipManager", "WIP_Manager1", "WIP", "wip"]));
   const installer = asName(firstNonEmpty(raw, ["installer", "Installer", "WIP_Manager", "tech", "Technician"]));
-  const caseOwner = firstWord(firstNonEmpty(raw, ["caseOwner", "Owner", "owner"]));
+  const caseOwner = firstWord(firstNonEmpty(raw, ["caseOwner", "Owner", "owner"])); // <-- USES firstWord
 
   const pmNotesRaw = first(raw, ["pmNotes", "Description", "notes", "Notes"]) || "";
   const pmNotes = (typeof pmNotesRaw === "string" ? pmNotesRaw : String(pmNotesRaw)).slice(0, 200);
@@ -229,18 +229,20 @@ export default function Calendar() {
     setDate(d);
   }, [date, view]);
 
-  // options for dropdowns (derived from current dataset)
-  const { wipOptions, installerOptions, stateOptions } = React.useMemo(() => {
-    const wipSet = new Set(), instSet = new Set(), stateSet = new Set();
+  // --- UPDATED: options for dropdowns (derived from current dataset) ---
+  const { wipOptions, installerOptions, stateOptions, ownerOptions } = React.useMemo(() => {
+    const wipSet = new Set(), instSet = new Set(), stateSet = new Set(), ownerSet = new Set();
     events.forEach((e) => {
       if (e.wipManager) wipSet.add(e.wipManager);
       if (e.installer) instSet.add(e.installer);
       if (e.state) stateSet.add(e.state);
+      if (e.caseOwner) ownerSet.add(e.caseOwner); // <-- ADDED
     });
     return {
       wipOptions: Array.from(wipSet).sort(),
       installerOptions: Array.from(instSet).sort(),
       stateOptions: Array.from(stateSet).sort(),
+      ownerOptions: Array.from(ownerSet).sort(), // <-- ADDED
     };
   }, [events]);
 
@@ -440,8 +442,11 @@ export default function Calendar() {
         clickEvent={editor.clickEvent}
         ev={editor.ev || undefined}
         onClose={() => setEditor({ open: false, ev: null, clickEvent: null })}
-        // Pass the full event object back
         onChangeDates={(id, updatedEvent) => applyDates(id, updatedEvent)}
+        // --- UPDATED: Pass the lists to the editor ---
+        wipOptions={wipOptions}
+        installerOptions={installerOptions}
+        ownerOptions={ownerOptions}
       />
     </div>
   );
