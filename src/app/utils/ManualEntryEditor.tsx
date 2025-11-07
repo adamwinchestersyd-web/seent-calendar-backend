@@ -159,7 +159,7 @@ export default function ManualEntryEditor({
     border: `1px solid ${borderColor}`,
     background: "#fff",
     color: textColor, 
-    colorScheme: 'light', // <-- FIX: Forces dark text on all fields
+    colorScheme: 'light',
   };
   const textArea: React.CSSProperties = {
     ...input,
