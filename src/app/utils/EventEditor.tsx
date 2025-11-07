@@ -1,5 +1,5 @@
-// CACHE BUST v4
 import React from "react";
+import { useEscapeKey } from "../../hooks/useEscapeKey"; 
 
 type Props = {
   open: boolean;
@@ -47,6 +47,7 @@ export default function EventEditor({ open, clickEvent, ev, onClose, onChangeDat
   const [start, setStart] = React.useState(ev?.start ?? "");
   const [end, setEnd] = React.useState(ev?.end ?? "");
   const { ref, style: positionStyle } = usePopupPosition(open ? (clickEvent || null) : null);
+  useEscapeKey(onClose);
 
   React.useEffect(() => {
     if (ev) {
