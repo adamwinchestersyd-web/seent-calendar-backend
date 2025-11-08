@@ -1,4 +1,4 @@
-// CACHE BUST v8
+// CACHE BUST v9
 import dotenv from "dotenv";
 dotenv.config();
 import fs from "fs/promises";
