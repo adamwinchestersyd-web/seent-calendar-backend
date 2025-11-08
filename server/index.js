@@ -54,6 +54,9 @@ const CLIENT_ID     = process.env.ZOHO_CLIENT_ID;
 const CLIENT_SECRET = process.env.ZOHO_CLIENT_SECRET;
 const REDIRECT_URI  = process.env.ZOHO_REDIRECT_URI;
 
+// --- NEW: Added ZOHO_PORTAL_ID ---
+const ZOHO_PORTAL_ID = process.env.ZOHO_PORTAL_ID; 
+
 const ZOHO_FULL_SCOPE = "ZohoCRM.modules.ALL,ZohoCRM.users.READ,ZohoProjects.projects.ALL,ZohoCreator.report.READ,ZohoCreator.form.CREATE";
 const ZOHO_WEBHOOK_SECRET = process.env.ZOHO_WEBHOOK_SECRET; 
 
@@ -64,6 +67,10 @@ let ACCESS_EXPIRES_AT = 0;
 // ----- Utilities (place once near top) -----
 function toYMD(v) {
   if (!v) return "";
+  // Projects needs 'YYYY-MM-DD'
+  if (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v.slice(0, 10))) {
+    return v.slice(0, 10);
+  }
   const d = new Date(v);
   return Number.isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
 }
@@ -226,50 +233,180 @@ async function createManualEntry(eventData) {
 // -----------------------------------------------------------------
 
 
-// --- ZOHO PROJECTS HELPER (NEW) ---
+// --- ZOHO SYNC HELPERS (CRM <-> PROJECTS) ---
+
+/**
+ * Updates a Zoho Case from the Calendar Widget.
+ * This is triggered by the user dragging/resizing an event.
+ */
+async function updateCaseInZoho(caseId, start, end) {
+  console.log(`[CRM Sync] Updating Case ${caseId} from widget...`);
+  try {
+    const accessToken = await getAccessToken();
+    const crmApiUrl = `${ZOHO_DOMAIN}/crm/v2/Cases/${caseId}`;
+    
+    const body = JSON.stringify({
+      data: [{
+        "Install_Date": toYMD(start),
+        "Install_End_Date": toYMD(end),
+        "Sync_Source": "widget" // Set source for loop protection
+      }]
+    });
+
+    const res = await fetch(crmApiUrl, {
+      method: 'PUT', // Use PUT to update a single record
+      headers: {
+        'Authorization': `Zoho-oauthtoken ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: body,
+    });
+    
+    const data = await res.json();
+    if (data.data && data.data[0].code === 'SUCCESS') {
+      console.log(`[CRM Sync] Case ${caseId} updated successfully.`);
+    } else {
+      console.error(`[CRM Sync] Error updating Case ${caseId}:`, data);
+    }
+  } catch (e) {
+    console.error(`[CRM Sync] Exception updating Case ${caseId}:`, e.message);
+  }
+}
+
+/**
+ * Updates (or creates) a Zoho Projects Task from a Zoho CRM Case.
+ * This is triggered by the CRM Webhook.
+ */
 async function updateProjectsTask(caseData) {
-  // caseData will contain { case_id, install_start, install_end, ... }
   console.log(`[Projects Sync] Received update for Case ID: ${caseData.case_id}`);
   
-  // 1. FIND THE PROJECT
-  // We need logic to find the correct Project (or Task) associated with this Case.
-  // For now, we'll just log the data.
-  console.log('[Projects Sync] Data:', caseData);
+  if (!ZOHO_PORTAL_ID) {
+    console.warn('[Projects Sync] ZOHO_PORTAL_ID is not set in .env. Skipping sync.');
+    return { success: false, error: 'Portal ID not configured' };
+  }
 
-  // 2. GET ACCESS TOKEN
-  // const accessToken = await getAccessToken();
-  // if (!accessToken) throw new Error("Could not get token for Projects");
+  // 1. GET ACCESS TOKEN
+  const accessToken = await getAccessToken();
+  if (!accessToken) throw new Error("Could not get token for Projects");
 
-  // 3. FIND/UPDATE TASK
-  // const portalId = "YOUR_PORTAL_ID"; // We need this
-  // const projectId = "YOUR_PROJECT_ID"; // We need to find this
-  // const taskId = "YOUR_TASK_ID"; // We need to find this
-  // const projectsApiUrl = `https://projects.zoho.com/restapi/portal/${portalId}/projects/${projectId}/tasks/${taskId}/`;
+  // 2. FIND THE PROJECT/TASK
+  // This assumes you have a custom field 'ZCAD_Case_ID' that stores the CRM Case ID.
+  // Replace 'ZCAD_Case_ID' with your actual custom field name.
+  const caseId = caseData.case_id;
+  const searchApiUrl = `https://projects.zoho.com/restapi/portal/${ZOHO_PORTAL_ID}/tasks/search?search_term=${caseId}`;
+
+  let taskId = null;
+  let projectId = null;
+
+  try {
+    const searchRes = await fetch(searchApiUrl, {
+      headers: { 'Authorization': `Zoho-oauthtoken ${accessToken}` }
+    });
+    const searchData = await searchRes.json();
+    
+    // TODO: Add logic to find the specific task if search returns multiple
+    if (searchData.tasks && searchData.tasks.length > 0) {
+      taskId = searchData.tasks[0].id_string;
+      projectId = searchData.tasks[0].project.id_string;
+      console.log(`[Projects Sync] Found Task ${taskId} in Project ${projectId}`);
+    } else {
+      console.log(`[Projects Sync] No task found for Case ${caseId}.`);
+      // TODO: Add logic to find the correct Project ID and CREATE a new task
+      // For now, we'll just log and return.
+      return { success: false, error: 'Task not found, create logic not implemented' };
+    }
+  } catch (e) {
+    console.error('[Projects Sync] Error searching for task:', e.message);
+    return { success: false, error: e.message };
+  }
+
+  // 3. UPDATE THE TASK
+  const updateApiUrl = `https://projects.zoho.com/restapi/portal/${ZOHO_PORTAL_ID}/projects/${projectId}/tasks/${taskId}/`;
   
-  // const body = JSON.stringify({
-  //   "task": {
-  //     "start_date": caseData.install_start,
-  //     "end_date": caseData.install_end,
-  //     "owner": caseData.wip_manager_id, 
-  //     "custom_fields": {
-  //       "Sync_Source": "crm" // This is the loop protection
-  //     }
-  //   }
-  // });
+  const body = JSON.stringify({
+    "task": {
+      "start_date": toYMD(caseData.install_start), // Ensure YYYY-MM-DD format
+      "end_date": toYMD(caseData.install_end),
+      // "owner": caseData.wip_manager_id, // This needs mapping
+      "custom_fields": {
+        "Sync_Source": "crm" // This is the loop protection
+      }
+    }
+  });
   
-  // const res = await fetch(projectsApiUrl, {
-  //   method: 'POST',
-  //   headers: {
-  //     'Authorization': `Zoho-oauthtoken ${accessToken}`,
-  //     'Content-Type': 'application/json',
-  //   },
-  //   body: body,
-  // });
-  // const data = await res.json();
-  // console.log('[Projects Sync] Update result:', data);
-
-  return { success: true };
+  try {
+    const res = await fetch(updateApiUrl, {
+      method: 'POST', // Projects API uses POST for updates
+      headers: {
+        'Authorization': `Zoho-oauthtoken ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: body,
+    });
+    const data = await res.json();
+    console.log('[Projects Sync] Update result:', data);
+    return { success: true };
+  } catch (e) {
+    console.error('[Projects Sync] Error updating task:', e.message);
+    return { success: false, error: e.message };
+  }
 }
+
+/**
+ * Updates a Zoho CRM Case from a Zoho Projects Task.
+ * This is triggered by the Project Webhook.
+ */
+async function updateCaseFromProject(taskData) {
+  console.log(`[CRM Sync] Received update for Task ID: ${taskData.id_string || taskData.task_id}`);
+
+  // 1. Find the CRM Case ID
+  // This assumes the Case ID is stored in a custom field 'ZCAD_Case_ID' on the task.
+  // Replace 'ZCAD_Case_ID' with your actual custom field name.
+  const caseId = taskData.custom_fields?.ZCAD_Case_ID; 
+  if (!caseId) {
+    console.warn(`[CRM Sync] Task ${taskData.id_string} has no Case ID. Skipping sync.`);
+    return { success: false, error: 'Case ID not found on task' };
+  }
+  
+  // 2. GET ACCESS TOKEN
+  const accessToken = await getAccessToken();
+  if (!accessToken) throw new Error("Could not get token for CRM");
+
+  // 3. UPDATE THE CASE
+  const crmApiUrl = `${ZOHO_DOMAIN}/crm/v2/Cases/${caseId}`;
+  
+  const body = JSON.stringify({
+    data: [{
+      "Install_Date": toYMD(taskData.start_date),
+      "Install_End_Date": toYMD(taskData.end_date),
+      "Sync_Source": "projects" // Set source for loop protection
+    }]
+  });
+
+  try {
+    const res = await fetch(crmApiUrl, {
+      method: 'PUT', // Use PUT to update
+      headers: {
+        'Authorization': `Zoho-oauthtoken ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: body,
+    });
+    
+    const data = await res.json();
+    if (data.data && data.data[0].code === 'SUCCESS') {
+      console.log(`[CRM Sync] Case ${caseId} updated successfully from Project.`);
+    } else {
+      console.error(`[CRM Sync] Error updating Case ${caseId}:`, data);
+    }
+    return { success: true };
+  } catch (e) {
+    console.error(`[CRM Sync] Exception updating Case ${caseId}:`, e.message);
+    return { success: false, error: e.message };
+  }
+}
+
+// -----------------------------------------------------------------
 
 
 // in-memory snapshot
@@ -625,7 +762,7 @@ app.patch("/api/cases/:id", async (req, res) => {
       // TODO: Build updateManualEntry function
       console.warn(`[PATCH] Update for Creator ID ${id} not yet implemented.`);
     } else {
-      // Update CRM case
+      // Update CRM case. This will set Sync_Source: "widget"
       updateCaseInZoho(id, start, end); // Run in background
     }
 
@@ -649,7 +786,7 @@ app.post("/api/manual-entry", async (req, res) => {
   }
 });
 
-// --- NEW WEBHOOK ENDPOINT for CRM ---
+// --- WEBHOOK ENDPOINT for CRM ---
 app.post("/api/webhook/crm-case-updated", async (req, res) => {
   console.log('[Webhook CRM] Received a request...');
 
@@ -661,11 +798,11 @@ app.post("/api/webhook/crm-case-updated", async (req, res) => {
   }
 
   // 2. Get data (Zoho sends as form-data)
-  // --- UPDATED: Add verbose logging ---
   console.log('[Webhook CRM] Raw Body:', req.body);
   const data = req.body;
   
   // 3. Check for loops
+  // If the update came from Projects, stop here.
   if (data.sync_source === 'projects') {
     console.log(`[Webhook CRM] Loop protection: Ignoring update for Case ${data.case_id} (source=projects).`);
     return res.status(200).send('Loop prevented');
@@ -674,10 +811,47 @@ app.post("/api/webhook/crm-case-updated", async (req, res) => {
   // 4. Process the update
   try {
     console.log(`[Webhook CRM] Processing update for Case ${data.case_id}...`);
+    // This will update the linked Project and set its Sync_Source: "crm"
     await updateProjectsTask(data);
     res.status(200).send('Webhook received');
   } catch (e) {
     console.error(`[Webhook CRM] Error processing update for Case ${data.case_id}:`, e.message);
+    res.status(500).send('Error processing webhook');
+  }
+});
+
+// --- NEW WEBHOOK ENDPOINT for PROJECTS ---
+app.post("/api/webhook/project-task-updated", async (req, res) => {
+  console.log('[Webhook Projects] Received a request...');
+
+  // 1. Check security
+  const secret = req.headers['x-webhook-secret'];
+  if (!ZOHO_WEBHOOK_SECRET || secret !== ZOHO_WEBHOOK_SECRET) {
+    console.warn('[Webhook Projects] Failed security check. Invalid secret.');
+    return res.status(401).send('Unauthorized');
+  }
+
+  // 2. Get data
+  console.log('[Webhook Projects] Raw Body:', req.body);
+  // Zoho Projects sends data differently, often nested
+  const taskData = req.body.task || req.body; 
+  
+  // 3. Check for loops
+  // If the update came from CRM, stop here.
+  // Note: Adjust 'taskData.custom_fields?.Sync_Source' to match the actual payload key
+  if (taskData.custom_fields?.Sync_Source === 'crm') {
+    console.log(`[Webhook Projects] Loop protection: Ignoring update for Task ${taskData.id_string} (source=crm).`);
+    return res.status(200).send('Loop prevented');
+  }
+
+  // 4. Process the update
+  try {
+    console.log(`[Webhook Projects] Processing update for Task ${taskData.id_string}...`);
+    // This will update the linked Case and set its Sync_Source: "projects"
+    await updateCaseFromProject(taskData);
+    res.status(200).send('Webhook received');
+  } catch (e) {
+    console.error(`[Webhook Projects] Error processing update for Task ${taskData.id_string}:`, e.message);
     res.status(500).send('Error processing webhook');
   }
 });
