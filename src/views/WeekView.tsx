@@ -1,6 +1,6 @@
-// CACHE BUST v8
+// CACHE BUST v9
 import React from "react";
-import EventPill from "../components/EventPill"; // <-- Using the correct pill
+import EventPill from "../components/EventPill";
 import {
   addDays,
   startOfWeek,
@@ -38,8 +38,8 @@ function useElementWidth(ref: React.RefObject<HTMLDivElement>) {
 }
 
 export default function WeekView({ date, events, onOpenEditor }: Props) {
-  const weekStart = startOfWeek(date);
-  const weekEnd = endOfWeek(weekStart); // This is Sunday
+  const weekStart = startOfWeek(date); // Monday 00:00
+  const weekEnd = endOfWeek(weekStart);   // Sunday 23:59
   const days = [...Array(7)].map((_, i) => addDays(weekStart, i));
 
   const segs = React.useMemo(
@@ -49,33 +49,31 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
         .filter((e) => {
           const start = new Date(e.start);
           const end = new Date(e.end);
-          // Check if event ends *before* Monday OR starts *after* next Monday
-          return !(end < weekStart || start >= addDays(weekEnd, 1)); 
+          // Exclude if it ends *before* this Monday
+          if (end < weekStart) return false;
+          // Exclude if it starts *on or after* next Monday
+          if (start > weekEnd) return false;
+          return true;
         })
         .flatMap((e) => segmentEventAcrossRange(e, weekStart, weekEnd))
         .sort((a, b) => a.start.getTime() - b.start.getTime() || b.span - a.span),
     [events, weekStart, weekEnd]
   );
 
-const H_GUTTER = 4;
-const V_GUTTER = 2;
-
+  const H_GUTTER = 4;
+  const V_GUTTER = 2;
   const lanes = React.useMemo(() => packLanes(segs), [segs]);
-
   const laneRefs = React.useMemo(
     () => lanes.map((lane) => lane.map(() => React.createRef<HTMLDivElement>())),
     [lanes.length]
   );
 
-  const [laneHeights, setLaneHeights] = React.useState<number[]>(
-    () => lanes.map(() => BAR_MIN)
-  );
+  const [laneHeights, setLaneHeights] = React.useState<number[]>([]);
   const [sectionH, setSectionH] = React.useState(60);
-
   const rowRef = React.useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>;
   const rowWidth = useElementWidth(rowRef);
-
-  const BAR_MIN = 40; // Default height
+  const BAR_MIN = 84; // 4 lines * 16px line-height + 12px padding + 8px gap
+  const LANE_GAP = 4;
   
   React.useLayoutEffect(() => {
     if (!rowWidth) return;
@@ -103,7 +101,7 @@ const V_GUTTER = 2;
       if (nextSectionH !== sectionH) setSectionH(nextSectionH);
     });
     return () => cancelAnimationFrame(raf);
-  }, [rowWidth, lanes, laneRefs]); // Added laneRefs
+  }, [rowWidth, lanes, laneRefs, BAR_MIN, LANE_GAP, laneHeights, sectionH]);
 
   const laneTops: number[] = [];
   laneHeights.reduce((acc, h, i) => {
@@ -186,7 +184,6 @@ const V_GUTTER = 2;
               const top = laneTops[li] ?? 0;
               const leftPct = (seg.offset / 7) * 100;
               const widthPct = (Math.max(1, seg.span) / 7) * 100;
-
               const isSingle = seg.span === 1;
 
               const tooltip = [
@@ -216,10 +213,7 @@ const V_GUTTER = 2;
                   onDragStart={onDragStart(seg)}
                   onDragEnd={onDragEnd}
                   onDoubleClick={beginQuickResize(seg)}
-                  onClick={(evt) => { 
-                    if (evt.ctrlKey) { beginQuickResize(seg)(evt as any); return; }
-                    if (evt) onOpenEditor?.(e, evt);
-                  }}
+                  // --- CLICK HANDLER REMOVED FROM WRAPPER ---
                   title={tooltip}
                 >
                 <EventPill
@@ -227,6 +221,7 @@ const V_GUTTER = 2;
                   isMultiDay={!isSingle}
                   className={e.colorClass || "event--blue"}
                   style={{ width: "100%", ...e.colour ? {["--c"]: e.colour} : {} }}
+                  // --- UPDATED: This creates a fake MouseEvent from the Rect ---
                   onOpenEditor={(ev, rect) => {
                      if (rect) onOpenEditor?.(ev, { clientY: rect.top, clientX: rect.left } as any);
                   }}

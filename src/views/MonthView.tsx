@@ -1,5 +1,5 @@
+// CACHE BUST v8
 import React from "react";
-// --- UPDATED: Reverted to original EventPill ---
 import EventPill from "../components/EventPill";
 import {
   addDays,
@@ -76,8 +76,12 @@ const V_GUTTER = 2;
         for (const r of lane) {
           const el = r.current;
           if (el) {
-            const h = Math.ceil(el.getBoundingClientRect().height);
-            if (h > maxH) maxH = h;
+            // Find the pill, which is the first child
+            const pillEl = el.querySelector('.event-pill') as HTMLDivElement;
+            if (pillEl) {
+              const h = Math.ceil(pillEl.getBoundingClientRect().height);
+              if (h > maxH) maxH = h;
+            }
           }
         }
         return maxH;
@@ -96,7 +100,7 @@ const V_GUTTER = 2;
       setRowHeights(nextRowHeights);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  });
+  }, [weekData]); // Simplified dependency
 
   const laneTops = laneHeights.map((laneHs) => {
     const tops: number[] = [];
@@ -214,10 +218,7 @@ const V_GUTTER = 2;
                       onDragStart={onDragStart(seg)}
                       onDragEnd={onDragEnd}
                       onDoubleClick={beginQuickResize(seg)}
-                      onClick={(evt) => {
-                        if (evt.ctrlKey) { beginQuickResize(seg)(evt as any); return; }
-                        if (evt) onOpenEditor?.(e, evt);
-                      }}
+                      // --- CLICK HANDLER REMOVED FROM WRAPPER ---
                       title={tooltip}
                     >
                       {/* --- UPDATED: Reverted to original EventPill --- */}
@@ -226,9 +227,9 @@ const V_GUTTER = 2;
                         isMultiDay={!isSingleDay}
                         className={e.colorClass || "event--blue"}
                         style={{ width: "100%", ...e.colour ? {["--c"]: e.colour} : {} }}
-                        onOpenEditor={(ev) => {
-                          const rect = row.laneRefs[li][bi].current?.getBoundingClientRect();
-                          if (rect) onOpenEditor?.(ev, rect as any);
+                        // --- UPDATED: This creates a fake MouseEvent from the Rect ---
+                        onOpenEditor={(ev, rect) => {
+                          if (rect) onOpenEditor?.(ev, { clientY: rect.top, clientX: rect.left } as any);
                         }}
                       />
                     </div>
