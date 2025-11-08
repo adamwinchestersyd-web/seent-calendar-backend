@@ -34,8 +34,12 @@ app.use(cors({
   maxAge: 600,
 }));
 
+// --- UPDATED: Split parsers ---
+// Use express.json() for our frontend API calls
 app.use(express.json());
+// Use urlencoded (for Zoho Webhooks)
 app.use(express.urlencoded({ extended: true })); 
+// ---
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const CASES_PATH = path.join(DATA_DIR, "cases.json");
@@ -164,7 +168,7 @@ async function fetchManualEntries() {
       caseOwner: item.Owner,
       installer: item.Installer,
       pmNotes: item.PM_Notes,
-      state: item.State || "", // <-- Read State
+      state: item.State || "",
       isManual: true, 
       colour: '#8b5cf6', 
       created_time: item.Added_Time, 
@@ -192,7 +196,7 @@ async function createManualEntry(eventData) {
       "Start_Date": toCreatorDate(eventData.start), 
       "End_Date": toCreatorDate(eventData.end),   
       "Start_Time": eventData.startTime,
-      "State": eventData.state, // <-- Save State
+      "State": eventData.state,
     }
   });
 
@@ -222,10 +226,48 @@ async function createManualEntry(eventData) {
 // -----------------------------------------------------------------
 
 
-// --- ZOHO PROJECTS HELPER ---
+// --- ZOHO PROJECTS HELPER (NEW) ---
 async function updateProjectsTask(caseData) {
+  // caseData will contain { case_id, install_start, install_end, ... }
   console.log(`[Projects Sync] Received update for Case ID: ${caseData.case_id}`);
+  
+  // 1. FIND THE PROJECT
+  // We need logic to find the correct Project (or Task) associated with this Case.
+  // For now, we'll just log the data.
   console.log('[Projects Sync] Data:', caseData);
+
+  // 2. GET ACCESS TOKEN
+  // const accessToken = await getAccessToken();
+  // if (!accessToken) throw new Error("Could not get token for Projects");
+
+  // 3. FIND/UPDATE TASK
+  // const portalId = "YOUR_PORTAL_ID"; // We need this
+  // const projectId = "YOUR_PROJECT_ID"; // We need to find this
+  // const taskId = "YOUR_TASK_ID"; // We need to find this
+  // const projectsApiUrl = `https://projects.zoho.com/restapi/portal/${portalId}/projects/${projectId}/tasks/${taskId}/`;
+  
+  // const body = JSON.stringify({
+  //   "task": {
+  //     "start_date": caseData.install_start,
+  //     "end_date": caseData.install_end,
+  //     "owner": caseData.wip_manager_id, 
+  //     "custom_fields": {
+  //       "Sync_Source": "crm" // This is the loop protection
+  //     }
+  //   }
+  // });
+  
+  // const res = await fetch(projectsApiUrl, {
+  //   method: 'POST',
+  //   headers: {
+  //     'Authorization': `Zoho-oauthtoken ${accessToken}`,
+  //     'Content-Type': 'application/json',
+  //   },
+  //   body: body,
+  // });
+  // const data = await res.json();
+  // console.log('[Projects Sync] Update result:', data);
+
   return { success: true };
 }
 
@@ -619,6 +661,8 @@ app.post("/api/webhook/crm-case-updated", async (req, res) => {
   }
 
   // 2. Get data (Zoho sends as form-data)
+  // --- UPDATED: Add verbose logging ---
+  console.log('[Webhook CRM] Raw Body:', req.body);
   const data = req.body;
   
   // 3. Check for loops
