@@ -37,7 +37,7 @@ export default function EventPillWeek({ ev }) {
   // Get the background color from the event
   const colorStyle = {
     background: ev.colour || "#3b82f6",
-    // position: 'relative' has been MOVED to calendar.css
+    // position: 'relative' is now in calendar.css
   };
 
   return (
