@@ -9,7 +9,7 @@ const clampStyle = (lines) => ({
   WebkitLineClamp: lines,
 });
 
-// --- NEW: Style for the manual entry bar ---
+// Style for the manual entry bar
 const manualEntryBarStyle = {
   position: 'absolute',
   top: 0,
@@ -26,25 +26,27 @@ export default function EventPillWeek({ ev }) {
   const metaStyle  = { opacity: 0.9, fontSize: 12, ...clampStyle(1) };
   const notesStyle = { opacity: 0.9, fontSize: 12, ...clampStyle(2) };
 
+  // Meta line: WIP Manager | Installer | Start time | Owner
   const wip = ev.wipManager || "";
   const ins = ev.installer || "";
-  const own = ev.caseOwner || "";
   const time = ev.startTime || "";
+  const own = ev.caseOwner || "";
   
   const line2 = [wip, ins, time, own].filter(Boolean).join(" | ");
 
   // Get the background color from the event
   const colorStyle = {
     background: ev.colour || "#3b82f6",
+    position: 'relative', // This is required for the yellow bar to position correctly
   };
 
   return (
     <div 
       className="event-pill" 
-      style={colorStyle} // Apply background color
+      style={colorStyle} // Apply background color and position
       title={ev.title}
     >
-      {/* --- NEW: Yellow bar for manual entries --- */}
+      {/* Yellow bar for manual entries */}
       {ev.isManual && <div style={manualEntryBarStyle} />}
 
       {/* The original CSS file uses event__fill, so we keep it for the gradient */}
