@@ -29,7 +29,7 @@ app.use(cors({
     if (origin.startsWith("http://localhost:5173")) return cb(null, true);
     return cb(new Error(`Not allowed by CORS: ${origin}`));
   },
-  methods: ["GET","POST","PATCH","OPTIONS","DELETE"], // --- CHANGED: Added DELETE
+  methods: ["GET","POST","PATCH","OPTIONS","DELETE"], // Kept DELETE
   allowedHeaders: ["Content-Type","Authorization"],
   maxAge: 600,
 }));
@@ -55,7 +55,8 @@ const CLIENT_ID     = process.env.ZOHO_CLIENT_ID;
 const CLIENT_SECRET = process.env.ZOHO_CLIENT_SECRET;
 const REDIRECT_URI  = process.env.ZOHO_REDIRECT_URI;
 
-const ZOHO_FULL_SCOPE = "ZohoCRM.modules.ALL,ZohoCRM.users.READ,ZohoProjects.projects.ALL,ZohoCreator.report.READ,ZohoCreator.form.CREATE,ZohoCreator.report.DELETE"; // --- CHANGED: Added report.DELETE
+// --- CHANGED: Added ZohoCreator.form.DELETE ---
+const ZOHO_FULL_SCOPE = "ZohoCRM.modules.ALL,ZohoCRM.users.READ,ZohoProjects.projects.ALL,ZohoCreator.report.READ,ZohoCreator.form.CREATE,ZohoCreator.form.DELETE";
 const ZOHO_WEBHOOK_SECRET = process.env.ZOHO_WEBHOOK_SECRET; 
 
 let REFRESH_TOKEN     = process.env.ZOHO_REFRESH_TOKEN || null;
@@ -229,7 +230,7 @@ async function createManualEntry(eventData) {
   }
 }
 
-// --- NEW: Delete function for manual entries ---
+// --- CHANGED: Delete function for manual entries ---
 async function deleteManualEntry(creatorId) {
   const accessToken = await getAccessToken();
   if (!accessToken) return { error: 'Could not get access token' };
@@ -238,8 +239,8 @@ async function deleteManualEntry(creatorId) {
   const recordId = creatorId.replace('creator_', '');
   if (!recordId) return { error: 'Invalid Creator ID' };
 
-  // Use report name for delete, with criteria
-  const creatorApiUrl = `https://creator.zoho.com/api/v2/${CREATOR_APP_OWNER}/${CREATOR_APP_NAME}/report/${CREATOR_REPORT_NAME}?criteria=(ID==${recordId})`;
+  // --- CHANGED: Use the FORM delete API, not the REPORT delete API ---
+  const creatorApiUrl = `https://creator.zoho.com/api/v2/${CREATOR_APP_OWNER}/${CREATOR_APP_NAME}/form/${CREATOR_FORM_NAME}/${recordId}`;
 
   try {
     const res = await fetch(creatorApiUrl, {
@@ -250,7 +251,8 @@ async function deleteManualEntry(creatorId) {
     });
     const data = await res.json();
     
-    if (data.code === 3000) { 
+    // Check for success code on deletion
+    if (data.code === 3000 && data.data?.ID) { 
       console.log('[creator] Deleted entry:', recordId);
       return { success: true, id: recordId };
     } else {
@@ -747,7 +749,7 @@ app.post("/api/manual-entry", async (req, res) => {
   }
 });
 
-// --- NEW: DELETE endpoint for manual entries ---
+// --- DELETE endpoint for manual entries ---
 app.delete("/api/manual-entry/:id", async (req, res) => {
   const { id } = req.params;
   
