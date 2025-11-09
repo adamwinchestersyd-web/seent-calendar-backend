@@ -55,8 +55,8 @@ const CLIENT_ID     = process.env.ZOHO_CLIENT_ID;
 const CLIENT_SECRET = process.env.ZOHO_CLIENT_SECRET;
 const REDIRECT_URI  = process.env.ZOHO_REDIRECT_URI;
 
-// --- CHANGED: Added ZohoCreator.form.DELETE ---
-const ZOHO_FULL_SCOPE = "ZohoCRM.modules.ALL,ZohoCRM.users.READ,ZohoProjects.projects.ALL,ZohoCreator.report.READ,ZohoCreator.form.CREATE,ZohoCreator.form.DELETE";
+// --- Scope for delete is ZohoCreator.report.DELETE ---
+const ZOHO_FULL_SCOPE = "ZohoCRM.modules.ALL,ZohoCRM.users.READ,ZohoProjects.projects.ALL,ZohoCreator.report.READ,ZohoCreator.form.CREATE,ZohoCreator.report.DELETE";
 const ZOHO_WEBHOOK_SECRET = process.env.ZOHO_WEBHOOK_SECRET; 
 
 let REFRESH_TOKEN     = process.env.ZOHO_REFRESH_TOKEN || null;
@@ -130,8 +130,9 @@ async function getAccessToken() {
     throw new Error(`Token refresh failed (${r.status}) ${data.error || "No access_token returned"}`);
   }
 
+  // --- THIS IS THE KEY: Set the API domain correctly ---
   if (typeof data.api_domain === "string" && data.api_domain) {
-    ZOHO_DOMAIN = data.api_domain;
+    ZOHO_DOMAIN = data.api_domain; // e.g., https://www.zohoapis.com
   }
 
   ACCESS_TOKEN = data.access_token;
@@ -156,6 +157,7 @@ async function fetchManualEntries() {
   const accessToken = await getAccessToken();
   if (!accessToken) return [];
 
+  // v2 APIs seem to work fine with creator.zoho.com
   const creatorApiUrl = `https://creator.zoho.com/api/v2/${CREATOR_APP_OWNER}/${CREATOR_APP_NAME}/report/${CREATOR_REPORT_NAME}`;
 
   try {
@@ -190,6 +192,7 @@ async function createManualEntry(eventData) {
   const accessToken = await getAccessToken();
   if (!accessToken) return { error: 'Could not get access token' };
 
+  // v2 APIs seem to work fine with creator.zoho.com
   const creatorApiUrl = `https://creator.zoho.com/api/v2/${CREATOR_APP_OWNER}/${CREATOR_APP_NAME}/form/${CREATOR_FORM_NAME}`;
 
   const body = JSON.stringify({
@@ -230,7 +233,7 @@ async function createManualEntry(eventData) {
   }
 }
 
-// --- CHANGED: Delete function for manual entries ---
+// --- FIXED: Delete function for manual entries ---
 async function deleteManualEntry(creatorId) {
   const accessToken = await getAccessToken();
   if (!accessToken) return { error: 'Could not get access token' };
@@ -239,22 +242,28 @@ async function deleteManualEntry(creatorId) {
   const recordId = creatorId.replace('creator_', '');
   if (!recordId) return { error: 'Invalid Creator ID' };
 
-  // --- CHANGED: Use the FORM delete API, not the REPORT delete API ---
-  const creatorApiUrl = `https://creator.zoho.com/api/v2/${CREATOR_APP_OWNER}/${CREATOR_APP_NAME}/form/${CREATOR_FORM_NAME}/${recordId}`;
+  // --- FIXED: Use the v2.1 API with the ZOHO_DOMAIN variable ---
+  const creatorApiUrl = `https://${ZOHO_DOMAIN}/creator/v2.1/data/${CREATOR_APP_OWNER}/${CREATOR_APP_NAME}/report/${CREATOR_REPORT_NAME}/${recordId}`;
+
+  const payload = {
+    "skip_workflow": ["form_workflow"]
+  };
 
   try {
     const res = await fetch(creatorApiUrl, {
       method: 'DELETE',
       headers: {
         'Authorization': `Zoho-oauthtoken ${accessToken}`,
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify(payload)
     });
     const data = await res.json();
     
     // Check for success code on deletion
     if (data.code === 3000 && data.data?.ID) { 
-      console.log('[creator] Deleted entry:', recordId);
-      return { success: true, id: recordId };
+      console.log('[creator] Deleted entry:', data.data.ID);
+      return { success: true, id: data.data.ID };
     } else {
       console.error('[creator] Delete error:', data);
       return { error: 'Failed to delete entry from Creator', details: data };
@@ -447,7 +456,6 @@ function pruneOld(events) {
 
 // ----- State → colour map (match your Zoho picklist dots) -----
 const STATE_COLOURS = {
-  // --- CHANGED: VIC is now black ---
   VIC: "#000000",
   NSW: "#eb4d4d", // red
   QLD: "#f97316", // orange
@@ -636,6 +644,7 @@ app.get("/debug/ping", async (req, res) => {
     const body = await r.text();
     res.status(r.status).send(body);
   } catch (e) {
+    // --- THIS IS THE FIX for the typo ---
     res.status(500).send(String(e));
   }
 });

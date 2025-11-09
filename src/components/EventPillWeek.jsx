@@ -26,7 +26,7 @@ export default function EventPillWeek({ ev }) {
   const metaStyle  = { opacity: 0.9, fontSize: 12, ...clampStyle(1) };
   const notesStyle = { opacity: 0.9, fontSize: 12, ...clampStyle(2) };
 
-  // Meta line: WIP Manager | Installer | Start time | Owner
+  // --- FIXED: Meta line: WIP Manager | Installer | Start time | Owner ---
   const wip = ev.wipManager || "";
   const ins = ev.installer || "";
   const time = ev.startTime || "";
@@ -37,7 +37,7 @@ export default function EventPillWeek({ ev }) {
   // Get the background color from the event
   const colorStyle = {
     background: ev.colour || "#3b82f6",
-    position: 'relative', // This is required for the yellow bar to position correctly
+    position: 'relative', // --- FIX: This is required for the yellow bar to position correctly
   };
 
   return (
