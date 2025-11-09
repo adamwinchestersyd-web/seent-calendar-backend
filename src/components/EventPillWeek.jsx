@@ -1,4 +1,5 @@
 // src/components/EventPillWeek.jsx
+//Test change
 import React from "react";
 
 // utility: clamp text to N lines using CSS-only (no JS measuring)
