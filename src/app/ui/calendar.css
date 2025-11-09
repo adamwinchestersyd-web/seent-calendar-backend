@@ -85,6 +85,9 @@ html,body{ background:var(--bg); color:var(--text); }
 
 .calendar-root .event,
 .calendar-root .event-pill{
+  /* --- THIS IS THE FIX --- */
+  position: relative; 
+  
   display:flex;
   flex-direction:column;
   justify-content:flex-start;
