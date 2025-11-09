@@ -8,6 +8,7 @@ type Props = {
   ev?: any;
   onClose: () => void;
   onChangeDates: (id: string, eventData: any) => void;
+  onDelete: (id: string) => void; // <-- NEW
   wipOptions: string[];
   installerOptions: string[];
   ownerOptions: string[];
@@ -70,6 +71,7 @@ export default function ManualEntryEditor({
   ev,
   onClose,
   onChangeDates,
+  onDelete, // <-- NEW
   wipOptions,
   installerOptions,
   ownerOptions,
@@ -132,6 +134,13 @@ export default function ManualEntryEditor({
     const updatedEvent = { ...ev, ...fields };
     onChangeDates(ev.id, updatedEvent);
     onClose();
+  };
+
+  // --- NEW: Delete handler ---
+  const handleDelete = () => {
+    if (window.confirm("Are you sure you want to delete this manual entry? This cannot be undone.")) {
+      onDelete(ev.id);
+    }
   };
 
   return (
@@ -260,6 +269,18 @@ export default function ManualEntryEditor({
 
       {/* Actions */}
       <div className="modal-actions">
+        {/* --- NEW: Delete Button --- */}
+        {!isNewEvent && ev.isManual && (
+          <button
+            type="button"
+            className="modal-btn modal-btn-ghost"
+            style={{ color: '#ef4444', marginRight: 'auto' }} // Red, pushed to left
+            onClick={handleDelete}
+          >
+            Delete
+          </button>
+        )}
+
         <button
           type="button"
           className="modal-btn modal-btn-primary"

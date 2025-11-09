@@ -95,7 +95,8 @@ function normalizeEvent(raw, idx = 0) {
     "end", "Install_End_Date", "endDate", "EndDate", "dateEnd", "end_date"
   ]) || start);
 
-  const wipManager = asName(firstNonEmpty(raw, ["wipManager", "WIP_Manager1", "WIP", "wip"]));
+  // --- CHANGED: Use firstWord for wipManager ---
+  const wipManager = firstWord(firstNonEmpty(raw, ["wipManager", "WIP_Manager1", "WIP", "wip"]));
   const installer = asName(firstNonEmpty(raw, ["installer", "Installer", "WIP_Manager", "tech", "Technician"]));
   const caseOwner = firstWord(firstNonEmpty(raw, ["caseOwner", "Owner", "owner"]));
 
@@ -125,7 +126,8 @@ function normalizeEvent(raw, idx = 0) {
 
 // Zoho state colours (stable)
 const STATE_COLOURS = {
-  VIC: "#6b7280", NSW: "#ef4444", QLD: "#f97316", WA: "#60a5fa",
+  // --- CHANGED: VIC is now dark grey ---
+  VIC: "#27272a", NSW: "#ef4444", QLD: "#f97316", WA: "#60a5fa",
   ACT: "#fcd9bd", TAS: "#ec4899", NT: "#b91c1c", SA: "#facc15",
   NZ: "#22c55e", Other: "#9ca3af",
 };
@@ -223,13 +225,27 @@ export default function Calendar() {
   const { wipOptions, installerOptions, stateOptions, ownerOptions } = React.useMemo(() => {
     const wipSet = new Set(), instSet = new Set(), stateSet = new Set(), ownerSet = new Set();
     events.forEach((e) => {
-      if (e.wipManager) wipSet.add(e.wipManager);
-      if (e.installer) instSet.add(e.installer);
+      // Use the raw full name for the dropdown, not the normalized first name
+      if (e.raw?.wipManager) wipSet.add(asName(e.raw.wipManager)); 
+      else if (e.wipManager) wipSet.add(e.wipManager); // Fallback for manual
+      
+      if (e.raw?.installer) instSet.add(asName(e.raw.installer));
+      else if (e.installer) instSet.add(e.installer);
+
       if (e.state) stateSet.add(e.state);
-      if (e.caseOwner) ownerSet.add(e.caseOwner);
+      
+      if (e.raw?.caseOwner) ownerSet.add(asName(e.raw.caseOwner));
+      else if (e.caseOwner) ownerSet.add(e.caseOwner);
     });
+    // Re-normalize dropdown options to get full names
+    const wipFullNames = new Set();
+    events.forEach(e => {
+        const rawWip = asName(firstNonEmpty(e, ["wipManager", "WIP_Manager1", "WIP", "wip"]));
+        if(rawWip) wipFullNames.add(rawWip);
+    });
+
     return {
-      wipOptions: Array.from(wipSet).sort(),
+      wipOptions: Array.from(wipFullNames).sort(),
       installerOptions: Array.from(instSet).sort(),
       stateOptions: Array.from(stateSet).sort(),
       ownerOptions: Array.from(ownerSet).sort(),
@@ -241,8 +257,10 @@ export default function Calendar() {
     const w = filterWip.trim().toLowerCase();
     const ins = filterInstaller.trim().toLowerCase();
     const st = filterState.trim().toLowerCase();
+    
+    // NOTE: We filter on the *normalized* (first name) wipManager
     return events.filter((e) => {
-      const okW = !w || (e.wipManager || "").toLowerCase() === w;
+      const okW = !w || (e.wipManager || "").toLowerCase() === firstWord(w).toLowerCase();
       const okI = !ins || (e.installer || "").toLowerCase() === ins;
       const okS = !st || (e.state || "").toLowerCase() === st;
       return okW && okI && okS;
@@ -327,16 +345,35 @@ export default function Calendar() {
     }
   }
 
+  // --- NEW: API delete logic ---
+  async function deleteEvent(id) {
+    const api = import.meta.env.VITE_API_URL || "";
+    try {
+      if (!id.startsWith('creator_')) {
+        throw new Error("Only manual entries can be deleted.");
+      }
+      const res = await fetch(`${api}/api/manual-entry/${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error(await res.text());
+    } catch (e) {
+      console.warn("[Calendar] deleteEvent failed:", e);
+      throw e;
+    }
+  }
+
   // Handles saving data from either editor
   const applyDates = React.useCallback(async (id, updatedEventData) => {
-    const { start, end, isNew } = updatedEventData;
+    const { isNew } = updatedEventData;
 
     // --- Logic for NEW event ---
     if (isNew) {
       try {
-        await saveEvent(updatedEventData);
+        // --- CHANGED: Normalize before saving ---
+        const normalizedNewEvent = normalizeEvent(updatedEventData);
+        await saveEvent(normalizedNewEvent);
         await loadData("manual-save"); // Reload all data
-        push({ message: `Event "${updatedEventData.title}" created.`, timeoutMs: 3000 });
+        push({ message: `Event "${normalizedNewEvent.title}" created.`, timeoutMs: 3000 });
       } catch (e) {
         push({ message: `Failed to create event: ${e.message}`, timeoutMs: 4000 });
       }
@@ -348,11 +385,14 @@ export default function Calendar() {
     if (!prev) return;
 
     historyRef.current.set(id, { start: prev.start, end: prev.end });
-    const next = events.map((e) => (e.id === id ? { ...e, ...updatedEventData } : e));
+    
+    // --- CHANGED: Normalize event before optimistic update ---
+    const normalizedUpdatedEvent = normalizeEvent({ ...prev, ...updatedEventData });
+    const next = events.map((e) => (e.id === id ? normalizedUpdatedEvent : e));
     setEvents(next); // Optimistic update
 
     try {
-      await saveEvent(updatedEventData);
+      await saveEvent(normalizedUpdatedEvent); // Save the normalized event
       
       let undone = false;
       const undo = () => {
@@ -360,13 +400,14 @@ export default function Calendar() {
         undone = true;
         const prior = historyRef.current.get(id);
         if (!prior) return;
-        const revert = events.map((e) => (e.id === id ? { ...e, ...prior } : e));
+        // Revert to original `prev` event's dates
+        const revert = events.map((e) => (e.id === id ? { ...prev, ...prior } : e));
         setEvents(revert);
         saveEvent({ ...prev, ...prior });
       };
   
       push({
-        message: `Dates changed for "${updatedEventData.title}"`,
+        message: `Dates changed for "${normalizedUpdatedEvent.title}"`,
         actionLabel: "Undo",
         onAction: undo,
         timeoutMs: 5000,
@@ -376,7 +417,29 @@ export default function Calendar() {
       setEvents(prevEvents => prevEvents.map(e => (e.id === id ? prev : e)));
       push({ message: `Failed to save changes: ${e.message}`, timeoutMs: 4000 });
     }
-  }, [events, push, api, loadData]);
+  }, [events, push, api, loadData]); // `normalizeEvent` is a pure function, no dep needed
+
+  // --- NEW: Handler for deleting an event ---
+  const handleDelete = React.useCallback(async (id) => {
+    const eventToDelete = events.find(e => e.id === id);
+    if (!eventToDelete) return;
+
+    const originalEvents = [...events]; // Keep a copy for rollback
+    
+    // Optimistic update: remove from state
+    setEvents(prev => prev.filter(e => e.id !== id));
+    handleCloseEditor(); // Close the modal
+    
+    try {
+      await deleteEvent(id);
+      push({ message: `Event "${eventToDelete.title}" deleted.`, timeoutMs: 3000 });
+    } catch (e) {
+      // Rollback on error
+      setEvents(originalEvents);
+      push({ message: `Failed to delete event: ${e.message}`, timeoutMs: 4000 });
+    }
+  }, [events, push, api, handleCloseEditor]); // Added deps
+
 
   // Reset filters
   const handleReset = React.useCallback(() => {
@@ -455,10 +518,11 @@ export default function Calendar() {
           clickEvent={editor.clickEvent}
           onClose={handleCloseEditor}
           onChangeDates={applyDates}
+          onDelete={handleDelete} // <-- NEW PROP
           wipOptions={wipOptions}
           installerOptions={installerOptions}
           ownerOptions={ownerOptions}
-          stateOptions={stateOptions} // <-- PROP IS PASSED
+          stateOptions={stateOptions} 
         />
       )}
     </div>

@@ -18,7 +18,11 @@ export default function EventPillWeek({ ev }) {
   const wip = ev.wipManager || "";
   const ins = ev.installer || "";
   const own = ev.caseOwner || "";
-  const line2 = [wip, ins, own].filter(Boolean).join(" | ");
+  // --- NEW: Get startTime ---
+  const time = ev.startTime || "";
+  
+  // --- CHANGED: Add time and use " | " separator ---
+  const line2 = [wip, ins, time, own].filter(Boolean).join(" | ");
 
   // Get the background color from the event
   const colorStyle = {
