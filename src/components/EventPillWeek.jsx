@@ -9,6 +9,17 @@ const clampStyle = (lines) => ({
   WebkitLineClamp: lines,
 });
 
+// --- NEW: Style for the manual entry bar ---
+const manualEntryBarStyle = {
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  right: 0,
+  height: '5px',
+  backgroundColor: '#facc15', // Using 'SA' yellow for consistency
+  zIndex: 2,
+};
+
 export default function EventPillWeek({ ev }) {
   // 1 line for title, 1 for meta, 2 for notes = 4 lines total
   const titleStyle = { fontWeight: 600, ...clampStyle(1) };
@@ -18,10 +29,8 @@ export default function EventPillWeek({ ev }) {
   const wip = ev.wipManager || "";
   const ins = ev.installer || "";
   const own = ev.caseOwner || "";
-  // --- NEW: Get startTime ---
   const time = ev.startTime || "";
   
-  // --- CHANGED: Add time and use " | " separator ---
   const line2 = [wip, ins, time, own].filter(Boolean).join(" | ");
 
   // Get the background color from the event
@@ -35,6 +44,9 @@ export default function EventPillWeek({ ev }) {
       style={colorStyle} // Apply background color
       title={ev.title}
     >
+      {/* --- NEW: Yellow bar for manual entries --- */}
+      {ev.isManual && <div style={manualEntryBarStyle} />}
+
       {/* The original CSS file uses event__fill, so we keep it for the gradient */}
       <div className="event__fill" style={{ background: ev.colour || "#3b82f6" }} /> 
       
