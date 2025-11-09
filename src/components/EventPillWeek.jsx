@@ -1,4 +1,4 @@
-// FORCE V3 UPDATE
+// src/components/EventPillWeek.jsx
 import React from "react";
 
 // utility: clamp text to N lines using CSS-only (no JS measuring)
