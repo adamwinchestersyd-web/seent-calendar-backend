@@ -242,8 +242,8 @@ async function deleteManualEntry(creatorId) {
   const recordId = creatorId.replace('creator_', '');
   if (!recordId) return { error: 'Invalid Creator ID' };
 
-  // --- FIXED: Use the v2.1 API with the ZOHO_DOMAIN variable ---
-  const creatorApiUrl = `https://${ZOHO_DOMAIN}/creator/v2.1/data/${CREATOR_APP_OWNER}/${CREATOR_APP_NAME}/report/${CREATOR_REPORT_NAME}/${recordId}`;
+  // --- FIXED: Remove "https://" prefix. ZOHO_DOMAIN already has it. ---
+  const creatorApiUrl = `${ZOHO_DOMAIN}/creator/v2.1/data/${CREATOR_APP_OWNER}/${CREATOR_APP_NAME}/report/${CREATOR_REPORT_NAME}/${recordId}`;
 
   const payload = {
     "skip_workflow": ["form_workflow"]
@@ -644,7 +644,6 @@ app.get("/debug/ping", async (req, res) => {
     const body = await r.text();
     res.status(r.status).send(body);
   } catch (e) {
-    // --- THIS IS THE FIX for the typo ---
     res.status(500).send(String(e));
   }
 });
@@ -679,7 +678,7 @@ app.post("/api/cases/refresh", async (_req, res) => {
 // ... (other debug routes) ...
 app.get("/debug/case/:id/raw", (req, res) => {
   const ev = CASES_CACHE.events.find(e => e.id === req.params.id);
-  if (!ev) return res.status(404).json({ error: "not found", id: req.params.id }); 
+  if (!ev) return res.status(44).json({ error: "not found", id: req.params.id }); 
   (async () => {
     try {
       const token = await getAccessToken(); 

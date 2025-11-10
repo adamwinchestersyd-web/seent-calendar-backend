@@ -3,12 +3,11 @@
    ========================================================================== */
 
 /* ---- Theme ---- */
-/*Test Change */
 :root{
   --bg:#2f3236;
   --panel:#2b2e32;
   --panel-strong:rgba(198, 213, 232, 0.278);
-  --grid:rgba(243, 235, 238, 0.236);
+  --grid:rgba(243,235,235,.236);
   --text:#e5e8ed;
   --text-muted:#a9b0b9;
   --shadow:0 6px 14px rgba(0,0,0,.35), 0 1px 0 rgba(255,255,255,.04) inset;
@@ -87,7 +86,8 @@ html,body{ background:var(--bg); color:var(--text); }
 .calendar-root .event,
 .calendar-root .event-pill{
   /* --- THIS IS THE FIX --- */
-  position: relative;
+  position: relative; 
+  
   display:flex;
   flex-direction:column;
   justify-content:flex-start;
