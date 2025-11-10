@@ -11,7 +11,11 @@ const clampStyle = (lines) => ({
 
 export default function EventPillWeek({ ev }) {
   // 1 line for title, 1 for meta, 2 for notes = 4 lines total
-  const titleStyle = { fontWeight: 600, ...clampStyle(1) };
+  const titleStyle = { 
+    fontWeight: 600, 
+    ...clampStyle(1),
+    textTransform: 'uppercase', // <-- NEW TEST CHANGE
+  };
   const metaStyle  = { opacity: 0.9, fontSize: 12, ...clampStyle(1) };
   const notesStyle = { opacity: 0.9, fontSize: 12, ...clampStyle(2) };
 
