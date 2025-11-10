@@ -8,6 +8,6 @@ export default defineConfig(({ command }) => ({
   plugins: [react()],
   base: command === 'build' ? '/' : '/',
   build: {
-    outDir: 'dist-v2'
+    outDir: 'dist-v3'
   } 
 }))
