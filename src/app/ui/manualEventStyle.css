@@ -1,8 +1,0 @@
-/* src/app/ui/manualEventStyle.css */
-
-/* --- NEW CLASS FOR MANUAL ENTRY PILL --- */
-.calendar-root .event-pill--manual {
-  border-top: 5px solid #facc15;
-  /* Adjust padding to account for the border */
-  padding-top: calc(var(--pill-padY) - 5px);
-}
