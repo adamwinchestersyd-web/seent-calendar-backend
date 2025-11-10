@@ -11,13 +11,7 @@ const clampStyle = (lines) => ({
 
 // Style for the manual entry bar
 const manualEntryBarStyle = {
-  position: 'absolute',
-  top: 0,
-  left: 0,
-  right: 0,
-  height: '5px',
-  backgroundColor: '#facc15', // Using 'SA' yellow for consistency
-  zIndex: 2,
+  borderTop: '6px solid #facc15', // Using 'SA' yellow for consistency
 };
 
 export default function EventPillWeek({ ev }) {
