@@ -277,7 +277,7 @@ export default function ManualEntryEditor({
             style={{ color: '#ef4444', marginRight: 'auto' }} // Red, pushed to left
             onClick={handleDelete}
           >
-            Delete
+            Remove
           </button>
         )}
 
