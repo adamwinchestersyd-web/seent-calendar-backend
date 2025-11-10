@@ -157,6 +157,10 @@ export default function Calendar() {
   const [filterState, setFilterState] = React.useState("");
   const [colourMode, setColourMode] = React.useState("state");
 
+  // --- NEW: State for modal dropdowns ---
+  const [allCrmUsers, setAllCrmUsers] = React.useState([]);
+  const [allServiceAgents, setAllServiceAgents] = React.useState([]);
+
   // Load + normalize data from API
   const api = import.meta.env.VITE_API_URL || "";
 
@@ -205,9 +209,33 @@ export default function Calendar() {
     }
   }, [api, push]); // Added `push`
 
+  // --- NEW: Fetch modal lists on load ---
   React.useEffect(() => {
+    async function fetchLists() {
+      try {
+        console.log("[Calendar] Fetching modal dropdown lists...");
+        const [usersRes, agentsRes] = await Promise.all([
+          fetch(`${api}/api/lists/users`),
+          fetch(`${api}/api/lists/service-agents`)
+        ]);
+        if (!usersRes.ok) throw new Error("Failed to fetch CRM users");
+        if (!agentsRes.ok) throw new Error("Failed to fetch Service Agents");
+        
+        const users = await usersRes.json();
+        const agents = await agentsRes.json();
+        
+        setAllCrmUsers(users);
+        setAllServiceAgents(agents);
+        console.log("[Calendar] Modal lists loaded.");
+      } catch (e) {
+        console.error("[Calendar] Failed to load modal lists:", e);
+        push({ message: `Failed to load dropdown lists: ${e.message}`, timeoutMs: 4000 });
+      }
+    }
+    
     loadData("init");
-  }, [loadData]);
+    fetchLists();
+  }, [loadData, api, push]); // Removed 'loadData' from here, it's in useCallback
   
   // Toolbar handlers
   const onViewChange = React.useCallback((v) => setView(v), []);
@@ -220,34 +248,24 @@ export default function Calendar() {
     setDate(d);
   }, [date, view]);
 
-  // options for dropdowns
-  const { wipOptions, installerOptions, stateOptions, ownerOptions } = React.useMemo(() => {
-    const wipSet = new Set(), instSet = new Set(), stateSet = new Set(), ownerSet = new Set();
+  // --- options for MAIN FILTER bar (unchanged) ---
+  const { wipOptions, installerOptions, stateOptions } = React.useMemo(() => {
+    const wipSet = new Set(), instSet = new Set(), stateSet = new Set();
     events.forEach((e) => {
       // Use the raw full name for the dropdown, not the normalized first name
-      if (e.raw?.wipManager) wipSet.add(asName(e.raw.wipManager)); 
-      else if (e.wipManager) wipSet.add(e.wipManager); // Fallback for manual
-      
-      if (e.raw?.installer) instSet.add(asName(e.raw.installer));
-      else if (e.installer) instSet.add(e.installer);
+      const rawWip = asName(firstNonEmpty(e, ["wipManager", "WIP_Manager1", "WIP", "wip"]));
+      if(rawWip) wipSet.add(rawWip);
+
+      const rawInstaller = asName(firstNonEmpty(e, ["installer", "Installer", "WIP_Manager", "tech", "Technician"]));
+      if(rawInstaller) instSet.add(rawInstaller);
 
       if (e.state) stateSet.add(e.state);
-      
-      if (e.raw?.caseOwner) ownerSet.add(asName(e.raw.caseOwner));
-      else if (e.caseOwner) ownerSet.add(e.caseOwner);
-    });
-    // Re-normalize dropdown options to get full names
-    const wipFullNames = new Set();
-    events.forEach(e => {
-        const rawWip = asName(firstNonEmpty(e, ["wipManager", "WIP_Manager1", "WIP", "wip"]));
-        if(rawWip) wipFullNames.add(rawWip);
     });
 
     return {
-      wipOptions: Array.from(wipFullNames).sort(),
+      wipOptions: Array.from(wipSet).sort(),
       installerOptions: Array.from(instSet).sort(),
       stateOptions: Array.from(stateSet).sort(),
-      ownerOptions: Array.from(ownerSet).sort(),
     };
   }, [events]);
 
@@ -259,7 +277,9 @@ export default function Calendar() {
     
     // NOTE: We filter on the *normalized* (first name) wipManager
     return events.filter((e) => {
-      const okW = !w || (e.wipManager || "").toLowerCase() === firstWord(w).toLowerCase();
+      // We filter by full name now, as the filter dropdown contains full names
+      const rawWip = asName(firstNonEmpty(e, ["wipManager", "WIP_Manager1", "WIP", "wip"]));
+      const okW = !w || (rawWip || "").toLowerCase() === w.toLowerCase();
       const okI = !ins || (e.installer || "").toLowerCase() === ins;
       const okS = !st || (e.state || "").toLowerCase() === st;
       return okW && okI && okS;
@@ -468,18 +488,8 @@ export default function Calendar() {
       />
     );
 
-  // --- NEW: Style for the version number ---
-  const versionStyle = {
-    position: "absolute",
-    bottom: "8px",
-    left: "12px",
-    fontSize: "10px",
-    color: "#9ca3af",
-    zIndex: 10,
-  };
-
   return (
-    <div className="h-full flex flex-col" style={{ position: "relative" }}>
+    <div className="h-full flex flex-col">
       <Toolbar
         view={view}
         onViewChange={onViewChange}
@@ -527,17 +537,17 @@ export default function Calendar() {
           clickEvent={editor.clickEvent}
           onClose={handleCloseEditor}
           onChangeDates={applyDates}
-          onDelete={handleDelete} // <-- NEW PROP
-          wipOptions={wipOptions}
-          installerOptions={installerOptions}
-          ownerOptions={ownerOptions}
-          stateOptions={stateOptions} 
+          onDelete={handleDelete}
+          // --- UPDATED: Pass the full lists to the modal ---
+          wipOptions={allCrmUsers}
+          installerOptions={allServiceAgents}
+          ownerOptions={allCrmUsers}
+          stateOptions={stateOptions} // State list is fine as-is
         />
       )}
-
       {/* --- NEW: VISIBLE VERSION NUMBER --- */}
       <div style={versionStyle}>
-        Version PROD - v1.2
+        Version PROD - v1.4 - Includes User and Installer Sync Services
       </div>
     </div>
   );

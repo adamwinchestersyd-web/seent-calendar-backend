@@ -242,7 +242,7 @@ async function deleteManualEntry(creatorId) {
   const recordId = creatorId.replace('creator_', '');
   if (!recordId) return { error: 'Invalid Creator ID' };
 
-  // --- FIXED: Remove "https://" prefix. ZOHO_DOMAIN already has it. ---
+  // --- FIXED: Use the v2.1 API with the ZOHO_DOMAIN variable ---
   const creatorApiUrl = `${ZOHO_DOMAIN}/creator/v2.1/data/${CREATOR_APP_OWNER}/${CREATOR_APP_NAME}/report/${CREATOR_REPORT_NAME}/${recordId}`;
 
   const payload = {
@@ -420,6 +420,48 @@ async function updateCaseFromProject(taskData) {
     console.error(`[CRM Sync] Exception updating Case ${caseId}:`, e.message);
     return { success: false, error: e.message };
   }
+}
+// -----------------------------------------------------------------
+
+// --- NEW: ZOHO LIST HELPERS ---
+
+/**
+ * Fetches all active Zoho CRM users.
+ */
+async function fetchAllCrmUsers() {
+  const token = await getAccessToken(); 
+  // Fetch only active users
+  const url = `${ZOHO_DOMAIN}/crm/v2/users?type=ActiveUsers`;
+  const r = await fetch(url, { headers: { Authorization: `Zoho-oauthtoken ${token}` } });
+  if (!r.ok) {
+    console.error("[lists] fetchAllCrmUsers failed:", r.status);
+    return [];
+  }
+  const { users = [] } = await r.json();
+  // Map to a simple string array of full names
+  return users.map(user => user.full_name).sort();
+}
+
+/**
+ * Fetches all records from the Service Agents custom module.
+ * ! IMPORTANT: Replace 'Service_Agents' with your actual module API name.
+ */
+async function fetchAllServiceAgents() {
+  const token = await getAccessToken();
+  // ! Replace 'Service_Agents' with your module's API name if different
+  // ! Replace 'Name' with the API name of the field you want to display
+  const moduleApiName = "Service_Agents"; 
+  const fieldApiName = "Name"; 
+  
+  const url = `${ZOHO_DOMAIN}/crm/v2/${moduleApiName}?fields=${fieldApiName}`;
+  const r = await fetch(url, { headers: { Authorization: `Zoho-oauthtoken ${token}` } });
+  if (!r.ok) {
+    console.error("[lists] fetchAllServiceAgents failed:", r.status);
+    return [];
+  }
+  const { data = [] } = await r.json();
+  // Map to a simple string array
+  return data.map(record => record[fieldApiName]).sort();
 }
 // -----------------------------------------------------------------
 
@@ -674,6 +716,28 @@ app.post("/api/cases/refresh", async (_req, res) => {
   const out = await refreshCases("manual");
   res.status(out.ok ? 200 : 500).json(out);
 });
+
+// --- NEW: API for modal dropdown lists ---
+app.get("/api/lists/users", async (_req, res) => {
+  try {
+    const users = await fetchAllCrmUsers();
+    res.json(users);
+  } catch (e) {
+    console.error("[api] /api/lists/users error:", e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get("/api/lists/service-agents", async (_req, res) => {
+  try {
+    const agents = await fetchAllServiceAgents();
+    res.json(agents);
+  } catch (e) {
+    console.error("[api] /api/lists/service-agents error:", e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+// ------------------------------------------
 
 // ... (other debug routes) ...
 app.get("/debug/case/:id/raw", (req, res) => {
