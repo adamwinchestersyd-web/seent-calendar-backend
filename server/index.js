@@ -64,13 +64,28 @@ let ACCESS_TOKEN      = null;
 let ACCESS_EXPIRES_AT = 0;
 
 // ----- Utilities (place once near top) -----
+
+// --- FIXED: Timezone-aware date parsing ---
 function toYMD(v) {
   if (!v) return "";
-  // Projects needs 'YYYY-MM-DD'
-  if (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v.slice(0, 10))) {
-    return v.slice(0, 10);
+  if (typeof v === "string") {
+    const s = v.trim();
+    // Pass-through if already YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s.slice(0, 10))) {
+      return s.slice(0, 10);
+    }
+    // Check for Creator format "DD-Mon-YYYY"
+    if (/^\d{2}-[A-Za-z]{3}-\d{4}$/.test(s)) {
+      // Append " UTC" to parse it as a UTC date, not local
+      const d = new Date(s + " UTC"); 
+      return Number.isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
+    }
+    // Fallback for other string formats (like full ISO strings)
+    const d = new Date(s);
+    return Number.isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
   }
-  const d = new Date(v);
+  // Handle if it's already a Date object
+  const d = v instanceof Date ? v : new Date(v);
   return Number.isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
 }
 
@@ -169,8 +184,8 @@ async function fetchManualEntries() {
     return (data.data || []).map(item => ({
       id: `creator_${item.ID}`, 
       title: item.Title,
-      start: item.Start_Date ? toYMD(item.Start_Date) : '', 
-      end: item.End_Date ? toYMD(item.End_Date) : '',     
+      start: item.Start_Date ? toYMD(item.Start_Date) : '', // <-- This now works
+      end: item.End_Date ? toYMD(item.End_Date) : '',     // <-- This now works
       startTime: item.Start_Time,
       wipManager: item.WIP_Manager,
       caseOwner: item.Owner,
@@ -831,7 +846,7 @@ app.patch("/api/cases/:id", async (req, res) => {
       return {
         ...e,
         start: start ? toYMD(start) : e.start,
-        end: end ? toYMD(end) : e.end,
+        end: end ? toYD(end) : e.end,
         title: title ?? e.title,
         state: state ?? e.state,
         modified_time: new Date().toISOString(),
