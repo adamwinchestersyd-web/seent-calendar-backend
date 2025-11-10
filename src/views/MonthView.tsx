@@ -184,60 +184,61 @@ const V_GUTTER = 2;
               </div>
             ))}
 
-            <div className="absolute inset-0 pointer-events-none" style={{ position: "absolute" }}>
-              {row.lanes.map((lane, li) =>
-                lane.map((seg, bi) => {
-                  const e = seg.evt;
-                  const isSingleDay = seg.span === 1;
-                  const top = laneTops[rIdx][li] ?? DATE_PAD;
-                  const left = (seg.offset / 7) * 100;
-                  const width = (seg.span / 7) * 100;
+            {/* --- FIXED: Removed the extra wrapper div --- */}
+            {row.lanes.map((lane, li) =>
+              lane.map((seg, bi) => {
+                const e = seg.evt;
+                const isSingleDay = seg.span === 1;
+                const top = laneTops[rIdx][li] ?? DATE_PAD;
+                const left = (seg.offset / 7) * 100;
+                const width = (seg.span / 7) * 100;
 
-                  const tooltip = [
-                    `${e.title}${e.caseHours ? ` (${e.caseHours}h)` : ""}${e.startTime ? ` @ ${to12h(e.startTime)}` : ""}`,
-                    e.wipManager ? `WIP: ${e.wipManager}` : "",
-                    e.installer ? `Installer: ${e.installer}` : "",
-                    e.caseOwner ? `Owner: ${e.caseOwner}` : "",
-                    e.pmNotes ? `Notes: ${e.pmNotes}` : "",
-                  ].filter(Boolean).join("\n");
+                const tooltip = [
+                  `${e.title}${e.caseHours ? ` (${e.caseHours}h)` : ""}${e.startTime ? ` @ ${to12h(e.startTime)}` : ""}`,
+                  e.wipManager ? `WIP: ${e.wipManager}` : "",
+                  e.installer ? `Installer: ${e.installer}` : "",
+                  e.caseOwner ? `Owner: ${e.caseOwner}` : "",
+                  e.pmNotes ? `Notes: ${e.pmNotes}` : "",
+                ].filter(Boolean).join("\n");
 
-                  return (
-                    <div
-                      key={seg.id}
-                      ref={row.laneRefs[li][bi]}
-                      className="pointer-events-auto"
-                      style={{
-                            position: "absolute",
-                            top,
-                            left: `${left}%`,
-                            width: `${width}%`,
-                            padding: `${V_GUTTER}px ${H_GUTTER}px`,
-                            boxSizing: "border-box",
-                          }}
-
-                      draggable
-                      onDragStart={onDragStart(seg)}
-                      onDragEnd={onDragEnd}
-                      onDoubleClick={beginQuickResize(seg)}
-                      // --- CLICK HANDLER REMOVED FROM WRAPPER ---
-                      title={tooltip}
-                    >
-                      {/* --- UPDATED: Using EventPillWeek component --- */}
-                      <EventPill
-                        ev={e}
-                        isMultiDay={!isSingleDay}
-                        className={e.colorClass || "event--blue"}
-                        style={{ width: "100%", ...e.colour ? {["--c"]: e.colour} : {} }}
-                        // --- UPDATED: Add types to fix TS error ---
-                        onOpenEditor={(ev: any, rect: DOMRect) => {
-                          if (rect) onOpenEditor?.(ev, { clientY: rect.top, clientX: rect.left } as any);
+                return (
+                  <div
+                    key={seg.id}
+                    ref={row.laneRefs[li][bi]}
+                    className="pointer-events-auto"
+                    style={{
+                          position: "absolute",
+                          top,
+                          left: `${left}%`,
+                          width: `${width}%`,
+                          padding: `${V_GServices .GUTTER}px ${H_GUTTER}px`,
+                          boxSizing: "border-box",
                         }}
-                      />
-                    </div>
-                  );
-                })
-              )}
-            </div>
+
+                    draggable
+                    onDragStart={onDragStart(seg)}
+                    onDragEnd={onDragEnd}
+                    onDoubleClick={beginQuickResize(seg)}
+                    // --- CLICK HANDLER REMOVED FROM WRAPPER ---
+                    title={tooltip}
+                  >
+                    {/* --- UPDATED: Using EventPillWeek component --- */}
+                    <EventPill
+                      ev={e}
+                      isMultiDay={!isSingleDay}
+                      className={e.colorClass || "event--blue"}
+                      style={{ width: "100%", ...e.colour ? {["--c"]: e.colour} : {} }}
+                      // --- UPDATED: Add types to fix TS error ---
+                      onOpenEditor={(ev: any, rect: DOMRect) => {
+                        if (rect) onOpenEditor?.(ev, { clientY: rect.top, clientX: rect.left } as any);
+                      }}
+                    />
+                  </div>
+                );
+              })
+            )}
+            {/* --- FIXED: Removed the extra wrapper div --- */}
+
           </div>
         ))}
       </div>
