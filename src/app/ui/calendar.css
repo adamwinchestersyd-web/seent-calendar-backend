@@ -346,7 +346,7 @@ html,body{ background:var(--bg); color:var(--text); }
   background: var(--btn-subtle-bg);
 }
 
-/* --- ADD THIS CLASS BACK TO THE BOTTOM --- */
+/* --- ADD THIS CLASS BACK TO THE BOTTOM --- yep */
 .calendar-root .event-pill--manual {
   border-top: 5px solid #facc15;
   /* Adjust padding to account for the border */
