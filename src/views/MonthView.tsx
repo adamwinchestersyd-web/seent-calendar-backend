@@ -211,7 +211,7 @@ const V_GUTTER = 2;
                           top,
                           left: `${left}%`,
                           width: `${width}%`,
-                          padding: `${V_GServices .GUTTER}px ${H_GUTTER}px`,
+                          padding: `${V_GUTTER}px ${H_GUTTER}px`,
                           boxSizing: "border-box",
                         }}
 
