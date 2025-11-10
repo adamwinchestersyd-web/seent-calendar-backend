@@ -233,7 +233,7 @@ async function createManualEntry(eventData) {
   }
 }
 
-// --- NEW: Update function for manual entries ---
+// --- FIXED: Update function for manual entries ---
 async function updateManualEntry(creatorId, eventData) {
   const accessToken = await getAccessToken();
   if (!accessToken) return { error: 'Could not get access token' };
@@ -241,8 +241,8 @@ async function updateManualEntry(creatorId, eventData) {
   const recordId = creatorId.replace('creator_', '');
   if (!recordId) return { error: 'Invalid Creator ID' };
 
-  // Use the v2.1 API with the ZOHO_DOMAIN
-  const creatorApiUrl = `${ZOHO_DOMAIN}/creator/api/v2/${CREATOR_APP_OWNER}/${CREATOR_APP_NAME}/report/${CREATOR_REPORT_NAME}/${recordId}`;
+  // --- FIXED: Use the v2.1 API with the ZOHO_DOMAIN and correct /data/ path ---
+  const creatorApiUrl = `${ZOHO_DOMAIN}/creator/v2.1/data/${CREATOR_APP_OWNER}/${CREATOR_APP_NAME}/report/${CREATOR_REPORT_NAME}/${recordId}`;
 
   // Build the data payload
   const body = JSON.stringify({
@@ -261,7 +261,7 @@ async function updateManualEntry(creatorId, eventData) {
 
   try {
     const res = await fetch(creatorApiUrl, {
-      method: 'PUT', // Use PUT for updating
+      method: 'PATCH', // --- FIXED: Use PATCH for updating ---
       headers: {
         'Authorization': `Zoho-oauthtoken ${accessToken}`,
         'Content-Type': 'application/json',
@@ -270,6 +270,7 @@ async function updateManualEntry(creatorId, eventData) {
     });
     const data = await res.json();
     
+    // Check for success code on update
     if (data.code === 3000 && data.data?.ID) { 
       console.log('[creator] Updated entry:', data.data.ID);
       return { success: true, id: data.data.ID };
