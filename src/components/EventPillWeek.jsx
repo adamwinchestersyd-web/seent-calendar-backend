@@ -41,7 +41,7 @@ export default function EventPillWeek({ ev }) {
       style={colorStyle}      // Apply background color
       title={ev.title}
     >
-      {/* Yellow bar is now handled by the .event-pill--manual class */}
+      {/* Yellow bar is now handled by the .event-pill--manual class test*/}
 
       {/* The original CSS file uses event__fill, so we keep it for the gradient */}
       <div className="event__fill" style={{ background: ev.colour || "#3b82f6" }} /> 

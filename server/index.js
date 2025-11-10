@@ -678,7 +678,7 @@ app.post("/api/cases/refresh", async (_req, res) => {
 // ... (other debug routes) ...
 app.get("/debug/case/:id/raw", (req, res) => {
   const ev = CASES_CACHE.events.find(e => e.id === req.params.id);
-  if (!ev) return res.status(44).json({ error: "not found", id: req.params.id }); 
+  if (!ev) return res.status(404).json({ error: "not found", id: req.params.id }); 
   (async () => {
     try {
       const token = await getAccessToken(); 
