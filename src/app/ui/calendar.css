@@ -346,9 +346,4 @@ html,body{ background:var(--bg); color:var(--text); }
   background: var(--btn-subtle-bg);
 }
 
-/* --- NEW CLASS FOR MANUAL ENTRY PILL --- */
-.calendar-root .event-pill--manual {
-  border-top: 5px solid #facc15;
-  /* Adjust padding to account for the border */
-  padding-top: calc(var(--pill-padY) - 5px);
-}
+/* --- REMOVED .event-pill--manual class from here --- */

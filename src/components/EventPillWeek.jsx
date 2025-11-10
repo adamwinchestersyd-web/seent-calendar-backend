@@ -1,5 +1,6 @@
 // src/components/EventPillWeek.jsx
 import React from "react";
+import EventPillNames from "./EventPillNames"; // <-- IMPORT THE NEW COMPONENT
 
 // utility: clamp text to N lines using CSS-only (no JS measuring)
 const clampStyle = (lines) => ({
@@ -10,18 +11,11 @@ const clampStyle = (lines) => ({
 });
 
 export default function EventPillWeek({ ev }) {
-  // 1 line for title, 1 for meta, 2 for notes = 4 lines total
+  // 1 line for title, 2 for notes
   const titleStyle = { fontWeight: 600, ...clampStyle(1) };
-  const metaStyle  = { opacity: 0.9, fontSize: 12, ...clampStyle(1) };
   const notesStyle = { opacity: 0.9, fontSize: 12, ...clampStyle(2) };
 
-  // --- Meta line: WIP Manager | Installer | Start time | Owner ---
-  const wip = ev.wipManager || "";
-  const ins = ev.installer || "";
-  const time = ev.startTime || "";
-  const own = ev.caseOwner || "";
-  
-  const line2 = [wip, ins, time, own].filter(Boolean).join(" | ");
+  // --- All meta line logic has been MOVED to EventPillNames.jsx ---
 
   // Get the background color from the event
   const colorStyle = {
@@ -29,7 +23,7 @@ export default function EventPillWeek({ ev }) {
     // position: 'relative' is in calendar.css
   };
 
-  // --- NEW: Conditionally add the manual class ---
+  // Conditionally add the manual class
   const pillClasses = [
     "event-pill",
     ev.isManual ? "event-pill--manual" : ""
@@ -41,14 +35,17 @@ export default function EventPillWeek({ ev }) {
       style={colorStyle}      // Apply background color
       title={ev.title}
     >
-      {/* Yellow bar is now handled by the .event-pill--manual class test*/}
+      {/* Yellow bar is now handled by the .event-pill--manual class */}
 
       {/* The original CSS file uses event__fill, so we keep it for the gradient */}
       <div className="event__fill" style={{ background: ev.colour || "#3b82f6" }} /> 
       
       <div className="event__label">
         <div style={titleStyle}>{ev.title}</div>
-        {line2 && <div style={metaStyle}>{line2}</div>}
+        
+        {/* --- USE THE NEW COMPONENT --- */}
+        <EventPillNames ev={ev} />
+        
         {ev.pmNotes ? <div style={notesStyle}>{ev.pmNotes}</div> : null}
       </div>
     </div>
