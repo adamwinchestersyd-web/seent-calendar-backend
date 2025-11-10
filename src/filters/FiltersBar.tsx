@@ -134,7 +134,7 @@ export default function FiltersBar({
         style={chip(colourMode === "case")}
         onClick={() => onColourModeChange?.("case")}
       >
-        Case Manager
+        WIP Manager
       </button>
 
       {/* Reset */}

@@ -55,8 +55,8 @@ const CLIENT_ID     = process.env.ZOHO_CLIENT_ID;
 const CLIENT_SECRET = process.env.ZOHO_CLIENT_SECRET;
 const REDIRECT_URI  = process.env.ZOHO_REDIRECT_URI;
 
-// --- Scope for delete is ZohoCreator.report.DELETE ---
-const ZOHO_FULL_SCOPE = "ZohoCRM.modules.ALL,ZohoCRM.users.READ,ZohoProjects.projects.ALL,ZohoCreator.report.READ,ZohoCreator.form.CREATE,ZohoCreator.report.DELETE";
+// --- UPDATED: Added report.UPDATE scope ---
+const ZOHO_FULL_SCOPE = "ZohoCRM.modules.ALL,ZohoCRM.users.READ,ZohoProjects.projects.ALL,ZohoCreator.report.READ,ZohoCreator.form.CREATE,ZohoCreator.report.DELETE,ZohoCreator.report.UPDATE";
 const ZOHO_WEBHOOK_SECRET = process.env.ZOHO_WEBHOOK_SECRET; 
 
 let REFRESH_TOKEN     = process.env.ZOHO_REFRESH_TOKEN || null;
@@ -233,16 +233,63 @@ async function createManualEntry(eventData) {
   }
 }
 
-// --- FIXED: Delete function for manual entries ---
+// --- NEW: Update function for manual entries ---
+async function updateManualEntry(creatorId, eventData) {
+  const accessToken = await getAccessToken();
+  if (!accessToken) return { error: 'Could not get access token' };
+
+  const recordId = creatorId.replace('creator_', '');
+  if (!recordId) return { error: 'Invalid Creator ID' };
+
+  // Use the v2.1 API with the ZOHO_DOMAIN
+  const creatorApiUrl = `${ZOHO_DOMAIN}/creator/api/v2/${CREATOR_APP_OWNER}/${CREATOR_APP_NAME}/report/${CREATOR_REPORT_NAME}/${recordId}`;
+
+  // Build the data payload
+  const body = JSON.stringify({
+    data: {
+      "Title": eventData.title,
+      "WIP_Manager": eventData.wipManager,
+      "Owner": eventData.caseOwner,
+      "Installer": eventData.installer,
+      "PM_Notes": eventData.pmNotes,
+      "Start_Date": toCreatorDate(eventData.start), 
+      "End_Date": toCreatorDate(eventData.end),   
+      "Start_Time": eventData.startTime,
+      "State": eventData.state,
+    }
+  });
+
+  try {
+    const res = await fetch(creatorApiUrl, {
+      method: 'PUT', // Use PUT for updating
+      headers: {
+        'Authorization': `Zoho-oauthtoken ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: body,
+    });
+    const data = await res.json();
+    
+    if (data.code === 3000 && data.data?.ID) { 
+      console.log('[creator] Updated entry:', data.data.ID);
+      return { success: true, id: data.data.ID };
+    } else {
+      console.error('[creator] Update error:', data);
+      return { error: 'Failed to update entry in Creator', details: data };
+    }
+  } catch (e) {
+    console.error('[creator] update fetch error:', e.message);
+    return { error: e.message };
+  }
+}
+
 async function deleteManualEntry(creatorId) {
   const accessToken = await getAccessToken();
   if (!accessToken) return { error: 'Could not get access token' };
 
-  // ID comes in as 'creator_12345', we just want '12345'
   const recordId = creatorId.replace('creator_', '');
   if (!recordId) return { error: 'Invalid Creator ID' };
 
-  // --- FIXED: Use the v2.1 API with the ZOHO_DOMAIN variable ---
   const creatorApiUrl = `${ZOHO_DOMAIN}/creator/v2.1/data/${CREATOR_APP_OWNER}/${CREATOR_APP_NAME}/report/${CREATOR_REPORT_NAME}/${recordId}`;
 
   const payload = {
@@ -260,7 +307,6 @@ async function deleteManualEntry(creatorId) {
     });
     const data = await res.json();
     
-    // Check for success code on deletion
     if (data.code === 3000 && data.data?.ID) { 
       console.log('[creator] Deleted entry:', data.data.ID);
       return { success: true, id: data.data.ID };
@@ -818,6 +864,25 @@ app.post("/api/manual-entry", async (req, res) => {
     res.status(201).json({ status: 'success', id: result.id });
   } else {
     res.status(500).json({ error: 'Failed to create manual entry', details: result.details });
+  }
+});
+
+// --- NEW: PATCH endpoint for manual entries ---
+app.patch("/api/manual-entry/:id", async (req, res) => {
+  const { id } = req.params;
+  const eventData = req.body;
+
+  if (!id.startsWith('creator_')) {
+    return res.status(400).json({ error: 'Updates are only allowed for manual entries.' });
+  }
+
+  const result = await updateManualEntry(id, eventData);
+
+  if (result.success) {
+    refreshCases("post-update"); // Refresh cache in background
+    res.status(200).json({ status: 'success', id: result.id });
+  } else {
+    res.status(500).json({ error: 'Failed to update manual entry', details: result.details });
   }
 });
 

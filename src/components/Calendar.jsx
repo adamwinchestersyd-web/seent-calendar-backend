@@ -340,7 +340,7 @@ export default function Calendar() {
     setEditor({ open: false, mode: 'view', ev: null, clickEvent: null });
   }, []);
 
-  // API save logic
+  // --- UPDATED: API save logic ---
   async function saveEvent(eventData) {
     const { id, start, end, isNew, isManual } = eventData;
     const api = import.meta.env.VITE_API_URL || "";
@@ -357,8 +357,12 @@ export default function Calendar() {
         
       } else if (isManual) {
         // --- UPDATE existing manual entry ---
-        // TODO: Build PATCH /api/manual-entry/:id endpoint
-        console.warn("Update logic for Creator entries is not built yet.");
+        const res = await fetch(`${api}/api/manual-entry/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(eventData), // Send the full event data
+        });
+        if (!res.ok) throw new Error(await res.text());
         
       } else {
         // --- UPDATE existing CRM entry ---
@@ -374,7 +378,7 @@ export default function Calendar() {
     }
   }
 
-  // --- NEW: API delete logic ---
+  // --- API delete logic ---
   async function deleteEvent(id) {
     const api = import.meta.env.VITE_API_URL || "";
     try {
@@ -398,7 +402,6 @@ export default function Calendar() {
     // --- Logic for NEW event ---
     if (isNew) {
       try {
-        // --- CHANGED: Normalize before saving ---
         const normalizedNewEvent = normalizeEvent(updatedEventData);
         await saveEvent(normalizedNewEvent);
         await loadData("manual-save"); // Reload all data
@@ -415,7 +418,6 @@ export default function Calendar() {
 
     historyRef.current.set(id, { start: prev.start, end: prev.end });
     
-    // --- CHANGED: Normalize event before optimistic update ---
     const normalizedUpdatedEvent = normalizeEvent({ ...prev, ...updatedEventData });
     const next = events.map((e) => (e.id === id ? normalizedUpdatedEvent : e));
     setEvents(next); // Optimistic update
@@ -448,7 +450,7 @@ export default function Calendar() {
     }
   }, [events, push, api, loadData]); // `normalizeEvent` is a pure function, no dep needed
 
-  // --- NEW: Handler for deleting an event ---
+  // --- Handler for deleting an event ---
   const handleDelete = React.useCallback(async (id) => {
     const eventToDelete = events.find(e => e.id === id);
     if (!eventToDelete) return;
@@ -558,7 +560,7 @@ export default function Calendar() {
 
       {/* --- NEW: VISIBLE VERSION NUMBER --- */}
       <div style={versionStyle}>
-        Version PROD - v1.4
+        Version PROD - v1.6
       </div>
     </div>
   );
