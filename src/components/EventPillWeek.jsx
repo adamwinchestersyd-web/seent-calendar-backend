@@ -9,11 +9,6 @@ const clampStyle = (lines) => ({
   WebkitLineClamp: lines,
 });
 
-// Style for the manual entry bar
-const manualEntryBarStyle = {
-  borderTop: '6px solid #facc15', // Using 'SA' yellow for consistency
-};
-
 export default function EventPillWeek({ ev }) {
   // 1 line for title, 1 for meta, 2 for notes = 4 lines total
   const titleStyle = { fontWeight: 600, ...clampStyle(1) };
@@ -31,17 +26,22 @@ export default function EventPillWeek({ ev }) {
   // Get the background color from the event
   const colorStyle = {
     background: ev.colour || "#3b82f6",
-    // position: 'relative' is now in calendar.css
+    // position: 'relative' is in calendar.css
   };
+
+  // --- NEW: Conditionally add the manual class ---
+  const pillClasses = [
+    "event-pill",
+    ev.isManual ? "event-pill--manual" : ""
+  ].filter(Boolean).join(" ");
 
   return (
     <div 
-      className="event-pill" 
-      style={colorStyle} // Apply background color
+      className={pillClasses} // <-- Use class names
+      style={colorStyle}      // Apply background color
       title={ev.title}
     >
-      {/* Yellow bar for manual entries */}
-      {ev.isManual && <div style={manualEntryBarStyle} />}
+      {/* Yellow bar is now handled by the .event-pill--manual class */}
 
       {/* The original CSS file uses event__fill, so we keep it for the gradient */}
       <div className="event__fill" style={{ background: ev.colour || "#3b82f6" }} /> 

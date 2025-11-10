@@ -337,11 +337,18 @@ html,body{ background:var(--bg); color:var(--text); }
   background: var(--btn-subtle-bg);
   color: var(--btn-subtle-text);
 }
-.calendar-editor-modal .modal-btn-ghost {
+.calendar-serial .modal-btn-ghost {
   background: transparent;
   color: var(--light-text);
   border-color: transparent;
 }
-.calendar-editor-modal .modal-btn-ghost:hover {
+.calendar-serial .modal-btn-ghost:hover {
   background: var(--btn-subtle-bg);
+}
+
+/* --- NEW CLASS FOR MANUAL ENTRY PILL --- */
+.calendar-root .event-pill--manual {
+  border-top: 5px solid #facc15;
+  /* Adjust padding to account for the border */
+  padding-top: calc(var(--pill-padY) - 5px);
 }
