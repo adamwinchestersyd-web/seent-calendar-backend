@@ -138,6 +138,16 @@ function colourForKeyStable(key) {
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
   return PALETTE[h % PALETTE.length];
 }
+
+// --- NEW: Style for the version number (MOVED OUTSIDE) ---
+const versionStyle = {
+  position: "absolute",
+  bottom: "8px",
+  left: "12px",
+  fontSize: "10px",
+  color: "#9ca3af",
+  zIndex: 10,
+};
 /* ---------------------------------------------------------------- */
 
 export default function Calendar() {
@@ -489,7 +499,7 @@ export default function Calendar() {
     );
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col" style={{ position: "relative" }}>
       <Toolbar
         view={view}
         onViewChange={onViewChange}
@@ -545,9 +555,10 @@ export default function Calendar() {
           stateOptions={stateOptions} // State list is fine as-is
         />
       )}
+
       {/* --- NEW: VISIBLE VERSION NUMBER --- */}
       <div style={versionStyle}>
-        Version PROD - v1.4 - Includes User and Installer Sync Services
+        Version PROD - v1.4
       </div>
     </div>
   );
