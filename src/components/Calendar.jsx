@@ -126,7 +126,6 @@ function normalizeEvent(raw, idx = 0) {
 
 // Zoho state colours (stable)
 const STATE_COLOURS = {
-  // --- CHANGED: VIC is now dark grey ---
   VIC: "#27272a", NSW: "#ef4444", QLD: "#f97316", WA: "#60a5fa",
   ACT: "#fcd9bd", TAS: "#ec4899", NT: "#b91c1c", SA: "#facc15",
   NZ: "#22c55e", Other: "#9ca3af",
@@ -469,8 +468,18 @@ export default function Calendar() {
       />
     );
 
+  // --- NEW: Style for the version number ---
+  const versionStyle = {
+    position: "absolute",
+    bottom: "8px",
+    left: "12px",
+    fontSize: "10px",
+    color: "#9ca3af",
+    zIndex: 10,
+  };
+
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col" style={{ position: "relative" }}>
       <Toolbar
         view={view}
         onViewChange={onViewChange}
@@ -525,6 +534,11 @@ export default function Calendar() {
           stateOptions={stateOptions} 
         />
       )}
+
+      {/* --- NEW: VISIBLE VERSION NUMBER --- */}
+      <div style={versionStyle}>
+        Version PROD - v1.1
+      </div>
     </div>
   );
 }
