@@ -1,6 +1,7 @@
 // CACHE BUST v8
 import React from "react";
-import EventPill from "../components/EventPill";
+// --- FIXED: Import the correct pill component ---
+import EventPill from "../components/EventPillWeek.jsx";
 import {
   addDays,
   startOfMonthGrid,
@@ -221,14 +222,14 @@ const V_GUTTER = 2;
                       // --- CLICK HANDLER REMOVED FROM WRAPPER ---
                       title={tooltip}
                     >
-                      {/* --- UPDATED: Reverted to original EventPill --- */}
+                      {/* --- UPDATED: Using EventPillWeek component --- */}
                       <EventPill
                         ev={e}
                         isMultiDay={!isSingleDay}
                         className={e.colorClass || "event--blue"}
                         style={{ width: "100%", ...e.colour ? {["--c"]: e.colour} : {} }}
-                        // --- UPDATED: This creates a fake MouseEvent from the Rect ---
-                        onOpenEditor={(ev, rect) => {
+                        // --- UPDATED: Add types to fix TS error ---
+                        onOpenEditor={(ev: any, rect: DOMRect) => {
                           if (rect) onOpenEditor?.(ev, { clientY: rect.top, clientX: rect.left } as any);
                         }}
                       />

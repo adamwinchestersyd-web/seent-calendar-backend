@@ -9,12 +9,14 @@ const clampStyle = (lines) => ({
   WebkitLineClamp: lines,
 });
 
-export default function EventPillWeek({ ev }) {
+// --- FIXED: Added all props to the function signature ---
+export default function EventPillWeek({ ev, isMultiDay, className, style, onOpenEditor }) {
+  const ref = React.useRef(null);
+
   // 1 line for title, 1 for meta, 2 for notes = 4 lines total
   const titleStyle = { 
     fontWeight: 600, 
     ...clampStyle(1),
-    textTransform: 'uppercase', // <-- NEW TEST CHANGE
   };
   const metaStyle  = { opacity: 0.9, fontSize: 12, ...clampStyle(1) };
   const notesStyle = { opacity: 0.9, fontSize: 12, ...clampStyle(2) };
@@ -29,21 +31,33 @@ export default function EventPillWeek({ ev }) {
 
   // Get the background color from the event
   const colorStyle = {
+    ...style, // Pass through style from parent (contains width and --c color)
     background: ev.colour || "#3b82f6",
     // position: 'relative' is in calendar.css
   };
 
-  // --- NEW: Conditionally add the manual class ---
+  // Conditionally add the manual class
   const pillClasses = [
     "event-pill",
+    className, // Pass through className from parent
     ev.isManual ? "event-pill--manual" : ""
   ].filter(Boolean).join(" ");
 
+  // Click handler to pass back the DOMRect
+  const onClick = () => {
+    const rect = ref.current?.getBoundingClientRect();
+    if (rect && onOpenEditor) {
+      onOpenEditor(ev, rect);
+    }
+  };
+
   return (
     <div 
+      ref={ref}
       className={pillClasses} // <-- Use class names
       style={colorStyle}      // Apply background color
       title={ev.title}
+      onClick={onClick}       // <-- Add click handler
     >
       {/* Yellow bar is now handled by the .event-pill--manual class */}
 

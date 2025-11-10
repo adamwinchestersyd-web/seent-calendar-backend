@@ -1,6 +1,6 @@
 // CACHE BUST v9
 import React from "react";
-import EventPill from "../components/EventPill";
+import EventPill from "../components/EventPillWeek.jsx";
 import {
   addDays,
   startOfWeek,
@@ -221,8 +221,8 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
                   isMultiDay={!isSingle}
                   className={e.colorClass || "event--blue"}
                   style={{ width: "100%", ...e.colour ? {["--c"]: e.colour} : {} }}
-                  // --- UPDATED: This creates a fake MouseEvent from the Rect ---
-                  onOpenEditor={(ev, rect) => {
+                  // --- UPDATED: Add types to fix TS error ---
+                  onOpenEditor={(ev: any, rect: DOMRect) => {
                      if (rect) onOpenEditor?.(ev, { clientY: rect.top, clientX: rect.left } as any);
                   }}
                 />

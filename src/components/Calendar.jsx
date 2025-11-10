@@ -537,7 +537,7 @@ export default function Calendar() {
 
       {/* --- NEW: VISIBLE VERSION NUMBER --- */}
       <div style={versionStyle}>
-        Version PROD - v1.1
+        Version PROD - v1.2
       </div>
     </div>
   );
