@@ -1,6 +1,25 @@
 // src/components/EventPillWeek.jsx
 import React from "react";
 
+// --- NEW: Helper functions to get first name ---
+function asName(v) {
+  if (!v) return "";
+  if (typeof v === "string") return v.trim();
+  if (typeof v === "object") {
+    if (typeof v.name === "string") return v.name.trim();
+    if (typeof v.display_value === "string") return v.display_value.trim();
+    const first = typeof v.first_name === "string" ? v.first_name.trim() : "";
+    const last = typeof v.last_name === "string" ? v.last_name.trim() : "";
+    return `${first} ${last}`.trim();
+  }
+  return "";
+}
+
+function firstWord(v) {
+  const s = asName(v);
+  return s ? s.split(/\s+/)[0] : "";
+}
+
 // utility: clamp text to N lines using CSS-only (no JS measuring)
 const clampStyle = (lines) => ({
   display: "-webkit-box",
@@ -21,11 +40,11 @@ export default function EventPillWeek({ ev, isMultiDay, className, style, onOpen
   const metaStyle  = { opacity: 0.9, fontSize: 12, ...clampStyle(1) };
   const notesStyle = { opacity: 0.9, fontSize: 12, ...clampStyle(2) };
 
-  // --- Meta line: WIP Manager | Installer | Start time | Owner ---
-  const wip = ev.wipManager || "";
-  const ins = ev.installer || "";
+  // --- FIXED: Use firstWord for display, but ev has full name ---
+  const wip = firstWord(ev.wipManager) || "";
+  const ins = asName(ev.installer) || ""; // Installers can be companies
   const time = ev.startTime || "";
-  const own = ev.caseOwner || "";
+  const own = firstWord(ev.caseOwner) || "";
   
   const line2 = [wip, ins, time, own].filter(Boolean).join(" | ");
 

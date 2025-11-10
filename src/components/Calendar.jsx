@@ -57,10 +57,21 @@ function toYMD(input) {
   if (!input) return "";
   if (typeof input === "string") {
     const s = input.trim();
-    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-    const iso = Date.parse(s);
-    if (!Number.isNaN(iso)) return new Date(iso).toISOString().slice(0, 10);
+    // Pass-through if already YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s.slice(0, 10))) {
+      return s.slice(0, 10);
+    }
+    // Check for Creator format "DD-Mon-YYYY"
+    if (/^\d{2}-[A-Za-z]{3}-\d{4}$/.test(s)) {
+      // Append " UTC" to parse it as a UTC date, not local
+      const d = new Date(s + " UTC"); 
+      return Number.isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
+    }
+    // Fallback for other string formats (like full ISO strings)
+    const d = new Date(s);
+    return Number.isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
   }
+  // Handle if it's already a Date object
   const d = input instanceof Date ? input : new Date(input);
   return Number.isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
 }
@@ -95,10 +106,10 @@ function normalizeEvent(raw, idx = 0) {
     "end", "Install_End_Date", "endDate", "EndDate", "dateEnd", "end_date"
   ]) || start);
 
-  // --- CHANGED: Use firstWord for wipManager ---
-  const wipManager = firstWord(firstNonEmpty(raw, ["wipManager", "WIP_Manager1", "WIP", "wip"]));
+  // --- FIXED: Use asName to get the full name for the modal dropdowns ---
+  const wipManager = asName(firstNonEmpty(raw, ["wipManager", "WIP_Manager1", "WIP", "wip"]));
   const installer = asName(firstNonEmpty(raw, ["installer", "Installer", "WIP_Manager", "tech", "Technician"]));
-  const caseOwner = firstWord(firstNonEmpty(raw, ["caseOwner", "Owner", "owner"]));
+  const caseOwner = asName(firstNonEmpty(raw, ["caseOwner", "Owner", "owner"]));
 
   const pmNotesRaw = first(raw, ["pmNotes", "Description", "notes", "Notes"]) || "";
   const pmNotes = (typeof pmNotesRaw === "string" ? pmNotesRaw : String(pmNotesRaw)).slice(0, 200);
@@ -108,7 +119,9 @@ function normalizeEvent(raw, idx = 0) {
   const caseUrl = firstNonEmpty(raw, ["caseUrl", "url", "Url"]) || "";
 
   const state = firstNonEmpty(raw, ["state", "State", "jobState", "region", "Region"]) || "";
-  const caseManager = firstNonEmpty(raw, ["caseManager", "CaseManager", "manager", "Manager"]) || "";
+  
+  // --- NEW: Get the full Case Manager name for color keying ---
+  const caseManager = asName(firstNonEmpty(raw, ["caseManager", "CaseManager", "manager", "Manager"])) || asName(raw.Owner);
 
   const colour = firstNonEmpty(raw, ["colour", "color", "colourHex", "Color"]);
   const colorClass = firstNonEmpty(raw, ["colorClass", "className"], "event--blue");
@@ -130,7 +143,20 @@ const STATE_COLOURS = {
   ACT: "#fcd9bd", TAS: "#ec4899", NT: "#b91c1c", SA: "#facc15",
   NZ: "#22c55e", Other: "#9ca3af",
 };
-// Fallback palette for "Colour by Case"
+
+// --- NEW: Large stable color palette for WIP Managers ---
+const WIP_MANAGER_PALETTE = [
+  "#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", 
+  "#e11d48", "#84cc16", "#14b8a6", "#f97316", "#d946ef", "#6366f1",
+  "#0891b2", "#be123c", "#f43f5e", "#16a34a", "#ca8a04", "#7c3aed",
+  "#059669", "#db2777", "#65a30d", "#ea580c", "#2563eb", "#eab308",
+  "#9333ea", "#047857", "#c026d3", "#4d7c0f", "#b45309", "#0284c7",
+  "#4f46e5", "#d61c4e", "#10b981", "#fde047", "#f0abfc", "#bfdbfe", 
+  "#a78bfa", "#fdba74", "#6ee7b7", "#fca5a5", "#93c5fd", "#fde68a",
+  "#d8b4fe", "#fbbf24", "#34d399", "#fb7185", "#60a5fa", "#fde047", 
+  "#c084fc", "#fb923c"
+];
+// Fallback palette (previously for Case Manager)
 const PALETTE = ["#3b82f6","#10b981","#f59e0b","#ef4444","#8b5cf6","#06b6d4","#e11d48","#84cc16","#14b8a6","#f97316"];
 function colourForKeyStable(key) {
   if (!key) return PALETTE[0];
@@ -165,7 +191,8 @@ export default function Calendar() {
   const [filterWip, setFilterWip] = React.useState("");
   const [filterInstaller, setFilterInstaller] = React.useState("");
   const [filterState, setFilterState] = React.useState("");
-  const [colourMode, setColourMode] = React.useState("state");
+  // --- UPDATED: Default to 'wip' color mode ---
+  const [colourMode, setColourMode] = React.useState("wip");
 
   // --- NEW: State for modal dropdowns ---
   const [allCrmUsers, setAllCrmUsers] = React.useState([]);
@@ -296,15 +323,38 @@ export default function Calendar() {
     });
   }, [events, filterWip, filterInstaller, filterState]);
 
+  // --- NEW: Generate stable WIP Manager color map ---
+  const wipColorMap = React.useMemo(() => {
+    const map = new Map();
+    // Use wipOptions, which is already a sorted list of unique full names
+    wipOptions.forEach((name, index) => {
+      map.set(name, WIP_MANAGER_PALETTE[index % WIP_MANAGER_PALETTE.length]);
+    });
+    return map;
+  }, [wipOptions]);
+
   // apply colouring
   const colouredEvents = React.useMemo(() => {
     if (!filtered?.length) return filtered;
-    if (colourMode === "case") {
-      return filtered.map(e => ({ ...e, colour: e.colour || colourForKeyStable(e.caseManager || e.id) }));
+
+    // --- UPDATED: Colour by WIP Manager ---
+    if (colourMode === "wip") {
+      return filtered.map(e => {
+        // Get the full WIP Manager name to use as the key
+        const rawWip = asName(firstNonEmpty(e, ["wipManager", "WIP_Manager1", "WIP", "wip"]));
+        return { 
+          ...e, 
+          colour: e.isManual ? (e.colour || wipColorMap.get(rawWip) || PALETTE[0]) : (wipColorMap.get(rawWip) || PALETTE[0]) 
+        };
+      });
     }
-    // Prioritize manual event color, then state color
-    return filtered.map(e => ({ ...e, colour: e.isManual ? (STATE_COLOURS[e.state] || e.colour) : (STATE_COLOURS[e.state] || STATE_COLOURS.Other) }));
-  }, [filtered, colourMode]);
+
+    // Default to State colours
+    return filtered.map(e => ({ 
+      ...e, 
+      colour: e.isManual ? (e.colour || STATE_COLOURS[e.state] || STATE_COLOURS.Other) : (STATE_COLOURS[e.state] || STATE_COLOURS.Other) 
+    }));
+  }, [filtered, colourMode, wipColorMap]); // Added wipColorMap
 
   // Editor state
   const [editor, setEditor] = React.useState({
@@ -560,7 +610,7 @@ export default function Calendar() {
 
       {/* --- NEW: VISIBLE VERSION NUMBER --- */}
       <div style={versionStyle}>
-        Version PROD - v1.6
+        Version PROD - v1.8
       </div>
     </div>
   );
