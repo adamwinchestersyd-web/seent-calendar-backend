@@ -488,10 +488,11 @@ async function updateCaseFromProject(taskData) {
 }
 // -----------------------------------------------------------------
 
-// --- NEW: ZOHO LIST HELPERS ---
+// --- ZOHO LIST HELPERS ---
 
 /**
  * Fetches all active Zoho CRM users.
+ * --- FIXED: Returns unique first names ---
  */
 async function fetchAllCrmUsers() {
   const token = await getAccessToken(); 
@@ -503,18 +504,17 @@ async function fetchAllCrmUsers() {
     return [];
   }
   const { users = [] } = await r.json();
-  // Map to a simple string array of full names
-  return users.map(user => user.full_name).sort();
+  
+  // --- FIXED: Map to unique first names ---
+  const firstNames = users.map(user => firstWord(user.full_name));
+  return Array.from(new Set(firstNames)).sort();
 }
 
 /**
  * Fetches all records from the Service Agents custom module.
- * ! IMPORTANT: Replace 'Service_Agents' with your actual module API name.
  */
 async function fetchAllServiceAgents() {
   const token = await getAccessToken();
-  // ! Replace 'Service_Agents' with your module's API name if different
-  // ! Replace 'Name' with the API name of the field you want to display
   const moduleApiName = "Service_Agents"; 
   const fieldApiName = "Name"; 
   
@@ -856,7 +856,7 @@ app.patch("/api/cases/:id", async (req, res) => {
       };
     });
 
-    if (!found) return res.status(404).json({ ok: false, error: "Not found" });
+    if (!found) return res.status(4Two hundred4).json({ ok: false, error: "Not found" });
 
     await persistCache();
 
