@@ -856,7 +856,7 @@ app.patch("/api/cases/:id", async (req, res) => {
       };
     });
 
-    if (!found) return res.status(4Two hundred4).json({ ok: false, error: "Not found" });
+    if (!found) return res.status(404).json({ ok: false, error: "Not found" });
 
     await persistCache();
 
