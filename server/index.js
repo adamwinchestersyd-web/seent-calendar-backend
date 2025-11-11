@@ -91,11 +91,13 @@ function toYMD(v) {
 
 function toCreatorDate(ymdString) {
   if (!ymdString) return "";
-  const d = new Date(ymdString); 
+  // Parse as UTC to avoid timezone shift
+  const d = new Date(ymdString + 'T00:00:00Z'); 
   if (Number.isNaN(d.getTime())) return "";
-  const day = String(d.getDate()).padStart(2, '0');
-  const month = d.toLocaleString('en-US', { month: 'short' });
-  const year = d.getFullYear();
+  // Use UTC methods to get the date components
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  const month = d.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' });
+  const year = d.getUTCFullYear();
   return `${day}-${month}-${year}`; 
 }
 
@@ -193,7 +195,8 @@ async function fetchManualEntries() {
       pmNotes: item.PM_Notes,
       state: item.State || "",
       isManual: true, 
-      colour: '#8b5cf6', 
+      // --- FIXED: Removed hard-coded purple color ---
+      // colour: '#8b5cf6', 
       created_time: item.Added_Time, 
       modified_time: item.Modified_Time,
     }));
@@ -846,7 +849,7 @@ app.patch("/api/cases/:id", async (req, res) => {
       return {
         ...e,
         start: start ? toYMD(start) : e.start,
-        end: end ? toYD(end) : e.end,
+        end: end ? toYMD(end) : e.end,
         title: title ?? e.title,
         state: state ?? e.state,
         modified_time: new Date().toISOString(),
