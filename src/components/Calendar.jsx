@@ -1,4 +1,4 @@
-// CACHE BUST v9 - Incrementing to v1.2
+// CACHE BUST v9 - Incrementing to v1.3
 import * as React from "react";
 
 // Views
@@ -605,7 +605,7 @@ export default function Calendar() {
 
       {/* --- NEW: VISIBLE VERSION NUMBER --- */}
       <div style={versionStyle}>
-        Version PROD - v1.2
+        Version PROD - v1.3
       </div>
     </div>
   );

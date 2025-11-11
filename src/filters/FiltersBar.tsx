@@ -10,8 +10,9 @@ type FiltersBarProps = {
   onWipChange?: (value: string) => void;
   onInstallerChange?: (value: string) => void;
   onStateChange?: (value: string) => void;
-  colourMode?: "state" | "case";
-  onColourModeChange?: (mode: "state" | "case") => void;
+  // --- UPDATED: Changed 'case' to 'wip' ---
+  colourMode?: "state" | "wip";
+  onColourModeChange?: (mode: "state" | "wip") => void;
   onReset?: () => void;
 };
 
@@ -29,7 +30,7 @@ export default function FiltersBar({
   onInstallerChange,
   onStateChange,
   // colour mode
-  colourMode = "state", // "state" | "case"
+  colourMode = "state", 
   onColourModeChange,
   // reset
   onReset,
@@ -129,10 +130,11 @@ export default function FiltersBar({
       >
         State
       </button>
+      {/* --- UPDATED: Changed to WIP Manager --- */}
       <button
         type="button"
-        style={chip(colourMode === "case")}
-        onClick={() => onColourModeChange?.("case")}
+        style={chip(colourMode === "wip")}
+        onClick={() => onColourModeChange?.("wip")}
       >
         WIP Manager
       </button>
