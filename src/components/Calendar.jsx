@@ -1,4 +1,4 @@
-// CACHE BUST v8
+// CACHE BUST v9 - Incrementing to v1.2
 import * as React from "react";
 
 // Views
@@ -289,13 +289,9 @@ export default function Calendar() {
   const { wipOptions, installerOptions, stateOptions } = React.useMemo(() => {
     const wipSet = new Set(), instSet = new Set(), stateSet = new Set();
     events.forEach((e) => {
-      // Use the raw full name for the dropdown, not the normalized first name
-      const rawWip = asName(firstNonEmpty(e, ["wipManager", "WIP_Manager1", "WIP", "wip"]));
-      if(rawWip) wipSet.add(rawWip);
-
-      const rawInstaller = asName(firstNonEmpty(e, ["installer", "Installer", "WIP_Manager", "tech", "Technician"]));
-      if(rawInstaller) instSet.add(rawInstaller);
-
+      // The event object 'e' already has the normalized full name
+      if(e.wipManager) wipSet.add(e.wipManager);
+      if(e.installer) instSet.add(e.installer);
       if (e.state) stateSet.add(e.state);
     });
 
@@ -312,11 +308,9 @@ export default function Calendar() {
     const ins = filterInstaller.trim().toLowerCase();
     const st = filterState.trim().toLowerCase();
     
-    // NOTE: We filter on the *normalized* (first name) wipManager
     return events.filter((e) => {
-      // We filter by full name now, as the filter dropdown contains full names
-      const rawWip = asName(firstNonEmpty(e, ["wipManager", "WIP_Manager1", "WIP", "wip"]));
-      const okW = !w || (rawWip || "").toLowerCase() === w.toLowerCase();
+      // Filter directly on the normalized (full name) properties
+      const okW = !w || (e.wipManager || "").toLowerCase() === w.toLowerCase();
       const okI = !ins || (e.installer || "").toLowerCase() === ins;
       const okS = !st || (e.state || "").toLowerCase() === st;
       return okW && okI && okS;
@@ -340,8 +334,9 @@ export default function Calendar() {
     // --- UPDATED: Colour by WIP Manager ---
     if (colourMode === "wip") {
       return filtered.map(e => {
-        // Get the full WIP Manager name to use as the key
-        const rawWip = asName(firstNonEmpty(e, ["wipManager", "WIP_Manager1", "WIP", "wip"]));
+        // --- FIXED: Use the 'e.wipManager' property directly ---
+        // The event 'e' is *already normalized* and has the full name.
+        const rawWip = e.wipManager;
         return { 
           ...e, 
           colour: e.isManual ? (e.colour || wipColorMap.get(rawWip) || PALETTE[0]) : (wipColorMap.get(rawWip) || PALETTE[0]) 
@@ -610,7 +605,7 @@ export default function Calendar() {
 
       {/* --- NEW: VISIBLE VERSION NUMBER --- */}
       <div style={versionStyle}>
-        Version PROD - v1.8
+        Version PROD - v1.2
       </div>
     </div>
   );
