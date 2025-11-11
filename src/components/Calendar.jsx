@@ -1,4 +1,4 @@
-// CACHE BUST v9 - Incrementing to v1.4
+// CACHE BUST v9 - Incrementing to v1.6
 import * as React from "react";
 
 // Views
@@ -106,10 +106,10 @@ function normalizeEvent(raw, idx = 0) {
     "end", "Install_End_Date", "endDate", "EndDate", "dateEnd", "end_date"
   ]) || start);
 
-  // --- FIXED: Use asName to get the full name for the modal dropdowns ---
-  const wipManager = asName(firstNonEmpty(raw, ["wipManager", "WIP_Manager1", "WIP", "wip"]));
+  // --- FIXED: Use firstWord to get only the first name ---
+  const wipManager = firstWord(firstNonEmpty(raw, ["wipManager", "WIP_Manager1", "WIP", "wip"]));
   const installer = asName(firstNonEmpty(raw, ["installer", "Installer", "WIP_Manager", "tech", "Technician"]));
-  const caseOwner = asName(firstNonEmpty(raw, ["caseOwner", "Owner", "owner"]));
+  const caseOwner = firstWord(firstNonEmpty(raw, ["caseOwner", "Owner", "owner"]));
 
   const pmNotesRaw = first(raw, ["pmNotes", "Description", "notes", "Notes"]) || "";
   const pmNotes = (typeof pmNotesRaw === "string" ? pmNotesRaw : String(pmNotesRaw)).slice(0, 200);
@@ -120,7 +120,7 @@ function normalizeEvent(raw, idx = 0) {
 
   const state = firstNonEmpty(raw, ["state", "State", "jobState", "region", "Region"]) || "";
   
-  // --- NEW: Get the full Case Manager name for color keying ---
+  // Get the full Case Manager name for color keying
   const caseManager = asName(firstNonEmpty(raw, ["caseManager", "CaseManager", "manager", "Manager"])) || asName(raw.Owner);
 
   const colour = firstNonEmpty(raw, ["colour", "color", "colourHex", "Color"]);
@@ -285,11 +285,11 @@ export default function Calendar() {
     setDate(d);
   }, [date, view]);
 
-  // --- options for MAIN FILTER bar (unchanged) ---
+  // --- options for MAIN FILTER bar (updated) ---
   const { wipOptions, installerOptions, stateOptions } = React.useMemo(() => {
     const wipSet = new Set(), instSet = new Set(), stateSet = new Set();
     events.forEach((e) => {
-      // The event object 'e' already has the normalized full name
+      // The event object 'e' already has the normalized name
       if(e.wipManager) wipSet.add(e.wipManager);
       if(e.installer) instSet.add(e.installer);
       if (e.state) stateSet.add(e.state);
@@ -317,15 +317,25 @@ export default function Calendar() {
     });
   }, [events, filterWip, filterInstaller, filterState]);
 
-  // --- NEW: Generate stable WIP Manager color map ---
+  // --- FIXED: Create a stable master list for the color map ---
+  const stableWipManagerList = React.useMemo(() => {
+    const managerSet = new Set(allCrmUsers);
+    // Add any managers from events (e.g., Creator tasks) that aren't in the CRM user list
+    events.forEach(e => {
+      if (e.wipManager) managerSet.add(e.wipManager);
+    });
+    return Array.from(managerSet).sort();
+  }, [allCrmUsers, events]);
+
+  // --- FIXED: Generate stable WIP Manager color map ---
   const wipColorMap = React.useMemo(() => {
     const map = new Map();
-    // Use wipOptions, which is already a sorted list of unique full names
-    wipOptions.forEach((name, index) => {
+    // Use the new stable list to generate the map
+    stableWipManagerList.forEach((name, index) => {
       map.set(name, WIP_MANAGER_PALETTE[index % WIP_MANAGER_PALETTE.length]);
     });
     return map;
-  }, [wipOptions]);
+  }, [stableWipManagerList]);
 
   // apply colouring
   const colouredEvents = React.useMemo(() => {
@@ -605,7 +615,7 @@ export default function Calendar() {
 
       {/* --- NEW: VISIBLE VERSION NUMBER --- */}
       <div style={versionStyle}>
-        Version PROD - v1.3
+        Version PROD - v1.6
       </div>
     </div>
   );
