@@ -46,6 +46,8 @@ const CASES_PATH = path.join(DATA_DIR, "cases.json");
 const PRUNE_DAYS = 30;
 const ZOHO_ORG_ID = process.env.ZOHO_ORG_ID || "org640578001"; 
 const ZOHO_PORTAL_ID = process.env.ZOHO_PORTAL_ID; // For Projects sync
+// --- NEW: Default project for new tasks ---
+const ZOHO_DEFAULT_PROJECT_ID = process.env.ZOHO_DEFAULT_PROJECT_ID;
 
 // ---- Zoho OAuth config + in-memory tokens -----------------------
 const ACCOUNTS_HOST = process.env.ZOHO_ACCOUNTS_HOST || "https://accounts.zoho.com";
@@ -376,6 +378,7 @@ async function updateCaseInZoho(caseId, start, end) {
   }
 }
 
+// --- UPDATED: This function now supports CREATE and UPDATE ---
 async function updateProjectsTask(caseData) {
   console.log(`[Projects Sync] Received update for Case ID: ${caseData.case_id}`);
   
@@ -388,10 +391,15 @@ async function updateProjectsTask(caseData) {
   if (!accessToken) throw new Error("Could not get token for Projects");
 
   const caseId = caseData.case_id;
+  // This is your custom field in Zoho Projects that stores the CRM Case ID
+  const caseIdLinkField = "ZCAD_Case_ID"; // !<- IMPORTANT: Check this API name
+  
+  // 1. Search for an existing task
   const searchApiUrl = `https://projects.zoho.com/restapi/portal/${ZOHO_PORTAL_ID}/tasks/search?search_term=${caseId}`;
-
+  
   let taskId = null;
   let projectId = null;
+  let isUpdate = false;
 
   try {
     const searchRes = await fetch(searchApiUrl, {
@@ -400,44 +408,77 @@ async function updateProjectsTask(caseData) {
     const searchData = await searchRes.json();
     
     if (searchData.tasks && searchData.tasks.length > 0) {
+      // --- Task Found: Set details for UPDATE ---
       taskId = searchData.tasks[0].id_string;
       projectId = searchData.tasks[0].project.id_string;
-      console.log(`[Projects Sync] Found Task ${taskId} in Project ${projectId}`);
+      isUpdate = true;
+      console.log(`[Projects Sync] Found Task ${taskId} in Project ${projectId}. Will update.`);
     } else {
-      console.log(`[Projects Sync] No task found for Case ${caseId}.`);
-      return { success: false, error: 'Task not found, create logic not implemented' };
+      // --- Task Not Found: Set details for CREATE ---
+      console.log(`[Projects Sync] No task found for Case ${caseId}. Will create new task.`);
+      projectId = ZOHO_DEFAULT_PROJECT_ID; // Get default project from .env
+      if (!projectId) {
+        console.error('[Projects Sync] ZOHO_DEFAULT_PROJECT_ID is not set. Cannot create new task.');
+        return { success: false, error: 'Default Project ID not configured' };
+      }
     }
   } catch (e) {
     console.error('[Projects Sync] Error searching for task:', e.message);
     return { success: false, error: e.message };
   }
 
-  const updateApiUrl = `https://projects.zoho.com/restapi/portal/${ZOHO_PORTAL_ID}/projects/${projectId}/tasks/${taskId}/`;
-  
-  const body = JSON.stringify({
-    "task": {
-      "start_date": toYMD(caseData.install_start), 
-      "end_date": toYMD(caseData.install_end),
-      "custom_fields": {
-        "Sync_Source": "crm" // This is the loop protection
+  // 2. Define API URL, Method, and Payload
+  let apiUrl, apiMethod, taskPayload;
+
+  if (isUpdate) {
+    // --- UPDATE existing task ---
+    apiUrl = `https://projects.zoho.com/restapi/portal/${ZOHO_PORTAL_ID}/projects/${projectId}/tasks/${taskId}/`;
+    apiMethod = 'POST'; // Projects API uses POST for updates
+    taskPayload = {
+      "task": {
+        "start_date": toYMD(caseData.install_start), 
+        "end_date": toYMD(caseData.install_end),
+        "custom_fields": {
+          "Sync_Source": "crm" // Loop protection
+        }
       }
-    }
-  });
+    };
+  } else {
+    // --- CREATE new task ---
+    apiUrl = `https://projects.zoho.com/restapi/portal/${ZOHO_PORTAL_ID}/projects/${projectId}/tasks/`;
+    apiMethod = 'POST';
+    taskPayload = {
+      "task": {
+        "name": caseData.subject || "New Task from CRM",
+        "start_date": toYMD(caseData.install_start), 
+        "end_date": toYMD(caseData.install_end),
+        "custom_fields": {
+          "Sync_Source": "crm", // Loop protection
+          [caseIdLinkField]: caseId // Link to the CRM Case ID
+        }
+      }
+    };
+  }
   
+  // 3. Execute the API call
   try {
-    const res = await fetch(updateApiUrl, {
-      method: 'POST', // Projects API uses POST for updates
+    const res = await fetch(apiUrl, {
+      method: apiMethod,
       headers: {
         'Authorization': `Zoho-oauthtoken ${accessToken}`,
         'Content-Type': 'application/json',
       },
-      body: body,
+      body: JSON.stringify(taskPayload),
     });
     const data = await res.json();
-    console.log('[Projects Sync] Update result:', data);
+    if (isUpdate) {
+      console.log('[Projects Sync] Update result:', data);
+    } else {
+      console.log('[Projects Sync] Create result:', data);
+    }
     return { success: true };
   } catch (e) {
-    console.error('[Projects Sync] Error updating task:', e.message);
+    console.error(`[Projects Sync] Error ${isUpdate ? 'updating' : 'creating'} task:`, e.message);
     return { success: false, error: e.message };
   }
 }
@@ -445,7 +486,10 @@ async function updateProjectsTask(caseData) {
 async function updateCaseFromProject(taskData) {
   console.log(`[CRM Sync] Received update for Task ID: ${taskData.id_string || taskData.task_id}`);
 
-  const caseId = taskData.custom_fields?.ZCAD_Case_ID; 
+  // This is your custom field in Zoho Projects that stores the CRM Case ID
+  const caseIdLinkField = "ZCAD_Case_ID"; // !<- IMPORTANT: Check this API name
+  const caseId = taskData.custom_fields?.[caseIdLinkField]; 
+  
   if (!caseId) {
     console.warn(`[CRM Sync] Task ${taskData.id_string} has no Case ID. Skipping sync.`);
     return { success: false, error: 'Case ID not found on task' };
@@ -488,7 +532,7 @@ async function updateCaseFromProject(taskData) {
 }
 // -----------------------------------------------------------------
 
-// --- ZOHO LIST HELPERS ---
+// --- NEW: ZOHO LIST HELPERS ---
 
 /**
  * Fetches all active Zoho CRM users.
@@ -926,7 +970,7 @@ app.delete("/api/manual-entry/:id", async (req, res) => {
 });
 
 
-// --- WEBHOOK ENDPOINT for CRM ii ---
+// --- WEBHOOK ENDPOINT for CRM ---
 app.post("/api/webhook/crm-case-updated", async (req, res) => {
   console.log('[Webhook CRM] Received a request...');
 

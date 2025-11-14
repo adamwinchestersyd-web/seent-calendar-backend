@@ -192,7 +192,7 @@ export default function Calendar() {
   const [filterInstaller, setFilterInstaller] = React.useState("");
   const [filterState, setFilterState] = React.useState("");
   // --- UPDATED: Default to 'wip' color mode ---
-  const [colourMode, setColourMode] = React.useState("wip");
+  const [colourMode, setColourMode] = React.useState("state");
 
   // --- NEW: State for modal dropdowns ---
   const [allCrmUsers, setAllCrmUsers] = React.useState([]);
