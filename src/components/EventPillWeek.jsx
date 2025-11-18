@@ -1,4 +1,4 @@
-// CACHE BUST v17
+// CACHE BUST v20 - VISUAL DEBUG
 import React from "react";
 
 // utility: clamp text to N lines using CSS-only
@@ -9,7 +9,7 @@ const clampStyle = (lines) => ({
   WebkitLineClamp: lines,
 });
 
-// --- FIXED: Added isMultiDay and ...props ---
+// --- FIXED: Accepts style/className and forces full width ---
 export default function EventPillWeek({ ev, style, className, onOpenEditor, isMultiDay, ...props }) {
   const titleStyle = { fontWeight: 600, ...clampStyle(1) };
   const metaStyle  = { opacity: 0.9, fontSize: 12, ...clampStyle(1) };
@@ -20,19 +20,19 @@ export default function EventPillWeek({ ev, style, className, onOpenEditor, isMu
   const own = ev.caseOwner || "";
   const line2 = [wip, ins, own].filter(Boolean).join(" | ");
 
-  // Merge styles, FORCE width 100%
+  // Merge styles, FORCE width 100%, ADD DEBUG BORDER
   const colorStyle = {
     ...style,
     width: "100%", 
     boxSizing: "border-box",
     background: ev.colour || "#3b82f6",
+    border: "2px dashed red", // <--- VISUAL DEBUG: REMOVE LATER
   };
 
   const onClick = (e) => {
     e.stopPropagation();
     if (onOpenEditor) {
       const rect = e.currentTarget.getBoundingClientRect();
-      // Pass fake event structure matching what Calendar.jsx expects
       onOpenEditor(ev, { clientY: rect.top, clientX: rect.left });
     }
   };

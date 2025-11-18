@@ -1,4 +1,4 @@
-// CACHE BUST v15
+// CACHE BUST v20 - VISUAL DEBUG
 import React from "react";
 import EventPillWeek from "../components/EventPillWeek.jsx"; 
 import {
@@ -76,7 +76,7 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
         for (const r of lane) {
           const el = r.current;
           if (el) {
-            const pillEl = el.firstElementChild;
+            const pillEl = el.querySelector('.event-pill') as HTMLDivElement;
             if (pillEl) {
               const h = Math.ceil(pillEl.getBoundingClientRect().height);
               if (h > maxH) maxH = h;
@@ -127,8 +127,9 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
   };
   const onDragEnd = (_e: React.DragEvent<HTMLDivElement>) => {};
 
-  type PendingResize = { segId: string; evtId?: string; edge: "start" | "end" } | null;
-  const [pendingResize, setPendingResize] = React.useState<PendingResize>(null);
+  const [pendingResize, setPendingResize] = React.useState<{
+    segId: string; evtId?: string; edge: "start" | "end";
+  } | null>(null);
 
   const beginQuickResize = (seg: any) => (ev: React.MouseEvent<HTMLDivElement>) => {
     if (!(ev.ctrlKey || ev.detail === 2)) return;
@@ -138,18 +139,21 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
     setPendingResize({ segId: seg.id, evtId: seg.evt?.id, edge });
   };
 
-  const pickQuickResizeDate =
-    (targetDate: Date) => (ev: React.MouseEvent<HTMLDivElement>) => {
-      if (!(ev.ctrlKey || ev.detail === 2)) return;
-      if (!pendingResize) return;
-      ev.preventDefault(); ev.stopPropagation();
-      if (onResize) onResize(pendingResize.evtId!, pendingResize.edge, targetDate);
-      setPendingResize(null);
-    };
+  const pickQuickResizeDate = (targetDate: Date) => (ev: React.MouseEvent<HTMLDivElement>) => {
+    if (!(ev.ctrlKey || ev.detail === 2)) return;
+    if (!pendingResize) return;
+    ev.preventDefault(); ev.stopPropagation();
+    if (onResize) onResize(pendingResize.evtId!, pendingResize.edge, targetDate);
+    setPendingResize(null);
+  };
 
   return (
     <div className="calendar-root">
-      {/* Blue Header */}
+      {/* VISUAL CONFIRMATION BAR */}
+      <div style={{background:'red', color:'white', padding:'4px', textAlign:'center', fontWeight:'bold'}}>
+        DEBUG: MONTH VIEW ACTIVE (CHECK PILL WIDTH)
+      </div>
+
       <div className="calendar-header sticky-header blue-header">
         {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
           <div key={d} className="calendar-header__cell">{d}</div>
@@ -169,7 +173,6 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                 onDoubleClick={pickQuickResizeDate(d)}
                 onClick={(e) => { if (e.ctrlKey) pickQuickResizeDate(d)(e as any); }}
               >
-                {/* Sticky Blue Date Label */}
                 <div className="sticky-date-label blue-date-label">
                   {d.getDate()}
                 </div>
@@ -216,9 +219,10 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                         ev={e}
                         isMultiDay={!isSingleDay}
                         className={e.colorClass || "event--blue"}
-                        // FIX: Pass width: 100% so it fills the box
                         style={{ width: "100%", ...e.colour ? {["--c"]: e.colour} : {} }}
-                        onOpenEditor={onOpenEditor}
+                        onOpenEditor={(ev: any, rect: any) => {
+                          if (rect) onOpenEditor?.(ev, { clientY: rect.top, clientX: rect.left } as any);
+                        }}
                       />
                     </div>
                   );
