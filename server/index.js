@@ -56,10 +56,10 @@ let   ZOHO_DOMAIN   = process.env.ZOHO_DOMAIN || "https://www.zohoapis.com";
 const CLIENT_ID     = process.env.ZOHO_CLIENT_ID;
 const CLIENT_SECRET = process.env.ZOHO_CLIENT_SECRET;
 const REDIRECT_URI  = process.env.ZOHO_REDIRECT_URI;
-
-// --- UPDATED: Added report.UPDATE scope ---
-const ZOHO_FULL_SCOPE = "ZohoCRM.modules.ALL,ZohoCRM.users.READ,ZohoProjects.projects.ALL,ZohoCreator.report.READ,ZohoCreator.form.CREATE,ZohoCreator.report.DELETE,ZohoCreator.report.UPDATE";
+// --- ADD THESE CONSTANTS ---
+const ZOHO_FULL_SCOPE = "ZohoCRM.modules.ALL,ZohoCRM.users.READ,ZohoProjects.projects.ALL,ZohoCreator.report.READ,ZohoCreator.form.CREATE";
 const ZOHO_WEBHOOK_SECRET = process.env.ZOHO_WEBHOOK_SECRET; 
+const { CREATOR_APP_OWNER, CREATOR_APP_NAME, CREATOR_FORM_NAME, CREATOR_REPORT_NAME } = process.env;
 
 let REFRESH_TOKEN     = process.env.ZOHO_REFRESH_TOKEN || null;
 let ACCESS_TOKEN      = null;
@@ -123,9 +123,10 @@ const asName = (v) => toStringSafe(v).trim();
 const firstWord = (v) => toStringSafe(v).trim().split(/\s+/)[0] || "";
 
 
+// --- UPDATED FUNCTION ---
 async function getAccessToken() {
   if (!REFRESH_TOKEN) {
-    throw new Error("No REFRESH_TOKEN available. Run OAuth with access_type=offline & prompt=consent.");
+    throw new Error("No REFRESH_TOKEN available. Run OAuth.");
   }
   const now = Date.now();
   if (ACCESS_TOKEN && now < ACCESS_EXPIRES_AT - 60_000) return ACCESS_TOKEN;
@@ -138,9 +139,26 @@ async function getAccessToken() {
       client_id: CLIENT_ID,
       client_secret: CLIENT_SECRET,
       grant_type: "refresh_token",
-      scope: ZOHO_FULL_SCOPE, 
+      scope: ZOHO_FULL_SCOPE, // <--- Now uses the constant with all 5 scopes
     }).toString(),
   });
+
+  const data = await r.json();
+
+  if (!r.ok || !data.access_token) {
+    console.error("[token] refresh error:", data);
+    throw new Error(`Token refresh failed`);
+  }
+
+  if (typeof data.api_domain === "string" && data.api_domain) {
+    ZOHO_DOMAIN = data.api_domain;
+  }
+
+  ACCESS_TOKEN = data.access_token;
+  const expiresIn = Number(data.expires_in) || 3600;
+  ACCESS_EXPIRES_AT = Date.now() + expiresIn * 1000;
+  return ACCESS_TOKEN;
+}
 
   const data = await r.json();
 
@@ -160,17 +178,6 @@ async function getAccessToken() {
 
   console.log("[token] ok", ACCESS_TOKEN.slice(0, 12), "… api:", ZOHO_DOMAIN, "exp(s):", expiresIn);
   return ACCESS_TOKEN;
-}
-// -----------------------------------------------------------------
-
-
-// --- ZOHO CREATOR HELPERS ---
-const { 
-  CREATOR_APP_OWNER, 
-  CREATOR_APP_NAME, 
-  CREATOR_FORM_NAME, 
-  CREATOR_REPORT_NAME 
-} = process.env;
 
 async function fetchManualEntries() {
   const accessToken = await getAccessToken();
@@ -621,38 +628,42 @@ const STATE_COLOURS = {
 
 
 // ----- Fetch from Zoho with the exact API names you gave -----
+// --- UPDATED FUNCTION (With Pagination) ---
 async function fetchCasesFromZoho() {
   const token = await getAccessToken(); 
-
   const fields = [
-    "id",
-    "Subject",
-    "Install_Date",
-    "Install_End_Date",
-    "Install_Start_Time",
-    "State",
-    "Owner",
-    "Case_Number",
-    "Description",
-    "WIP_Manager",
-    "WIP_Manager1",
-    "Installer",
-    "Modified_Time",
-    "Created_Time",
+    "id", "Subject", "Install_Date", "Install_End_Date", "Install_Start_Time",
+    "State", "Owner", "Case_Number", "Description", "WIP_Manager",
+    "WIP_Manager1", "Installer", "Modified_Time", "Created_Time"
   ].join(",");
 
-  const url = `${ZOHO_DOMAIN}/crm/v2/Cases?per_page=200&fields=${encodeURIComponent(fields)}`;
+  let allRows = [];
+  let page = 1;
+  let hasMore = true;
+  // Fetch most recently modified first
+  const baseUrl = `${ZOHO_DOMAIN}/crm/v2/Cases?fields=${encodeURIComponent(fields)}&sort_by=Modified_Time&sort_order=desc`;
 
-  const r = await fetch(url, { headers: { Authorization: `Zoho-oauthtoken ${token}` } });
-  const text = await r.text();
-  if (!r.ok) throw new Error(`Zoho fetch failed ${r.status}: ${text}`);
+  while (hasMore) {
+    const url = `${baseUrl}&per_page=200&page=${page}`;
+    const r = await fetch(url, { headers: { Authorization: `Zoho-oauthtoken ${token}` } });
+    if (!r.ok) break;
 
-  const { data: rows = [] } = JSON.parse(text);
+    const json = await r.json();
+    const rows = json.data || [];
+    allRows = allRows.concat(rows);
 
-  const events = rows.map((row) => {
+    // Fetch up to 5 pages (1000 records) or stop if page is not full
+    if (rows.length < 200 || page >= 5) {
+      hasMore = false;
+    } else {
+      page++;
+    }
+  }
+
+  return allRows.map((row) => {
     const wipMgrName = asName(row.WIP_Manager1) || asName(row.WIP_Manager);
     const installerName = asName(row.Installer) || asName(row.WIP_Manager);
-    const ownerFirst = firstWord(row.Owner); // Owner is a user object
+    const ownerFirst = firstWord(row.Owner);
 
     return {
       id: row.id,
@@ -671,8 +682,6 @@ async function fetchCasesFromZoho() {
       isManual: false,
     };
   });
-
-  return events;
 }
 
 // ----- mapper (no longer used by fetchCasesFromZoho but kept just in case) -----
@@ -712,7 +721,132 @@ async function persistCache() {
   CASES_CACHE.lastUpdated = payload.lastUpdated;
 }
 
+// --- NEW HELPERS ---
+
+function toCreatorDate(ymdString) {
+  if (!ymdString) return "";
+  const d = new Date(ymdString); 
+  if (Number.isNaN(d.getTime())) return "";
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = d.toLocaleString('en-US', { month: 'short' });
+  const year = d.getFullYear();
+  return `${day}-${month}-${year}`; 
+}
+
+async function fetchManualEntries() {
+  const accessToken = await getAccessToken();
+  if (!accessToken) return [];
+
+  const creatorApiUrl = `https://creator.zoho.com/api/v2/${CREATOR_APP_OWNER}/${CREATOR_APP_NAME}/report/${CREATOR_REPORT_NAME}`;
+
+  try {
+    const res = await fetch(creatorApiUrl, {
+      headers: { 'Authorization': `Zoho-oauthtoken ${accessToken}` }
+    });
+    const data = await res.json();
+
+    return (data.data || []).map(item => ({
+      id: `creator_${item.ID}`, 
+      title: item.Title,
+      start: item.Start_Date ? toYMD(item.Start_Date) : '', 
+      end: item.End_Date ? toYMD(item.End_Date) : '',     
+      startTime: item.Start_Time,
+      wipManager: item.WIP_Manager,
+      caseOwner: item.Owner,
+      installer: item.Installer,
+      pmNotes: item.PM_Notes,
+      state: item.State || "", // Reads State
+      isManual: true, 
+      colour: '#8b5cf6', 
+      created_time: item.Added_Time, 
+      modified_time: item.Modified_Time,
+    }));
+  } catch (e) {
+    console.error('[creator] fetch error:', e.message);
+    return [];
+  }
+}
+
+async function createManualEntry(eventData) {
+  const accessToken = await getAccessToken();
+  if (!accessToken) return { error: 'Could not get access token' };
+
+  const creatorApiUrl = `https://creator.zoho.com/api/v2/${CREATOR_APP_OWNER}/${CREATOR_APP_NAME}/form/${CREATOR_FORM_NAME}`;
+
+  const body = JSON.stringify({
+    data: {
+      "Title": eventData.title,
+      "WIP_Manager": eventData.wipManager,
+      "Owner": eventData.caseOwner,
+      "Installer": eventData.installer,
+      "PM_Notes": eventData.pmNotes,
+      "Start_Date": toCreatorDate(eventData.start), 
+      "End_Date": toCreatorDate(eventData.end),   
+      "Start_Time": eventData.startTime,
+      "State": eventData.state, 
+    }
+  });
+
+  try {
+    const res = await fetch(creatorApiUrl, {
+      method: 'POST',
+      headers: { 'Authorization': `Zoho-oauthtoken ${accessToken}`, 'Content-Type': 'application/json' },
+      body: body,
+    });
+    const data = await res.json();
+    
+    if (data.code === 3000) { 
+      return { success: true, id: data.data.ID };
+    } else {
+      console.error('[creator] Create error:', data);
+      return { error: 'Failed', details: data };
+    }
+  } catch (e) {
+    console.error('[creator] create fetch error:', e.message);
+    return { error: e.message };
+  }
+}
+
+async function updateCaseInZoho(caseId, start, end) {
+  const accessToken = await getAccessToken();
+  if (!accessToken) return false;
+
+  const crmApiUrl = `${ZOHO_DOMAIN}/crm/v2/Cases/${caseId}`;
+  const body = JSON.stringify({
+    data: [{
+      "Install_Date": start,
+      "Install_End_Date": end,
+      "Sync_Source": "widget" 
+    }]
+  });
+
+  try {
+    const res = await fetch(crmApiUrl, {
+      method: 'PUT',
+      headers: { 'Authorization': `Zoho-oauthtoken ${accessToken}`, 'Content-Type': 'application/json' },
+      body: body,
+    });
+    const data = await res.json();
+    if (data.data && data.data[0].status === 'success') {
+      console.log(`[cases] Updated case ${caseId} successfully.`);
+      return true;
+    }
+    console.error(`[cases] Failed to update case ${caseId}:`, data);
+    return false;
+  } catch (e) {
+    console.error('[cases] update error:', e.message);
+    return false;
+  }
+}
+
+async function updateProjectsTask(caseData) {
+  console.log(`[Projects Sync] Received update for Case ID: ${caseData.case_id}`);
+  console.log('[Projects Sync] Data:', caseData);
+  // Placeholder for full Projects sync logic
+  return { success: true };
+}
 // --- UPDATED refreshCases ---
+// --- UPDATED FUNCTION ---
 async function refreshCases(reason = "manual") {
   console.log(`[cases] refresh starting (${reason})`);
   try {
@@ -881,23 +1015,18 @@ app.get("/debug/case/:id", (_req, res) => {
 });
 
 // ---- API: optimistic update from UI ----
+// --- UPDATED PATCH ROUTE ---
 app.patch("/api/cases/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { start, end, title, state } = req.body || {};
+    const eventData = req.body;
+    const { start, end } = eventData;
     let found = false;
     
     CASES_CACHE.events = CASES_CACHE.events.map((e) => {
       if (e.id !== id) return e;
       found = true;
-      return {
-        ...e,
-        start: start ? toYMD(start) : e.start,
-        end: end ? toYMD(end) : e.end,
-        title: title ?? e.title,
-        state: state ?? e.state,
-        modified_time: new Date().toISOString(),
-      };
+      return { ...e, ...eventData, modified_time: new Date().toISOString() };
     });
 
     if (!found) return res.status(404).json({ ok: false, error: "Not found" });
@@ -905,14 +1034,44 @@ app.patch("/api/cases/:id", async (req, res) => {
     await persistCache();
 
     if (id.startsWith('creator_')) {
-      console.warn(`[PATCH] Update for Creator ID ${id} not yet implemented.`);
+       // Creator update logic (placeholder)
     } else {
-      updateCaseInZoho(id, start, end); // Run in background
+       // Update CRM case
+       updateCaseInZoho(id, start, end); 
     }
 
     res.json({ ok: true });
   } catch (e) {
     res.status(500).json({ ok: false, error: String(e) });
+  }
+});
+
+// --- NEW ROUTES ---
+app.post("/api/manual-entry", async (req, res) => {
+  const eventData = req.body;
+  const result = await createManualEntry(eventData);
+  if (result.success) {
+    refreshCases("post-create");
+    res.status(201).json({ status: 'success', id: result.id });
+  } else {
+    res.status(500).json({ error: 'Failed', details: result.details });
+  }
+});
+
+app.post("/api/webhook/crm-case-updated", async (req, res) => {
+  const secret = req.headers['x-webhook-secret'];
+  if (!ZOHO_WEBHOOK_SECRET || secret !== ZOHO_WEBHOOK_SECRET) return res.status(401).send('Unauthorized');
+
+  const data = req.body;
+  console.log('[Webhook CRM] Payload:', data);
+  
+  if (data.sync_source === 'projects') return res.status(200).send('Loop prevented');
+
+  try {
+    await updateProjectsTask(data);
+    res.status(200).send('Webhook received');
+  } catch (e) {
+    res.status(500).send('Error');
   }
 });
 
