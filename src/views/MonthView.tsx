@@ -1,4 +1,4 @@
-// CACHE BUST v21 - Sticky + EventPillWeek
+// CACHE BUST v23 - Match WeekView Logic
 import React from "react";
 import EventPillWeek from "../components/EventPillWeek.jsx"; 
 import {
@@ -76,8 +76,11 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
         for (const r of lane) {
           const el = r.current;
           if (el) {
-            const h = Math.ceil(el.getBoundingClientRect().height);
-            if (h > maxH) maxH = h;
+            const pillEl = el.querySelector('.event-pill') as HTMLDivElement;
+            if (pillEl) {
+              const h = Math.ceil(pillEl.getBoundingClientRect().height);
+              if (h > maxH) maxH = h;
+            }
           }
         }
         return maxH;
@@ -111,7 +114,10 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
 
   const onCellDrop = (targetDate: Date) => (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    const raw = e.dataTransfer?.getData("application/json") || "";
+    const raw =
+      e.dataTransfer?.getData("application/json") ||
+      e.dataTransfer?.getData("text/plain") ||
+      "";
     try {
       const data = JSON.parse(raw);
       if (onMove) onMove(data.evtId, targetDate);
@@ -121,6 +127,8 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
   const onDragStart = (seg: any) => (e: React.DragEvent<HTMLDivElement>) => {
     const payload = JSON.stringify({ segId: seg.id, evtId: seg.evt?.id });
     e.dataTransfer?.setData("application/json", payload);
+    e.dataTransfer?.setData("text/plain", payload);
+    if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
   };
   const onDragEnd = (_e: React.DragEvent<HTMLDivElement>) => {};
 
@@ -146,7 +154,6 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
 
   return (
     <div className="calendar-root">
-      {/* Sticky Blue Header */}
       <div className="calendar-header sticky-header blue-header">
         {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
           <div key={d} className="calendar-header__cell">{d}</div>
@@ -166,7 +173,6 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                 onDoubleClick={pickQuickResizeDate(d)}
                 onClick={(e) => { if (e.ctrlKey) pickQuickResizeDate(d)(e as any); }}
               >
-                {/* Sticky Date Label */}
                 <div className="sticky-date-label blue-date-label">
                   {d.getDate()}
                 </div>
@@ -179,8 +185,10 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                   const e = seg.evt;
                   const isSingleDay = seg.span === 1;
                   const top = laneTops[rIdx][li] ?? DATE_PAD;
-                  const left = (seg.offset / 7) * 100;
-                  const width = (seg.span / 7) * 100;
+                  // Variable names adapted to match WeekView logic for copy-paste accuracy
+                  const leftPct = (seg.offset / 7) * 100;
+                  const widthPct = (Math.max(1, seg.span) / 7) * 100;
+
                   const tooltip = e.title;
 
                   return (
@@ -188,33 +196,31 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                       key={seg.id}
                       ref={row.laneRefs[li][bi]}
                       className="pointer-events-auto"
+                      // --- EXACT STYLE FROM WEEKVIEW (adapted variables) ---
                       style={{
-                            position: "absolute",
-                            top,
-                            left: `${left}%`,
-                            width: `${width}%`,
-                            padding: `${V_GUTTER}px ${H_GUTTER}px`,
-                            boxSizing: "border-box",
-                            zIndex: 10,
-                          }}
+                        position: "absolute",
+                        top,
+                        left: `${leftPct}%`,
+                        width: `${widthPct}%`,
+                        padding: `${V_GUTTER}px ${H_GUTTER}px`,
+                        boxSizing: "border-box",
+                        zIndex: 2,
+                      }}
+
                       draggable
                       onDragStart={onDragStart(seg)}
                       onDragEnd={onDragEnd}
                       onDoubleClick={beginQuickResize(seg)}
-                      onClick={(evt) => {
-                        if (evt.ctrlKey) { beginQuickResize(seg)(evt as any); return; }
-                        const rect = row.laneRefs[li][bi].current?.getBoundingClientRect();
-                        if (rect) onOpenEditor?.(e, rect as any);
-                      }}
                       title={tooltip}
                     >
+                      {/* --- EXACT COMPONENT FROM WEEKVIEW --- */}
                       <EventPillWeek
                         ev={e}
                         isMultiDay={!isSingleDay}
                         className={e.colorClass || "event--blue"}
                         style={{ width: "100%", ...e.colour ? {["--c"]: e.colour} : {} }}
                         onOpenEditor={(ev: any, rect: any) => {
-                          if (rect) onOpenEditor?.(ev, { clientY: rect.top, clientX: rect.left } as any);
+                           if (rect) onOpenEditor?.(ev, { clientY: rect.top, clientX: rect.left } as any);
                         }}
                       />
                     </div>

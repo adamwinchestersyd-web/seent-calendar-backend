@@ -239,7 +239,7 @@ html,body{ background:var(--bg); color:var(--text); }
   background: var(--light-panel); border: 1px solid var(--light-border);
   border-radius: 8px; padding: 8px 10px;
 }
-.calendar-editor-modal .modal-actions { display: flex; gap: 8px; justifyContent: flex-end; }
+.calendar-editor-modal .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
 .calendar-editor-modal .modal-btn {
   height: 36px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--light-border);
   font-size: 14px; cursor: pointer; user-select: none;
