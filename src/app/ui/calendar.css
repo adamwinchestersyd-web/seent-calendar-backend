@@ -258,3 +258,7 @@ html,body{ background:var(--bg); color:var(--text); }
 .calendar-editor-modal .modal-btn-subtle { background: var(--btn-subtle-bg); color: var(--btn-subtle-text); }
 .calendar-editor-modal .modal-btn-ghost { background: transparent; color: var(--light-text); border-color: transparent; }
 .calendar-editor-modal .modal-btn-ghost:hover { background: var(--btn-subtle-bg); }
+/* Month View specific manual entry override */
+.event-pill-month.event-pill--manual {
+  border-left: 3px solid #facc15; /* Yellow bar for manual entries */
+}

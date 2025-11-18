@@ -1,13 +1,12 @@
-// CACHE BUST v24 - Force EventPillWeek
+// CACHE BUST v25 - GOLD STANDARD MONTH VIEW
 import React from "react";
-import EventPillWeek from "../components/EventPillWeek.jsx"; // <-- Uses EventPillWeek
+import EventPillMonth from "../components/EventPillMonth.jsx"; // <-- Uses new component
 import {
   addDays,
   startOfMonthGrid,
   endOfMonthGrid,
   segmentEventAcrossRange,
   packLanes,
-  to12h,
 } from "../app/utils/calendar";
 
 type Props = {
@@ -18,24 +17,20 @@ type Props = {
   onOpenEditor?: (ev: any, clickEvent: React.MouseEvent) => void;
 };
 
-const CELL_MIN_H = 112;
-const DATE_PAD = 20;
-const GAP = 4;
+const CELL_MIN_H = 120; // Minimum height for a day cell
+const DATE_HEADER_H = 28; // Height of the date number bar
+const EVENT_H = 26; // Height of one event bar including gap
 
 type WeekRow = {
   week: Date[];
-  rowStart: Date;
-  rowEnd: Date;
   lanes: any[][];
   laneRefs: React.RefObject<HTMLDivElement>[][];
 };
 
 export default function MonthView({ date, events, onMove, onResize, onOpenEditor }: Props) {
   const gridStart = React.useMemo(() => startOfMonthGrid(date), [date]);
-  const gridEnd = React.useMemo(() => endOfMonthGrid(date), [date]);
-  const H_GUTTER = 4;
-  const V_GUTTER = 2;
-
+  
+  // 1. Build the 6-week grid
   const weeks = React.useMemo(() => {
     const out: Date[][] = [];
     let cur = new Date(gridStart);
@@ -50,64 +45,43 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
     return out;
   }, [gridStart]);
 
+  // 2. Segment events into weeks and pack them into lanes (visual rows)
   const weekData = React.useMemo<WeekRow[]>(() => {
     return weeks.map((week) => {
       const rowStart = week[0];
       const rowEnd   = week[6];
 
+      // Filter and split events for this week
       const segs = (events || [])
         .flatMap((e) => segmentEventAcrossRange(e, rowStart, rowEnd))
-        .sort((a, b) => a.start.getTime() - b.start.getTime() || b.span - a.span);
+        .sort((a, b) => {
+            // Sort by start date, then duration (longer first)
+            const startDiff = a.start.getTime() - b.start.getTime();
+            if (startDiff !== 0) return startDiff;
+            return b.span - a.span;
+        });
 
+      // Pack into non-overlapping lanes (0, 1, 2...)
       const lanes = packLanes(segs);
-      const laneRefs = lanes.map((lane: any[]) => lane.map(() => React.createRef<HTMLDivElement>())) as React.RefObject<HTMLDivElement>[][];
+      
+      // Create refs for drag/drop targets if needed later
+      const laneRefs = lanes.map((lane: any[]) => lane.map(() => React.createRef<HTMLDivElement>()));
 
-      return { week, rowStart, rowEnd, lanes, laneRefs };
+      return { week, lanes, laneRefs };
     });
   }, [weeks, events]);
 
-  const [laneHeights, setLaneHeights] = React.useState<number[][]>(() => weeks.map(() => []));
-  const [rowHeights, setRowHeights] = React.useState<number[]>(() => weeks.map(() => CELL_MIN_H));
-
-  React.useLayoutEffect(() => {
-    const nextLaneHeights = weekData.map(({ laneRefs }) =>
-      laneRefs.map((lane) => {
-        let maxH = 22;
-        for (const r of lane) {
-          const el = r.current;
-          if (el) {
-            // Look for .event-pill class
-            const pillEl = el.querySelector('.event-pill') as HTMLDivElement;
-            if (pillEl) {
-              const h = Math.ceil(pillEl.getBoundingClientRect().height);
-              if (h > maxH) maxH = h;
-            }
-          }
-        }
-        return maxH;
-      })
-    );
-
-    const nextRowHeights = nextLaneHeights.map((laneHs) => {
-      const contentHeight = laneHs.reduce((acc, h, i) => acc + (i ? GAP : 0) + h, 0);
-      return Math.max(CELL_MIN_H, DATE_PAD + contentHeight + 8);
+  // 3. Calculate row heights based on how many events are in the busiest day
+  const rowHeights = React.useMemo(() => {
+    return weekData.map((data) => {
+      const maxLaneIndex = data.lanes.length;
+      // Height = Header + (Events * Height) + Padding
+      const contentH = DATE_HEADER_H + (maxLaneIndex * EVENT_H) + 10; 
+      return Math.max(CELL_MIN_H, contentH);
     });
+  }, [weekData]);
 
-    if (JSON.stringify(nextLaneHeights) !== JSON.stringify(laneHeights)) {
-      setLaneHeights(nextLaneHeights);
-    }
-    if (JSON.stringify(nextRowHeights) !== JSON.stringify(rowHeights)) {
-      setRowHeights(nextRowHeights);
-    }
-  }, [weekData]); 
-
-  const laneTops = laneHeights.map((laneHs) => {
-    const tops: number[] = [];
-    let cur = DATE_PAD;
-    laneHs.forEach((h) => { tops.push(cur); cur += h + GAP; });
-    return tops;
-  });
-
+  // --- Drag & Drop Handlers (Simplified) ---
   const onCellDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
@@ -126,30 +100,10 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
     const payload = JSON.stringify({ segId: seg.id, evtId: seg.evt?.id });
     e.dataTransfer?.setData("application/json", payload);
   };
-  const onDragEnd = (_e: React.DragEvent<HTMLDivElement>) => {};
-
-  type PendingResize = { segId: string; evtId?: string; edge: "start" | "end" } | null;
-  const [pendingResize, setPendingResize] = React.useState<PendingResize>(null);
-
-  const beginQuickResize = (seg: any) => (ev: React.MouseEvent<HTMLDivElement>) => {
-    if (!(ev.ctrlKey || ev.detail === 2)) return;
-    ev.preventDefault(); ev.stopPropagation();
-    const rect = (ev.currentTarget as HTMLDivElement).getBoundingClientRect();
-    const edge: "start" | "end" = ev.clientX - rect.left < rect.width / 2 ? "start" : "end";
-    setPendingResize({ segId: seg.id, evtId: seg.evt?.id, edge });
-  };
-
-  const pickQuickResizeDate =
-    (targetDate: Date) => (ev: React.MouseEvent<HTMLDivElement>) => {
-      if (!(ev.ctrlKey || ev.detail === 2)) return;
-      if (!pendingResize) return;
-      ev.preventDefault(); ev.stopPropagation();
-      if (onResize) onResize(pendingResize.evtId!, pendingResize.edge, targetDate);
-      setPendingResize(null);
-    };
 
   return (
     <div className="calendar-root">
+      {/* Sticky Blue Header */}
       <div className="calendar-header sticky-header blue-header">
         {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
           <div key={d} className="calendar-header__cell">{d}</div>
@@ -158,67 +112,53 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
 
       <div className="calendar-grid">
         {weekData.map((row, rIdx) => (
-          <div key={rIdx} className="calendar-row" style={{ ["--cols" as any]: 7 }}>
+          <div key={rIdx} className="calendar-row" style={{ ["--cols" as any]: 7, height: rowHeights[rIdx] }}>
+            {/* Render Day Cells (Background & Date Labels) */}
             {row.week.map((d, i) => (
               <div
                 key={i}
                 className="calendar-cell"
-                style={{ position: "relative", minHeight: rowHeights[rIdx] }}
                 onDragOver={onCellDragOver}
                 onDrop={onCellDrop(d)}
-                onDoubleClick={pickQuickResizeDate(d)}
-                onClick={(e) => { if (e.ctrlKey) pickQuickResizeDate(d)(e as any); }}
               >
-                <div className="sticky-date-label blue-date-label">
+                <div className="sticky-date-label blue-date-label" style={{ position: 'absolute', top: 0, left: 0 }}>
                   {d.getDate()}
                 </div>
               </div>
             ))}
 
-            <div className="absolute inset-0 pointer-events-none" style={{ position: "absolute" }}>
-              {row.lanes.map((lane, li) =>
-                lane.map((seg, bi) => {
+            {/* Render Events Layer */}
+            <div className="absolute inset-0 pointer-events-none">
+              {row.lanes.map((lane, laneIdx) =>
+                lane.map((seg, segIdx) => {
                   const e = seg.evt;
-                  const isSingleDay = seg.span === 1;
-                  const top = laneTops[rIdx][li] ?? DATE_PAD;
+                  
+                  // Calculate Position
+                  const top = DATE_HEADER_H + (laneIdx * EVENT_H);
                   const left = (seg.offset / 7) * 100;
                   const width = (seg.span / 7) * 100;
-
-                  const tooltip = e.title;
 
                   return (
                     <div
                       key={seg.id}
-                      ref={row.laneRefs[li][bi]}
                       className="pointer-events-auto"
                       style={{
-                            position: "absolute",
-                            top,
-                            left: `${left}%`,
-                            width: `${width}%`,
-                            padding: `${V_GUTTER}px ${H_GUTTER}px`,
-                            boxSizing: "border-box",
-                            zIndex: 10,
-                          }}
+                        position: "absolute",
+                        top: `${top}px`,
+                        left: `${left}%`,
+                        width: `${width}%`,
+                        height: `${EVENT_H - 4}px`, // Leave 4px gap
+                        padding: "0 4px", // Horizontal gap between adjacent events
+                        boxSizing: "border-box",
+                        zIndex: 10,
+                      }}
                       draggable
                       onDragStart={onDragStart(seg)}
-                      onDragEnd={onDragEnd}
-                      onDoubleClick={beginQuickResize(seg)}
-                      onClick={(evt) => {
-                        if (evt.ctrlKey) { beginQuickResize(seg)(evt as any); return; }
-                        const rect = row.laneRefs[li][bi].current?.getBoundingClientRect();
-                        if (rect) onOpenEditor?.(e, rect as any);
-                      }}
-                      title={tooltip}
+                      title={e.title}
                     >
-                      <EventPillWeek
+                      <EventPillMonth
                         ev={e}
-                        isMultiDay={!isSingleDay}
-                        className={e.colorClass || "event--blue"}
-                        style={{ width: "100%", ...e.colour ? {["--c"]: e.colour} : {} }}
-                        onOpenEditor={(ev: any, rect: any) => {
-                          if (rect) onOpenEditor?.(ev, { clientY: rect.top, clientX: rect.left } as any);
-                        }}
+                        onOpenEditor={onOpenEditor}
                       />
                     </div>
                   );
