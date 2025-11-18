@@ -1,6 +1,6 @@
-// CACHE BUST v10 - TS Fix
+// CACHE BUST v13
 import React from "react";
-import EventPill from "../components/EventPillWeek.jsx";
+import EventPillWeek from "../components/EventPillWeek.jsx"; // <-- Correct import
 import {
   addDays,
   startOfWeek,
@@ -38,17 +38,20 @@ function useElementWidth(ref: React.RefObject<HTMLDivElement>) {
 }
 
 export default function WeekView({ date, events, onOpenEditor }: Props) {
-  const weekStart = startOfWeek(date);
-  const weekEnd = endOfWeek(weekStart);
+  const weekStart = startOfWeek(date); 
+  const weekEnd = endOfWeek(weekStart); // Sunday
   const days = [...Array(7)].map((_, i) => addDays(weekStart, i));
 
   const segs = React.useMemo(
     () =>
       (events || [])
+        // Inclusive date filter for Sunday
         .filter((e) => {
           const start = new Date(e.start);
           const end = new Date(e.end);
-          return !(end < weekStart || start > addDays(weekEnd, 1)); 
+          if (end < weekStart) return false;
+          if (start > weekEnd) return false;
+          return true;
         })
         .flatMap((e) => segmentEventAcrossRange(e, weekStart, weekEnd))
         .sort((a, b) => a.start.getTime() - b.start.getTime() || b.span - a.span),
@@ -67,7 +70,7 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
   const [sectionH, setSectionH] = React.useState(60);
   const rowRef = React.useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>;
   const rowWidth = useElementWidth(rowRef);
-  const BAR_MIN = 84; 
+  const BAR_MIN = 84; // 4 lines
   const LANE_GAP = 4;
   
   React.useLayoutEffect(() => {
@@ -179,7 +182,6 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
               const top = laneTops[li] ?? 0;
               const leftPct = (seg.offset / 7) * 100;
               const widthPct = (Math.max(1, seg.span) / 7) * 100;
-
               const isSingle = seg.span === 1;
 
               const tooltip = [
@@ -209,16 +211,16 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
                   onDragStart={onDragStart(seg)}
                   onDragEnd={onDragEnd}
                   onDoubleClick={beginQuickResize(seg)}
+                  // Click is handled by EventPillWeek
                   title={tooltip}
                 >
-                <EventPill
+                {/* --- UPDATED: Uses EventPillWeek --- */}
+                <EventPillWeek
                   ev={e}
                   isMultiDay={!isSingle}
                   className={e.colorClass || "event--blue"}
                   style={{ width: "100%", ...e.colour ? {["--c"]: e.colour} : {} }}
-                  onOpenEditor={(ev: any, rect: any) => { // <-- ADDED TYPES
-                     if (rect) onOpenEditor?.(ev, { clientY: rect.top, clientX: rect.left } as any);
-                  }}
+                  onOpenEditor={onOpenEditor}
                 />
                 </div>
               );

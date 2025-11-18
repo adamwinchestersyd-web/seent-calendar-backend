@@ -28,7 +28,7 @@ const clampStyle = (lines) => ({
   WebkitLineClamp: lines,
 });
 
-// --- FIXED: Added all props to the function signature ---
+// --- FIXED: Added className and style to props ---
 export default function EventPillWeek({ ev, isMultiDay, className, style, onOpenEditor }) {
   const ref = React.useRef(null);
 
@@ -40,9 +40,8 @@ export default function EventPillWeek({ ev, isMultiDay, className, style, onOpen
   const metaStyle  = { opacity: 0.9, fontSize: 12, ...clampStyle(1) };
   const notesStyle = { opacity: 0.9, fontSize: 12, ...clampStyle(2) };
 
-  // --- FIXED: Use firstWord for display, but ev has full name ---
   const wip = firstWord(ev.wipManager) || "";
-  const ins = asName(ev.installer) || ""; // Installers can be companies
+  const ins = asName(ev.installer) || ""; 
   const time = ev.startTime || "";
   const own = firstWord(ev.caseOwner) || "";
   
@@ -50,37 +49,37 @@ export default function EventPillWeek({ ev, isMultiDay, className, style, onOpen
 
   // Get the background color from the event
   const colorStyle = {
-    ...style, // Pass through style from parent (contains width and --c color)
+    ...style, // Pass through style from parent (contains width and position)
     background: ev.colour || "#3b82f6",
-    // position: 'relative' is in calendar.css
   };
 
   // Conditionally add the manual class
   const pillClasses = [
-    "event-pill",
-    className, // Pass through className from parent
+    "event-pill", // This applies the calendar.css 4-line limit
+    className, 
     ev.isManual ? "event-pill--manual" : ""
   ].filter(Boolean).join(" ");
 
   // Click handler to pass back the DOMRect
-  const onClick = () => {
+  const onClick = (e) => {
+    // Stop propagation so we don't trigger the cell click
+    e.stopPropagation();
+    
     const rect = ref.current?.getBoundingClientRect();
     if (rect && onOpenEditor) {
-      onOpenEditor(ev, rect);
+      // Convert rect to a fake MouseEvent structure so Calendar.jsx is happy
+      onOpenEditor(ev, { clientY: rect.top, clientX: rect.left });
     }
   };
 
   return (
     <div 
       ref={ref}
-      className={pillClasses} // <-- Use class names
-      style={colorStyle}      // Apply background color
+      className={pillClasses} 
+      style={colorStyle}      
       title={ev.title}
-      onClick={onClick}       // <-- Add click handler
+      onClick={onClick}       
     >
-      {/* Yellow bar is now handled by the .event-pill--manual class */}
-
-      {/* The original CSS file uses event__fill, so we keep it for the gradient */}
       <div className="event__fill" style={{ background: ev.colour || "#3b82f6" }} /> 
       
       <div className="event__label">

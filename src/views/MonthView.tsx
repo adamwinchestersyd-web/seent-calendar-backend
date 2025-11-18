@@ -1,6 +1,6 @@
-// CACHE BUST v10 - TS Fix
+// CACHE BUST v13
 import React from "react";
-import EventPill from "../components/EventPillWeek.jsx";
+import EventPillWeek from "../components/EventPillWeek.jsx"; // <-- Correct import
 import {
   addDays,
   startOfMonthGrid,
@@ -216,21 +216,15 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                       onDragStart={onDragStart(seg)}
                       onDragEnd={onDragEnd}
                       onDoubleClick={beginQuickResize(seg)}
-                      onClick={(evt) => {
-                        if (evt.ctrlKey) { beginQuickResize(seg)(evt as any); return; }
-                        const rect = row.laneRefs[li][bi].current?.getBoundingClientRect();
-                        if (rect) onOpenEditor?.(e, rect as any);
-                      }}
+                      // Click is handled by EventPillWeek
                       title={tooltip}
                     >
-                      <EventPill
+                      <EventPillWeek
                         ev={e}
                         isMultiDay={!isSingleDay}
                         className={e.colorClass || "event--blue"}
                         style={{ width: "100%", ...e.colour ? {["--c"]: e.colour} : {} }}
-                        onOpenEditor={(ev: any, rect: any) => { // <-- ADDED TYPES
-                          if (rect) onOpenEditor?.(ev, { clientY: rect.top, clientX: rect.left } as any);
-                        }}
+                        onOpenEditor={onOpenEditor}
                       />
                     </div>
                   );
