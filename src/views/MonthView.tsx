@@ -1,6 +1,6 @@
-// CACHE BUST v25 - GOLD STANDARD MONTH VIEW
+// CACHE BUST v26 - Fix TS Ref Types
 import React from "react";
-import EventPillMonth from "../components/EventPillMonth.jsx"; // <-- Uses new component
+import EventPillMonth from "../components/EventPillMonth.jsx";
 import {
   addDays,
   startOfMonthGrid,
@@ -17,20 +17,20 @@ type Props = {
   onOpenEditor?: (ev: any, clickEvent: React.MouseEvent) => void;
 };
 
-const CELL_MIN_H = 120; // Minimum height for a day cell
-const DATE_HEADER_H = 28; // Height of the date number bar
-const EVENT_H = 26; // Height of one event bar including gap
+const CELL_MIN_H = 120;
+const DATE_HEADER_H = 28;
+const EVENT_H = 26;
 
+// --- FIXED: Allow null in the ref type definition ---
 type WeekRow = {
   week: Date[];
   lanes: any[][];
-  laneRefs: React.RefObject<HTMLDivElement>[][];
+  laneRefs: React.RefObject<HTMLDivElement | null>[][];
 };
 
 export default function MonthView({ date, events, onMove, onResize, onOpenEditor }: Props) {
   const gridStart = React.useMemo(() => startOfMonthGrid(date), [date]);
   
-  // 1. Build the 6-week grid
   const weeks = React.useMemo(() => {
     const out: Date[][] = [];
     let cur = new Date(gridStart);
@@ -45,43 +45,38 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
     return out;
   }, [gridStart]);
 
-  // 2. Segment events into weeks and pack them into lanes (visual rows)
   const weekData = React.useMemo<WeekRow[]>(() => {
     return weeks.map((week) => {
       const rowStart = week[0];
       const rowEnd   = week[6];
 
-      // Filter and split events for this week
       const segs = (events || [])
         .flatMap((e) => segmentEventAcrossRange(e, rowStart, rowEnd))
         .sort((a, b) => {
-            // Sort by start date, then duration (longer first)
             const startDiff = a.start.getTime() - b.start.getTime();
             if (startDiff !== 0) return startDiff;
             return b.span - a.span;
         });
 
-      // Pack into non-overlapping lanes (0, 1, 2...)
       const lanes = packLanes(segs);
       
-      // Create refs for drag/drop targets if needed later
-      const laneRefs = lanes.map((lane: any[]) => lane.map(() => React.createRef<HTMLDivElement>()));
+      // --- FIXED: createRef matches the nullable type ---
+      const laneRefs = lanes.map((lane: any[]) => 
+        lane.map(() => React.createRef<HTMLDivElement | null>())
+      );
 
       return { week, lanes, laneRefs };
     });
   }, [weeks, events]);
 
-  // 3. Calculate row heights based on how many events are in the busiest day
   const rowHeights = React.useMemo(() => {
     return weekData.map((data) => {
       const maxLaneIndex = data.lanes.length;
-      // Height = Header + (Events * Height) + Padding
       const contentH = DATE_HEADER_H + (maxLaneIndex * EVENT_H) + 10; 
       return Math.max(CELL_MIN_H, contentH);
     });
   }, [weekData]);
 
-  // --- Drag & Drop Handlers (Simplified) ---
   const onCellDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
@@ -103,7 +98,6 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
 
   return (
     <div className="calendar-root">
-      {/* Sticky Blue Header */}
       <div className="calendar-header sticky-header blue-header">
         {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
           <div key={d} className="calendar-header__cell">{d}</div>
@@ -113,7 +107,6 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
       <div className="calendar-grid">
         {weekData.map((row, rIdx) => (
           <div key={rIdx} className="calendar-row" style={{ ["--cols" as any]: 7, height: rowHeights[rIdx] }}>
-            {/* Render Day Cells (Background & Date Labels) */}
             {row.week.map((d, i) => (
               <div
                 key={i}
@@ -127,13 +120,10 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
               </div>
             ))}
 
-            {/* Render Events Layer */}
             <div className="absolute inset-0 pointer-events-none">
               {row.lanes.map((lane, laneIdx) =>
                 lane.map((seg, segIdx) => {
                   const e = seg.evt;
-                  
-                  // Calculate Position
                   const top = DATE_HEADER_H + (laneIdx * EVENT_H);
                   const left = (seg.offset / 7) * 100;
                   const width = (seg.span / 7) * 100;
@@ -141,14 +131,16 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                   return (
                     <div
                       key={seg.id}
+                      // Ref is now compatible with HTMLDivElement | null
+                      ref={row.laneRefs[laneIdx][segIdx]}
                       className="pointer-events-auto"
                       style={{
                         position: "absolute",
                         top: `${top}px`,
                         left: `${left}%`,
                         width: `${width}%`,
-                        height: `${EVENT_H - 4}px`, // Leave 4px gap
-                        padding: "0 4px", // Horizontal gap between adjacent events
+                        height: `${EVENT_H - 4}px`, 
+                        padding: "0 4px", 
                         boxSizing: "border-box",
                         zIndex: 10,
                       }}
