@@ -1,5 +1,24 @@
-// CACHE BUST v20 - VISUAL DEBUG
+// src/components/EventPillWeek.jsx
 import React from "react";
+
+// --- Helper functions ---
+function asName(v) {
+  if (!v) return "";
+  if (typeof v === "string") return v.trim();
+  if (typeof v === "object") {
+    if (typeof v.name === "string") return v.name.trim();
+    if (typeof v.display_value === "string") return v.display_value.trim();
+    const first = typeof v.first_name === "string" ? v.first_name.trim() : "";
+    const last = typeof v.last_name === "string" ? v.last_name.trim() : "";
+    return `${first} ${last}`.trim();
+  }
+  return "";
+}
+
+function firstWord(v) {
+  const s = asName(v);
+  return s ? s.split(/\s+/)[0] : "";
+}
 
 // utility: clamp text to N lines using CSS-only
 const clampStyle = (lines) => ({
@@ -9,41 +28,49 @@ const clampStyle = (lines) => ({
   WebkitLineClamp: lines,
 });
 
-// --- FIXED: Accepts style/className and forces full width ---
-export default function EventPillWeek({ ev, style, className, onOpenEditor, isMultiDay, ...props }) {
+// --- FIXED: Added 'style' prop ---
+export default function EventPillWeek({ ev, isMultiDay, className, style, onOpenEditor }) {
+  const ref = React.useRef(null);
+
   const titleStyle = { fontWeight: 600, ...clampStyle(1) };
   const metaStyle  = { opacity: 0.9, fontSize: 12, ...clampStyle(1) };
   const notesStyle = { opacity: 0.9, fontSize: 12, ...clampStyle(2) };
 
-  const wip = ev.wipManager || "";
-  const ins = ev.installer || "";
-  const own = ev.caseOwner || "";
-  const line2 = [wip, ins, own].filter(Boolean).join(" | ");
+  const wip = firstWord(ev.wipManager) || "";
+  const ins = asName(ev.installer) || ""; 
+  const time = ev.startTime || "";
+  const own = firstWord(ev.caseOwner) || "";
+  
+  const line2 = [wip, ins, time, own].filter(Boolean).join(" | ");
 
-  // Merge styles, FORCE width 100%, ADD DEBUG BORDER
+  // --- FIXED: Merge incoming style (width: 100%) ---
   const colorStyle = {
-    ...style,
-    width: "100%", 
-    boxSizing: "border-box",
+    ...style, // <-- This applies width: 100% from parent
     background: ev.colour || "#3b82f6",
-    border: "2px dashed red", // <--- VISUAL DEBUG: REMOVE LATER
+    boxSizing: "border-box", // Ensure padding doesn't break width
   };
 
+  const pillClasses = [
+    "event-pill",
+    className, 
+    ev.isManual ? "event-pill--manual" : ""
+  ].filter(Boolean).join(" ");
+
   const onClick = (e) => {
-    e.stopPropagation();
-    if (onOpenEditor) {
-      const rect = e.currentTarget.getBoundingClientRect();
-      onOpenEditor(ev, { clientY: rect.top, clientX: rect.left });
+    // e.stopPropagation(); // Optional: prevent cell click if needed
+    const rect = ref.current?.getBoundingClientRect();
+    if (rect && onOpenEditor) {
+      onOpenEditor(ev, rect);
     }
   };
 
   return (
     <div 
-      className={`event-pill ${className || ""}`} 
-      style={colorStyle}
+      ref={ref}
+      className={pillClasses} 
+      style={colorStyle}      
       title={ev.title}
-      onClick={onClick}
-      {...props}
+      onClick={onClick}       
     >
       <div className="event__fill" style={{ background: ev.colour || "#3b82f6" }} /> 
       
