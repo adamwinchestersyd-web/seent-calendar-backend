@@ -17,9 +17,9 @@ type Props = {
   onOpenEditor?: (ev: any, clickEvent: React.MouseEvent) => void;
 };
 
-const CELL_MIN_H = 120;
+const CELL_MIN_H = 150;
 const DATE_HEADER_H = 28;
-const EVENT_H = 26;
+const EVENT_H = 90;
 
 type WeekRow = {
   week: Date[];
