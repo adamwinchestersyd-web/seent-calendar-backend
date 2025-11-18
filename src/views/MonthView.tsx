@@ -1,4 +1,4 @@
-// CACHE BUST v26 - Fix TS Ref Types
+// CACHE BUST v27 - Fix Sticky Dates
 import React from "react";
 import EventPillMonth from "../components/EventPillMonth.jsx";
 import {
@@ -21,7 +21,6 @@ const CELL_MIN_H = 120;
 const DATE_HEADER_H = 28;
 const EVENT_H = 26;
 
-// --- FIXED: Allow null in the ref type definition ---
 type WeekRow = {
   week: Date[];
   lanes: any[][];
@@ -60,7 +59,6 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
 
       const lanes = packLanes(segs);
       
-      // --- FIXED: createRef matches the nullable type ---
       const laneRefs = lanes.map((lane: any[]) => 
         lane.map(() => React.createRef<HTMLDivElement | null>())
       );
@@ -114,7 +112,8 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                 onDragOver={onCellDragOver}
                 onDrop={onCellDrop(d)}
               >
-                <div className="sticky-date-label blue-date-label" style={{ position: 'absolute', top: 0, left: 0 }}>
+                {/* --- FIXED: Removed inline absolute positioning so sticky CSS works --- */}
+                <div className="sticky-date-label blue-date-label">
                   {d.getDate()}
                 </div>
               </div>
@@ -131,7 +130,6 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                   return (
                     <div
                       key={seg.id}
-                      // Ref is now compatible with HTMLDivElement | null
                       ref={row.laneRefs[laneIdx][segIdx]}
                       className="pointer-events-auto"
                       style={{
