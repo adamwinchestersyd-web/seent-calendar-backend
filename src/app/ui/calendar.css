@@ -36,7 +36,6 @@ html,body{ background:var(--bg); color:var(--text); }
   background:var(--panel);
   color:var(--text);
   border-radius:14px;
-  /* overflow:hidden; REMOVED for sticky headers */
   box-shadow:0 10px 30px rgba(0,0,0,.35);
   font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;
   margin-bottom:40px;
@@ -69,7 +68,7 @@ html,body{ background:var(--bg); color:var(--text); }
 
 /* --- BLUE HEADER (BRANDING) --- */
 .calendar-root .blue-header {
-  background: linear-gradient(90deg, #312e81 0%, #4338ca 100%); /* Deep Blue/Purple Gradient */
+  background: linear-gradient(90deg, #312e81 0%, #4338ca 100%); 
   border-bottom: 1px solid #312e81;
 }
 .calendar-root .blue-header .calendar-header__cell {
@@ -103,14 +102,14 @@ html,body{ background:var(--bg); color:var(--text); }
 /* --- STICKY DATE LABEL --- */
 .calendar-root .sticky-date-label {
   position: sticky;
-  top: 45px; /* Below the header */
+  top: 45px; 
   left: 0;
   z-index: 30;
   padding: 4px 10px;
   font-size: 14px;
   font-weight: 700;
   color: #fff;
-  background: #4338ca; /* Matches header */
+  background: #4338ca; 
   border-bottom-right-radius: 6px;
   pointer-events: none;
   width: fit-content;
@@ -126,9 +125,10 @@ html,body{ background:var(--bg); color:var(--text); }
   --pill-padX: 8px;
 }
 
-/* --- FIXED: Removed position: absolute so it respects parent wrapper --- */
+/* --- FIXED: Removed position: absolute here --- */
 .calendar-root .event,
 .calendar-root .event-pill{
+  position: relative; /* <--- CHANGED FROM ABSOLUTE */
   display:flex;
   flex-direction:column;
   justify-content:flex-start;
@@ -145,14 +145,12 @@ html,body{ background:var(--bg); color:var(--text); }
   padding:var(--pill-padY) var(--pill-padX);
   cursor: pointer;
 
-  /* hard lock height to exactly 4 lines of text */
   min-block-size: calc(var(--pill-padY)*2 + var(--pill-lh)*4);
   max-block-size: calc(var(--pill-padY)*2 + var(--pill-lh)*4);
 }
 
-/* Manual entry styling override */
 .calendar-root .event-pill--manual {
-  border-left: 4px solid #facc15; /* Yellow bar */
+  border-left: 4px solid #facc15; 
 }
 
 .calendar-root .event *{ margin:0; }
@@ -161,7 +159,6 @@ html,body{ background:var(--bg); color:var(--text); }
   position:absolute;
   inset:0;
   border-radius:inherit;
-  /* gradient based on --c */
   background:linear-gradient(
     90deg,
     color-mix(in srgb, var(--c, #5e6b7a) 88%, #000 12%) 0%,
@@ -172,6 +169,20 @@ html,body{ background:var(--bg); color:var(--text); }
 }
 
 .calendar-root .event__label{ position:relative; z-index:1; width:100%; }
+.calendar-root .event__title{
+  font-weight:700;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.calendar-root .event__people{
+  margin-top:5px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; opacity:.95;
+}
+.calendar-root .event__notes{
+  margin-top:2px;
+  display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2;
+  overflow:hidden; opacity:.95;
+  word-break: break-word;
+}
 
 
 /* --------------------------------------------------------------------------
@@ -219,7 +230,6 @@ html,body{ background:var(--bg); color:var(--text); }
   color-scheme: light; 
   border-top: 6px solid var(--green-test-bar); 
 }
-/* ... (Rest of modal styles from previous step remain the same) ... */
 .calendar-editor-modal input,
 .calendar-editor-modal select,
 .calendar-editor-modal textarea {

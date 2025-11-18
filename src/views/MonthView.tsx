@@ -1,6 +1,6 @@
-// CACHE BUST v23 - Match WeekView Logic
+// CACHE BUST v24 - Force EventPillWeek
 import React from "react";
-import EventPillWeek from "../components/EventPillWeek.jsx"; 
+import EventPillWeek from "../components/EventPillWeek.jsx"; // <-- Uses EventPillWeek
 import {
   addDays,
   startOfMonthGrid,
@@ -76,6 +76,7 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
         for (const r of lane) {
           const el = r.current;
           if (el) {
+            // Look for .event-pill class
             const pillEl = el.querySelector('.event-pill') as HTMLDivElement;
             if (pillEl) {
               const h = Math.ceil(pillEl.getBoundingClientRect().height);
@@ -114,10 +115,7 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
 
   const onCellDrop = (targetDate: Date) => (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    const raw =
-      e.dataTransfer?.getData("application/json") ||
-      e.dataTransfer?.getData("text/plain") ||
-      "";
+    const raw = e.dataTransfer?.getData("application/json") || "";
     try {
       const data = JSON.parse(raw);
       if (onMove) onMove(data.evtId, targetDate);
@@ -127,8 +125,6 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
   const onDragStart = (seg: any) => (e: React.DragEvent<HTMLDivElement>) => {
     const payload = JSON.stringify({ segId: seg.id, evtId: seg.evt?.id });
     e.dataTransfer?.setData("application/json", payload);
-    e.dataTransfer?.setData("text/plain", payload);
-    if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
   };
   const onDragEnd = (_e: React.DragEvent<HTMLDivElement>) => {};
 
@@ -185,9 +181,8 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                   const e = seg.evt;
                   const isSingleDay = seg.span === 1;
                   const top = laneTops[rIdx][li] ?? DATE_PAD;
-                  // Variable names adapted to match WeekView logic for copy-paste accuracy
-                  const leftPct = (seg.offset / 7) * 100;
-                  const widthPct = (Math.max(1, seg.span) / 7) * 100;
+                  const left = (seg.offset / 7) * 100;
+                  const width = (seg.span / 7) * 100;
 
                   const tooltip = e.title;
 
@@ -196,31 +191,33 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                       key={seg.id}
                       ref={row.laneRefs[li][bi]}
                       className="pointer-events-auto"
-                      // --- EXACT STYLE FROM WEEKVIEW (adapted variables) ---
                       style={{
-                        position: "absolute",
-                        top,
-                        left: `${leftPct}%`,
-                        width: `${widthPct}%`,
-                        padding: `${V_GUTTER}px ${H_GUTTER}px`,
-                        boxSizing: "border-box",
-                        zIndex: 2,
-                      }}
-
+                            position: "absolute",
+                            top,
+                            left: `${left}%`,
+                            width: `${width}%`,
+                            padding: `${V_GUTTER}px ${H_GUTTER}px`,
+                            boxSizing: "border-box",
+                            zIndex: 10,
+                          }}
                       draggable
                       onDragStart={onDragStart(seg)}
                       onDragEnd={onDragEnd}
                       onDoubleClick={beginQuickResize(seg)}
+                      onClick={(evt) => {
+                        if (evt.ctrlKey) { beginQuickResize(seg)(evt as any); return; }
+                        const rect = row.laneRefs[li][bi].current?.getBoundingClientRect();
+                        if (rect) onOpenEditor?.(e, rect as any);
+                      }}
                       title={tooltip}
                     >
-                      {/* --- EXACT COMPONENT FROM WEEKVIEW --- */}
                       <EventPillWeek
                         ev={e}
                         isMultiDay={!isSingleDay}
                         className={e.colorClass || "event--blue"}
                         style={{ width: "100%", ...e.colour ? {["--c"]: e.colour} : {} }}
                         onOpenEditor={(ev: any, rect: any) => {
-                           if (rect) onOpenEditor?.(ev, { clientY: rect.top, clientX: rect.left } as any);
+                          if (rect) onOpenEditor?.(ev, { clientY: rect.top, clientX: rect.left } as any);
                         }}
                       />
                     </div>

@@ -1,26 +1,7 @@
 // src/components/EventPillWeek.jsx
 import React from "react";
 
-// --- Helper functions ---
-function asName(v) {
-  if (!v) return "";
-  if (typeof v === "string") return v.trim();
-  if (typeof v === "object") {
-    if (typeof v.name === "string") return v.name.trim();
-    if (typeof v.display_value === "string") return v.display_value.trim();
-    const first = typeof v.first_name === "string" ? v.first_name.trim() : "";
-    const last = typeof v.last_name === "string" ? v.last_name.trim() : "";
-    return `${first} ${last}`.trim();
-  }
-  return "";
-}
-
-function firstWord(v) {
-  const s = asName(v);
-  return s ? s.split(/\s+/)[0] : "";
-}
-
-// utility: clamp text to N lines using CSS-only
+// utility: clamp text to N lines using CSS-only (no JS measuring)
 const clampStyle = (lines) => ({
   display: "-webkit-box",
   WebkitBoxOrient: "vertical",
@@ -32,22 +13,22 @@ const clampStyle = (lines) => ({
 export default function EventPillWeek({ ev, isMultiDay, className, style, onOpenEditor }) {
   const ref = React.useRef(null);
 
+  // 1 line for title, 1 for meta, 2 for notes = 4 lines total
   const titleStyle = { fontWeight: 600, ...clampStyle(1) };
   const metaStyle  = { opacity: 0.9, fontSize: 12, ...clampStyle(1) };
   const notesStyle = { opacity: 0.9, fontSize: 12, ...clampStyle(2) };
 
-  const wip = firstWord(ev.wipManager) || "";
-  const ins = asName(ev.installer) || ""; 
-  const time = ev.startTime || "";
-  const own = firstWord(ev.caseOwner) || "";
-  
-  const line2 = [wip, ins, time, own].filter(Boolean).join(" | ");
+  const wip = ev.wipManager || "";
+  const ins = ev.installer || "";
+  const own = ev.caseOwner || "";
+  const line2 = [wip, ins, own].filter(Boolean).join(" | ");
 
-  // --- FIXED: Merge incoming style (width: 100%) ---
+  // Merge incoming style (width: 100%) with our background color
   const colorStyle = {
-    ...style, // <-- This applies width: 100% from parent
+    ...style, 
+    position: "relative", // <--- FORCE RELATIVE
     background: ev.colour || "#3b82f6",
-    boxSizing: "border-box", // Ensure padding doesn't break width
+    boxSizing: "border-box",
   };
 
   const pillClasses = [
@@ -57,10 +38,10 @@ export default function EventPillWeek({ ev, isMultiDay, className, style, onOpen
   ].filter(Boolean).join(" ");
 
   const onClick = (e) => {
-    // e.stopPropagation(); // Optional: prevent cell click if needed
-    const rect = ref.current?.getBoundingClientRect();
-    if (rect && onOpenEditor) {
-      onOpenEditor(ev, rect);
+    // If onOpenEditor is passed, we need to find the DOM rect
+    if (onOpenEditor) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      onOpenEditor(ev, { clientY: rect.top, clientX: rect.left });
     }
   };
 
@@ -68,9 +49,9 @@ export default function EventPillWeek({ ev, isMultiDay, className, style, onOpen
     <div 
       ref={ref}
       className={pillClasses} 
-      style={colorStyle}      
+      style={colorStyle} 
       title={ev.title}
-      onClick={onClick}       
+      onClick={onClick}
     >
       <div className="event__fill" style={{ background: ev.colour || "#3b82f6" }} /> 
       
