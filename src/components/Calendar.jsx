@@ -140,7 +140,7 @@ function normalizeEvent(raw, idx = 0) {
 // Zoho state colours (stable)
 const STATE_COLOURS = {
   VIC: "#27272a", NSW: "#ef4444", QLD: "#f97316", WA: "#60a5fa",
-  ACT: "#fcd9bd", TAS: "#ec4899", NT: "#b91c1c", SA: "#facc15",
+  ACT: "#c9976eff", TAS: "#ec4899", NT: "#b91c1c", SA: "#b0900fff",
   NZ: "#22c55e", Other: "#9ca3af",
 };
 
