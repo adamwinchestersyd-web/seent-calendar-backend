@@ -106,24 +106,6 @@ html,body{ background:var(--bg); color:var(--text); }
   background: #2b2e32; 
   border-bottom: 1px solid var(--grid);
 }
-/* --- STICKY DATE LABEL (Full Width Bar) --- */
-.calendar-root .sticky-date-label {
-  position: sticky;
-  top: 0; /* Stick to the top of the cell's scrolling context */
-  left: 0;
-  z-index: 30;
-  padding: 6px 10px;
-  font-size: 13px;
-  font-weight: 700;
-  color: #fff;
-  background: #4338ca; /* Matches blue header */
-  width: 100%; 
-  box-sizing: border-box;
-  border-bottom: 1px solid rgba(0,0,0,0.1);
-  text-align: left; /* Left align the number */
-  pointer-events: none; 
-  margin: 0; /* Remove any default margins */
-}
 
 /* Ensure cell has no padding that pushes the sticky label */
 .calendar-root .calendar-cell {
@@ -288,4 +270,25 @@ html,body{ background:var(--bg); color:var(--text); }
 .calendar-root .sticky-date-label {
   border-top-left-radius: 0;
   border-top-right-radius: 0;
+}
+/* --- NEW: Combined Header Content Style --- */
+.calendar-root .header-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 4px 0; 
+  line-height: 1.2;
+}
+
+.calendar-root .header-day-name {
+  font-size: 13px;
+  opacity: 0.8;
+}
+
+.calendar-root .header-date-num {
+  font-size: 20px; 
+  font-weight: 900;
 }
