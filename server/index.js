@@ -1,4 +1,4 @@
-// CACHE BUST v16 - AUTO REFRESH
+// CACHE BUST v16 - TIMEOUTS & DEBUGGING
 import dotenv from "dotenv";
 dotenv.config();
 import fs from "fs/promises";
@@ -8,8 +8,10 @@ import cors from "cors";
 import fetch from "node-fetch";
 import qs from "querystring";
 import express from "express";
+
 const app = express(); 
 
+// --- CONFIGURATION ---
 function parseAllowlist(raw) {
   if (typeof raw !== "string") return [];
   return raw.split(",").map(v => v.trim()).filter(Boolean);
@@ -19,6 +21,8 @@ const allowList = parseAllowlist(process.env.FRONTEND_ORIGIN);
 const devFallback = "http://localhost:5173";
 if (allowList.length === 0) allowList.push(devFallback);
 
+// --- MIDDLEWARE (Order Matters) ---
+// 1. Enable CORS
 app.use(cors({
   origin: (origin, cb) => {
     if (!origin) return cb(null, true);
@@ -27,13 +31,15 @@ app.use(cors({
     return cb(new Error(`Not allowed by CORS: ${origin}`));
   },
   methods: ["GET","POST","PATCH","OPTIONS","DELETE"],
-  allowedHeaders: ["Content-Type","Authorization"],
+  allowedHeaders: ["Content-Type","Authorization", "x-webhook-secret"], // Added webhook header
   maxAge: 600,
 }));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true })); 
+// 2. Webhook Parsers (UrlEncoded MUST be extended: true for Zoho)
+app.use(express.urlencoded({ extended: true, limit: "10mb" })); 
+app.use(express.json({ limit: "10mb" }));
 
+// --- CONSTANTS ---
 const DATA_DIR = path.join(process.cwd(), "data");
 const CASES_PATH = path.join(DATA_DIR, "cases.json");
 const PRUNE_DAYS = 30;
@@ -56,7 +62,28 @@ let REFRESH_TOKEN     = process.env.ZOHO_REFRESH_TOKEN || null;
 let ACCESS_TOKEN      = null;
 let ACCESS_EXPIRES_AT = 0;
 
-// ----- Utilities -----
+
+// ==========================================
+// UTILITIES & TIMEOUTS
+// ==========================================
+
+// Helper to fetch with timeout
+async function fetchWithTimeout(url, options = {}, timeout = 15000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal  
+    });
+    clearTimeout(id);
+    return response;
+  } catch (error) {
+    clearTimeout(id);
+    throw error;
+  }
+}
+
 function toYMD(v) {
   if (!v) return "";
   if (typeof v === "string") {
@@ -97,52 +124,69 @@ const asName = (v) => toStringSafe(v).trim();
 const firstWord = (v) => toStringSafe(v).trim().split(/\s+/)[0] || "";
 
 
-// ----- Auth -----
+// ==========================================
+// AUTHENTICATION
+// ==========================================
+
 async function getAccessToken() {
   if (!REFRESH_TOKEN) throw new Error("No REFRESH_TOKEN available.");
+  
   const now = Date.now();
   if (ACCESS_TOKEN && now < ACCESS_EXPIRES_AT - 60_000) return ACCESS_TOKEN;
 
-  const r = await fetch(`${ACCOUNTS_HOST}/oauth/v2/token`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      refresh_token: REFRESH_TOKEN,
-      client_id: CLIENT_ID,
-      client_secret: CLIENT_SECRET,
-      grant_type: "refresh_token",
-      scope: ZOHO_FULL_SCOPE, 
-    }).toString(),
-  });
+  try {
+    const r = await fetchWithTimeout(`${ACCOUNTS_HOST}/oauth/v2/token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        refresh_token: REFRESH_TOKEN,
+        client_id: CLIENT_ID,
+        client_secret: CLIENT_SECRET,
+        grant_type: "refresh_token",
+        scope: ZOHO_FULL_SCOPE, 
+      }).toString(),
+    });
 
-  const data = await r.json();
-  if (!r.ok || !data.access_token) {
-    console.error("[token] refresh error:", data);
-    throw new Error(`Token refresh failed`);
+    const data = await r.json();
+
+    if (!r.ok || !data.access_token) {
+      console.error("[token] refresh error:", data);
+      throw new Error(`Token refresh failed`);
+    }
+
+    if (typeof data.api_domain === "string" && data.api_domain) {
+      ZOHO_DOMAIN = data.api_domain;
+    }
+
+    ACCESS_TOKEN = data.access_token;
+    const expiresIn = Number(data.expires_in) || 3600;
+    ACCESS_EXPIRES_AT = Date.now() + expiresIn * 1000;
+    
+    console.log("[token] refreshed successfully.");
+    return ACCESS_TOKEN;
+  } catch (e) {
+    console.error("[token] Network error:", e.message);
+    throw e;
   }
-
-  if (typeof data.api_domain === "string" && data.api_domain) {
-    ZOHO_DOMAIN = data.api_domain;
-  }
-
-  ACCESS_TOKEN = data.access_token;
-  const expiresIn = Number(data.expires_in) || 3600;
-  ACCESS_EXPIRES_AT = Date.now() + expiresIn * 1000;
-  console.log("[token] refreshed successfully.");
-  return ACCESS_TOKEN;
 }
 
-// ----- Creator -----
+
+// ==========================================
+// ZOHO CREATOR LOGIC
+// ==========================================
+
 async function fetchManualEntries() {
   const accessToken = await getAccessToken();
   if (!accessToken) return [];
+
   const creatorApiUrl = `https://creator.zoho.com/api/v2/${CREATOR_APP_OWNER}/${CREATOR_APP_NAME}/report/${CREATOR_REPORT_NAME}`;
 
   try {
-    const res = await fetch(creatorApiUrl, {
+    const res = await fetchWithTimeout(creatorApiUrl, {
       headers: { 'Authorization': `Zoho-oauthtoken ${accessToken}` }
     });
     const data = await res.json();
+
     return (data.data || []).map(item => ({
       id: `creator_${item.ID}`, 
       title: item.Title,
@@ -167,6 +211,7 @@ async function fetchManualEntries() {
 async function createManualEntry(eventData) {
   const accessToken = await getAccessToken();
   if (!accessToken) return { error: 'Could not get access token' };
+
   const creatorApiUrl = `https://creator.zoho.com/api/v2/${CREATOR_APP_OWNER}/${CREATOR_APP_NAME}/form/${CREATOR_FORM_NAME}`;
 
   const body = JSON.stringify({
@@ -184,12 +229,13 @@ async function createManualEntry(eventData) {
   });
 
   try {
-    const res = await fetch(creatorApiUrl, {
+    const res = await fetchWithTimeout(creatorApiUrl, {
       method: 'POST',
       headers: { 'Authorization': `Zoho-oauthtoken ${accessToken}`, 'Content-Type': 'application/json' },
       body: body,
     });
     const data = await res.json();
+    
     if (data.code === 3000) { 
       return { success: true, id: data.data.ID };
     } else {
@@ -203,26 +249,31 @@ async function createManualEntry(eventData) {
 }
 
 async function updateManualEntry(creatorId, eventData) {
-  console.log("Update Creator entry logic placeholder");
+  // Placeholder
+  console.log("Update Creator entry logic goes here.");
   return { success: true };
 }
 
-// ----- Projects -----
+
+// ==========================================
+// ZOHO PROJECT LOGIC
+// ==========================================
+
 async function updateProjectsTask(caseData) {
   console.log(`[Projects Sync] Received update for Case ID: ${caseData.case_id}`);
   console.log('[Projects Sync] Data:', caseData);
   return { success: true };
 }
 
-async function updateCaseFromProject(taskData) {
-  console.log(`[CRM Sync] Received update for Task ID: ${taskData.id_string}`);
-  return { success: true };
-}
 
-// ----- CRM -----
+// ==========================================
+// ZOHO CRM LOGIC
+// ==========================================
+
 async function updateCaseInZoho(caseId, start, end) {
   const accessToken = await getAccessToken();
   if (!accessToken) return false;
+
   const crmApiUrl = `${ZOHO_DOMAIN}/crm/v2/Cases/${caseId}`;
   const body = JSON.stringify({
     data: [{
@@ -233,7 +284,7 @@ async function updateCaseInZoho(caseId, start, end) {
   });
 
   try {
-    const res = await fetch(crmApiUrl, {
+    const res = await fetchWithTimeout(crmApiUrl, {
       method: 'PUT',
       headers: { 'Authorization': `Zoho-oauthtoken ${accessToken}`, 'Content-Type': 'application/json' },
       body: body,
@@ -251,25 +302,7 @@ async function updateCaseInZoho(caseId, start, end) {
   }
 }
 
-async function fetchAllCrmUsers() {
-  const token = await getAccessToken(); 
-  const url = `${ZOHO_DOMAIN}/crm/v2/users?type=ActiveUsers`;
-  const r = await fetch(url, { headers: { Authorization: `Zoho-oauthtoken ${token}` } });
-  if (!r.ok) return [];
-  const { users = [] } = await r.json();
-  return Array.from(new Set(users.map(user => firstWord(user.full_name)))).sort();
-}
-
-async function fetchAllServiceAgents() {
-  const token = await getAccessToken();
-  const url = `${ZOHO_DOMAIN}/crm/v2/Service_Agents?fields=Name`;
-  const r = await fetch(url, { headers: { Authorization: `Zoho-oauthtoken ${token}` } });
-  if (!r.ok) return [];
-  const { data = [] } = await r.json();
-  return data.map(record => record["Name"]).sort();
-}
-
-// ----- Fetch Cases (Pagination) -----
+// Fetch Cases (With Pagination + Timeouts)
 async function fetchCasesFromZoho() {
   const token = await getAccessToken(); 
   const fields = [
@@ -281,23 +314,37 @@ async function fetchCasesFromZoho() {
   let allRows = [];
   let page = 1;
   let hasMore = true;
+  
   const baseUrl = `${ZOHO_DOMAIN}/crm/v2/Cases?fields=${encodeURIComponent(fields)}&sort_by=Modified_Time&sort_order=desc`;
 
   while (hasMore) {
     const url = `${baseUrl}&per_page=200&page=${page}`;
-    const r = await fetch(url, { headers: { Authorization: `Zoho-oauthtoken ${token}` } });
-    if (!r.ok) break;
+    console.log(`[cases] Fetching page ${page}...`);
+    
+    try {
+        const r = await fetchWithTimeout(url, { headers: { Authorization: `Zoho-oauthtoken ${token}` } });
+        if (!r.ok) {
+            console.warn(`[cases] Page ${page} failed: ${r.status}`);
+            break;
+        }
 
-    const json = await r.json();
-    const rows = json.data || [];
-    allRows = allRows.concat(rows);
+        const json = await r.json();
+        const rows = json.data || [];
+        allRows = allRows.concat(rows);
 
-    if (rows.length < 200 || page >= 5) { // Limit 1000
-      hasMore = false;
-    } else {
-      page++;
+        // Stop if we get a short page or hit limit
+        if (rows.length < 200 || page >= 5) {
+            hasMore = false;
+        } else {
+            page++;
+        }
+    } catch (e) {
+        console.error(`[cases] Error fetching page ${page}: ${e.message}`);
+        break; // Stop on network error
     }
   }
+  
+  console.log(`[cases] Total rows fetched: ${allRows.length}`);
 
   return allRows.map((row) => {
     const wipMgrName = asName(row.WIP_Manager1) || asName(row.WIP_Manager);
@@ -323,7 +370,30 @@ async function fetchCasesFromZoho() {
   });
 }
 
-// ----- Cache -----
+// Lists Helpers
+async function fetchAllCrmUsers() {
+  const token = await getAccessToken(); 
+  const url = `${ZOHO_DOMAIN}/crm/v2/users?type=ActiveUsers`;
+  const r = await fetchWithTimeout(url, { headers: { Authorization: `Zoho-oauthtoken ${token}` } });
+  if (!r.ok) return [];
+  const { users = [] } = await r.json();
+  return Array.from(new Set(users.map(user => firstWord(user.full_name)))).sort();
+}
+
+async function fetchAllServiceAgents() {
+  const token = await getAccessToken();
+  const url = `${ZOHO_DOMAIN}/crm/v2/Service_Agents?fields=Name`;
+  const r = await fetchWithTimeout(url, { headers: { Authorization: `Zoho-oauthtoken ${token}` } });
+  if (!r.ok) return [];
+  const { data = [] } = await r.json();
+  return data.map(record => record["Name"]).sort();
+}
+
+
+// ==========================================
+// CACHE & REFRESH LOGIC
+// ==========================================
+
 let CASES_CACHE = { events: [], lastUpdated: 0 };
 
 async function writeJSONAtomic(file, data) {
@@ -376,20 +446,25 @@ async function refreshCases(reason = "manual") {
 
     const prunedCrm = pruneOld(crmCases);
     const prunedCreator = pruneOld(manualEntries);
+
     CASES_CACHE.events = [...prunedCrm, ...prunedCreator];
     await persistCache();
     
-    return { ok: true, count: CASES_CACHE.events.length };
+    console.log(`[cases] refresh ok (${reason}) events=${CASES_CACHE.events.length}`);
+    return { ok: true, count: CASES_CACHE.events.length, lastUpdated: CASES_CACHE.lastUpdated };
   } catch (e) {
     console.error("[cases] refresh error:", e);
     return { ok: false, error: String(e) };
   }
 }
 
-// ----- Routes -----
+
+// ==========================================
+// ROUTES
+// ==========================================
+
 app.get("/oauth/callback", async (req, res) => {
-  // (Standard OAuth callback logic omitted for brevity but fully supported)
-  res.send("Token logic present.");
+  res.send("Token logic active.");
 });
 
 app.get("/api/cases", (_req, res) => {
@@ -439,41 +514,47 @@ app.post("/api/manual-entry", async (req, res) => {
   }
 });
 
-// --- WEBHOOK: CRM -> APP (With auto-refresh) ---
-app.post("/api/webhook/crm-case-updated", async (req, res) => {
-  const secret = req.headers['x-webhook-secret'];
-  if (!ZOHO_WEBHOOK_SECRET || secret !== ZOHO_WEBHOOK_SECRET) return res.status(401).send('Unauthorized');
-
-  const data = req.body;
-  console.log('[Webhook CRM] Payload:', data);
-  
-  if (data.sync_source === 'projects') return res.status(200).send('Loop prevented');
-
-  try {
-    await updateProjectsTask(data);
-    
-    // --- AUTO REFRESH ---
-    // Trigger a background refresh so the frontend gets the new data on next poll
-    refreshCases("webhook-crm").catch(e => console.error("Webhook refresh failed:", e));
-    
-    res.status(200).send('Webhook received');
-  } catch (e) {
-    res.status(500).send('Error');
-  }
-});
-
+// Lists
 app.get("/api/lists/users", async (_req, res) => {
   try {
     const users = await fetchAllCrmUsers();
     res.json(users);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
-
 app.get("/api/lists/service-agents", async (_req, res) => {
   try {
     const agents = await fetchAllServiceAgents();
     res.json(agents);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Webhooks
+app.post("/api/webhook/crm-case-updated", async (req, res) => {
+  const secret = req.headers['x-webhook-secret'];
+  if (!ZOHO_WEBHOOK_SECRET || secret !== ZOHO_WEBHOOK_SECRET) return res.status(401).send('Unauthorized');
+
+  // DEBUG LOGGING
+  console.log('[Webhook CRM] Content-Type:', req.headers['content-type']);
+  console.log('[Webhook CRM] Raw Body:', req.body);
+  
+  const data = req.body;
+  if (!data || Object.keys(data).length === 0) {
+      console.warn('[Webhook CRM] Empty payload received. Check Zoho config.');
+  }
+
+  if (data.sync_source === 'projects') return res.status(200).send('Loop prevented');
+
+  try {
+    await updateProjectsTask(data);
+    refreshCases("webhook-crm").catch(e => console.error("Webhook refresh failed:", e));
+    res.status(200).send('Webhook received');
+  } catch (e) {
+    res.status(500).send('Error');
+  }
 });
 
 app.get("/healthz", (req, res) => res.json({ ok: true }));

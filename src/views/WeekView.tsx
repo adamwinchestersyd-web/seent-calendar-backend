@@ -1,4 +1,4 @@
-// CACHE BUST v9
+// CACHE BUST v10 - TS Fix
 import React from "react";
 import EventPill from "../components/EventPillWeek.jsx";
 import {
@@ -38,22 +38,17 @@ function useElementWidth(ref: React.RefObject<HTMLDivElement>) {
 }
 
 export default function WeekView({ date, events, onOpenEditor }: Props) {
-  const weekStart = startOfWeek(date); // Monday 00:00
-  const weekEnd = endOfWeek(weekStart);   // Sunday 23:59
+  const weekStart = startOfWeek(date);
+  const weekEnd = endOfWeek(weekStart);
   const days = [...Array(7)].map((_, i) => addDays(weekStart, i));
 
   const segs = React.useMemo(
     () =>
       (events || [])
-        // --- UPDATED: Inclusive date filter for Sunday ---
         .filter((e) => {
           const start = new Date(e.start);
           const end = new Date(e.end);
-          // Exclude if it ends *before* this Monday
-          if (end < weekStart) return false;
-          // Exclude if it starts *on or after* next Monday
-          if (start > weekEnd) return false;
-          return true;
+          return !(end < weekStart || start > addDays(weekEnd, 1)); 
         })
         .flatMap((e) => segmentEventAcrossRange(e, weekStart, weekEnd))
         .sort((a, b) => a.start.getTime() - b.start.getTime() || b.span - a.span),
@@ -72,7 +67,7 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
   const [sectionH, setSectionH] = React.useState(60);
   const rowRef = React.useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>;
   const rowWidth = useElementWidth(rowRef);
-  const BAR_MIN = 84; // 4 lines * 16px line-height + 12px padding + 8px gap
+  const BAR_MIN = 84; 
   const LANE_GAP = 4;
   
   React.useLayoutEffect(() => {
@@ -153,7 +148,7 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
 
   return (
     <div className="calendar-root">
-      <div className="calendar-header">
+      <div className="calendar-header sticky-header">
         {days.map((d, i) => (
           <div key={i} className="calendar-header__cell">
             {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][i]} {d.getDate()}
@@ -184,6 +179,7 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
               const top = laneTops[li] ?? 0;
               const leftPct = (seg.offset / 7) * 100;
               const widthPct = (Math.max(1, seg.span) / 7) * 100;
+
               const isSingle = seg.span === 1;
 
               const tooltip = [
@@ -213,7 +209,6 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
                   onDragStart={onDragStart(seg)}
                   onDragEnd={onDragEnd}
                   onDoubleClick={beginQuickResize(seg)}
-                  // --- CLICK HANDLER REMOVED FROM WRAPPER ---
                   title={tooltip}
                 >
                 <EventPill
@@ -221,8 +216,7 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
                   isMultiDay={!isSingle}
                   className={e.colorClass || "event--blue"}
                   style={{ width: "100%", ...e.colour ? {["--c"]: e.colour} : {} }}
-                  // --- UPDATED: Add types to fix TS error ---
-                  onOpenEditor={(ev: any, rect: DOMRect) => {
+                  onOpenEditor={(ev: any, rect: any) => { // <-- ADDED TYPES
                      if (rect) onOpenEditor?.(ev, { clientY: rect.top, clientX: rect.left } as any);
                   }}
                 />

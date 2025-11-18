@@ -1,6 +1,5 @@
-// CACHE BUST v8
+// CACHE BUST v10 - TS Fix
 import React from "react";
-// --- FIXED: Import the correct pill component ---
 import EventPill from "../components/EventPillWeek.jsx";
 import {
   addDays,
@@ -21,7 +20,7 @@ type Props = {
 
 const CELL_MIN_H = 112;
 const DATE_PAD = 20;
-const GAP = 4; // Was 55
+const GAP = 4;
 
 type WeekRow = {
   week: Date[];
@@ -34,8 +33,8 @@ type WeekRow = {
 export default function MonthView({ date, events, onMove, onResize, onOpenEditor }: Props) {
   const gridStart = React.useMemo(() => startOfMonthGrid(date), [date]);
   const gridEnd = React.useMemo(() => endOfMonthGrid(date), [date]);
-const H_GUTTER = 4;
-const V_GUTTER = 2;
+  const H_GUTTER = 4;
+  const V_GUTTER = 2;
 
   const weeks = React.useMemo(() => {
     const out: Date[][] = [];
@@ -77,7 +76,6 @@ const V_GUTTER = 2;
         for (const r of lane) {
           const el = r.current;
           if (el) {
-            // Find the pill, which is the first child
             const pillEl = el.querySelector('.event-pill') as HTMLDivElement;
             if (pillEl) {
               const h = Math.ceil(pillEl.getBoundingClientRect().height);
@@ -100,8 +98,7 @@ const V_GUTTER = 2;
     if (JSON.stringify(nextRowHeights) !== JSON.stringify(rowHeights)) {
       setRowHeights(nextRowHeights);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [weekData]); // Simplified dependency
+  }, [weekData]); 
 
   const laneTops = laneHeights.map((laneHs) => {
     const tops: number[] = [];
@@ -159,7 +156,7 @@ const V_GUTTER = 2;
 
   return (
     <div className="calendar-root">
-      <div className="calendar-header">
+      <div className="calendar-header sticky-header">
         {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
           <div key={d} className="calendar-header__cell">{d}</div>
         ))}
@@ -178,67 +175,68 @@ const V_GUTTER = 2;
                 onDoubleClick={pickQuickResizeDate(d)}
                 onClick={(e) => { if (e.ctrlKey) pickQuickResizeDate(d)(e as any); }}
               >
-                <div className="absolute top-2 left-2 text-xs" style={{ color: "var(--text-muted)" }}>
+                <div className="sticky-date-label">
                   {d.getDate()}
                 </div>
               </div>
             ))}
 
-            {/* --- FIXED: Removed the extra wrapper div --- */}
-            {row.lanes.map((lane, li) =>
-              lane.map((seg, bi) => {
-                const e = seg.evt;
-                const isSingleDay = seg.span === 1;
-                const top = laneTops[rIdx][li] ?? DATE_PAD;
-                const left = (seg.offset / 7) * 100;
-                const width = (seg.span / 7) * 100;
+            <div className="absolute inset-0 pointer-events-none" style={{ position: "absolute" }}>
+              {row.lanes.map((lane, li) =>
+                lane.map((seg, bi) => {
+                  const e = seg.evt;
+                  const isSingleDay = seg.span === 1;
+                  const top = laneTops[rIdx][li] ?? DATE_PAD;
+                  const left = (seg.offset / 7) * 100;
+                  const width = (seg.span / 7) * 100;
 
-                const tooltip = [
-                  `${e.title}${e.caseHours ? ` (${e.caseHours}h)` : ""}${e.startTime ? ` @ ${to12h(e.startTime)}` : ""}`,
-                  e.wipManager ? `WIP: ${e.wipManager}` : "",
-                  e.installer ? `Installer: ${e.installer}` : "",
-                  e.caseOwner ? `Owner: ${e.caseOwner}` : "",
-                  e.pmNotes ? `Notes: ${e.pmNotes}` : "",
-                ].filter(Boolean).join("\n");
+                  const tooltip = [
+                    `${e.title}${e.caseHours ? ` (${e.caseHours}h)` : ""}${e.startTime ? ` @ ${to12h(e.startTime)}` : ""}`,
+                    e.wipManager ? `WIP: ${e.wipManager}` : "",
+                    e.installer ? `Installer: ${e.installer}` : "",
+                    e.caseOwner ? `Owner: ${e.caseOwner}` : "",
+                    e.pmNotes ? `Notes: ${e.pmNotes}` : "",
+                  ].filter(Boolean).join("\n");
 
-                return (
-                  <div
-                    key={seg.id}
-                    ref={row.laneRefs[li][bi]}
-                    className="pointer-events-auto"
-                    style={{
-                          position: "absolute",
-                          top,
-                          left: `${left}%`,
-                          width: `${width}%`,
-                          padding: `${V_GUTTER}px ${H_GUTTER}px`,
-                          boxSizing: "border-box",
-                        }}
+                  return (
+                    <div
+                      key={seg.id}
+                      ref={row.laneRefs[li][bi]}
+                      className="pointer-events-auto"
+                      style={{
+                            position: "absolute",
+                            top,
+                            left: `${left}%`,
+                            width: `${width}%`,
+                            padding: `${V_GUTTER}px ${H_GUTTER}px`,
+                            boxSizing: "border-box",
+                          }}
 
-                    draggable
-                    onDragStart={onDragStart(seg)}
-                    onDragEnd={onDragEnd}
-                    onDoubleClick={beginQuickResize(seg)}
-                    // --- CLICK HANDLER REMOVED FROM WRAPPER ---
-                    title={tooltip}
-                  >
-                    {/* --- UPDATED: Using EventPillWeek component --- */}
-                    <EventPill
-                      ev={e}
-                      isMultiDay={!isSingleDay}
-                      className={e.colorClass || "event--blue"}
-                      style={{ width: "100%", ...e.colour ? {["--c"]: e.colour} : {} }}
-                      // --- UPDATED: Add types to fix TS error ---
-                      onOpenEditor={(ev: any, rect: DOMRect) => {
-                        if (rect) onOpenEditor?.(ev, { clientY: rect.top, clientX: rect.left } as any);
+                      draggable
+                      onDragStart={onDragStart(seg)}
+                      onDragEnd={onDragEnd}
+                      onDoubleClick={beginQuickResize(seg)}
+                      onClick={(evt) => {
+                        if (evt.ctrlKey) { beginQuickResize(seg)(evt as any); return; }
+                        const rect = row.laneRefs[li][bi].current?.getBoundingClientRect();
+                        if (rect) onOpenEditor?.(e, rect as any);
                       }}
-                    />
-                  </div>
-                );
-              })
-            )}
-            {/* --- FIXED: Removed the extra wrapper div --- */}
-
+                      title={tooltip}
+                    >
+                      <EventPill
+                        ev={e}
+                        isMultiDay={!isSingleDay}
+                        className={e.colorClass || "event--blue"}
+                        style={{ width: "100%", ...e.colour ? {["--c"]: e.colour} : {} }}
+                        onOpenEditor={(ev: any, rect: any) => { // <-- ADDED TYPES
+                          if (rect) onOpenEditor?.(ev, { clientY: rect.top, clientX: rect.left } as any);
+                        }}
+                      />
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
         ))}
       </div>
