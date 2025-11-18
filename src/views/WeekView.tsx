@@ -1,4 +1,4 @@
-// CACHE BUST v15
+// CACHE BUST v22 - Fix Types & Logic
 import React from "react";
 import EventPillWeek from "../components/EventPillWeek.jsx"; 
 import {
@@ -39,23 +39,26 @@ function useElementWidth(ref: React.RefObject<HTMLDivElement>) {
 
 export default function WeekView({ date, events, onOpenEditor }: Props) {
   const weekStart = startOfWeek(date); 
-  const weekEnd = endOfWeek(weekStart);
+  const weekEnd = endOfWeek(weekStart); 
   const days = [...Array(7)].map((_, i) => addDays(weekStart, i));
+
+  // Logic to include Sunday events correctly
+  const nextWeekStart = addDays(weekStart, 7);
 
   const segs = React.useMemo(
     () =>
       (events || [])
-        // Inclusive date filter for Sunday
         .filter((e) => {
           const start = new Date(e.start);
           const end = new Date(e.end);
+          // Include if it overlaps with [weekStart, nextWeekStart)
           if (end < weekStart) return false;
-          if (start > weekEnd) return false;
+          if (start >= nextWeekStart) return false;
           return true;
         })
         .flatMap((e) => segmentEventAcrossRange(e, weekStart, weekEnd))
         .sort((a, b) => a.start.getTime() - b.start.getTime() || b.span - a.span),
-    [events, weekStart, weekEnd]
+    [events, weekStart, weekEnd, nextWeekStart]
   );
 
   const H_GUTTER = 4;
@@ -70,7 +73,7 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
   const [sectionH, setSectionH] = React.useState(60);
   const rowRef = React.useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>;
   const rowWidth = useElementWidth(rowRef);
-  const BAR_MIN = 84; // 4 lines
+  const BAR_MIN = 84; 
   const LANE_GAP = 4;
   
   React.useLayoutEffect(() => {
@@ -81,8 +84,7 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
         lane.forEach((_, bi) => {
           const el = laneRefs[li][bi]?.current;
           if (el) {
-            // Because we use .event-pill class now, we can target it
-            const pillEl = el.firstElementChild;
+            const pillEl = el.querySelector('.event-pill') as HTMLDivElement;
             if (pillEl) {
               const h = Math.ceil(pillEl.getBoundingClientRect().height);
               if (h > maxH) maxH = h;
@@ -102,11 +104,16 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
     return () => cancelAnimationFrame(raf);
   }, [rowWidth, lanes, laneRefs, BAR_MIN, LANE_GAP, laneHeights, sectionH]);
 
-  const laneTops: number[] = [];
-  laneHeights.reduce((acc, h, i) => {
-    laneTops[i] = acc;
-    return acc + h + LANE_GAP;
-  }, 0);
+  // --- FIXED: Explicit calculation of tops ---
+  const laneTops = React.useMemo(() => {
+    const tops: number[] = [];
+    let currentTop = 0;
+    for (const h of laneHeights) {
+        tops.push(currentTop);
+        currentTop += h + LANE_GAP;
+    }
+    return tops;
+  }, [laneHeights, LANE_GAP]);
 
   const onCellDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -130,6 +137,7 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
   const [pendingResize, setPendingResize] = React.useState<{
     segId: string; evtId?: string; edge: "start" | "end";
   } | null>(null);
+
   const beginQuickResize = (seg: any) => (ev: React.MouseEvent<HTMLDivElement>) => {
     if (!(ev.ctrlKey || ev.detail === 2)) return;
     ev.preventDefault(); ev.stopPropagation();
@@ -146,7 +154,6 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
 
   return (
     <div className="calendar-root">
-      {/* Blue Header */}
       <div className="calendar-header sticky-header blue-header">
         {days.map((d, i) => (
           <div key={i} className="calendar-header__cell">
@@ -175,11 +182,10 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
           {lanes.map((lane, li) =>
             lane.map((seg, bi) => {
               const e = seg.evt;
-              const top = laneTops[li] ?? 0;
+              const top = laneTops[li] || 0;
               const leftPct = (seg.offset / 7) * 100;
               const widthPct = (Math.max(1, seg.span) / 7) * 100;
               const isSingle = seg.span === 1;
-
               const tooltip = e.title;
 
               return (
@@ -193,7 +199,6 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
                         width: `${widthPct}%`,
                         padding: `${V_GUTTER}px ${H_GUTTER}px`,
                         boxSizing: "border-box",
-                        pointerEvents: "auto",
                         zIndex: 2,
                       }}
                   draggable
@@ -206,9 +211,11 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
                   ev={e}
                   isMultiDay={!isSingle}
                   className={e.colorClass || "event--blue"}
-                  // Pass style with width: 100% and color var
                   style={{ width: "100%", ...e.colour ? {["--c"]: e.colour} : {} }}
-                  onOpenEditor={onOpenEditor}
+                  // --- FIXED: Added explicit 'any' types to callback ---
+                  onOpenEditor={(ev: any, rect: any) => {
+                     if (rect) onOpenEditor?.(ev, { clientY: rect.top, clientX: rect.left } as any);
+                  }}
                 />
                 </div>
               );

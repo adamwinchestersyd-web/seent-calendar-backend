@@ -1,4 +1,4 @@
-// CACHE BUST v20 - VISUAL DEBUG
+// CACHE BUST v21 - Sticky + EventPillWeek
 import React from "react";
 import EventPillWeek from "../components/EventPillWeek.jsx"; 
 import {
@@ -76,11 +76,8 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
         for (const r of lane) {
           const el = r.current;
           if (el) {
-            const pillEl = el.querySelector('.event-pill') as HTMLDivElement;
-            if (pillEl) {
-              const h = Math.ceil(pillEl.getBoundingClientRect().height);
-              if (h > maxH) maxH = h;
-            }
+            const h = Math.ceil(el.getBoundingClientRect().height);
+            if (h > maxH) maxH = h;
           }
         }
         return maxH;
@@ -127,9 +124,8 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
   };
   const onDragEnd = (_e: React.DragEvent<HTMLDivElement>) => {};
 
-  const [pendingResize, setPendingResize] = React.useState<{
-    segId: string; evtId?: string; edge: "start" | "end";
-  } | null>(null);
+  type PendingResize = { segId: string; evtId?: string; edge: "start" | "end" } | null;
+  const [pendingResize, setPendingResize] = React.useState<PendingResize>(null);
 
   const beginQuickResize = (seg: any) => (ev: React.MouseEvent<HTMLDivElement>) => {
     if (!(ev.ctrlKey || ev.detail === 2)) return;
@@ -139,21 +135,18 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
     setPendingResize({ segId: seg.id, evtId: seg.evt?.id, edge });
   };
 
-  const pickQuickResizeDate = (targetDate: Date) => (ev: React.MouseEvent<HTMLDivElement>) => {
-    if (!(ev.ctrlKey || ev.detail === 2)) return;
-    if (!pendingResize) return;
-    ev.preventDefault(); ev.stopPropagation();
-    if (onResize) onResize(pendingResize.evtId!, pendingResize.edge, targetDate);
-    setPendingResize(null);
-  };
+  const pickQuickResizeDate =
+    (targetDate: Date) => (ev: React.MouseEvent<HTMLDivElement>) => {
+      if (!(ev.ctrlKey || ev.detail === 2)) return;
+      if (!pendingResize) return;
+      ev.preventDefault(); ev.stopPropagation();
+      if (onResize) onResize(pendingResize.evtId!, pendingResize.edge, targetDate);
+      setPendingResize(null);
+    };
 
   return (
     <div className="calendar-root">
-      {/* VISUAL CONFIRMATION BAR */}
-      <div style={{background:'red', color:'white', padding:'4px', textAlign:'center', fontWeight:'bold'}}>
-        DEBUG: MONTH VIEW ACTIVE (CHECK PILL WIDTH)
-      </div>
-
+      {/* Sticky Blue Header */}
       <div className="calendar-header sticky-header blue-header">
         {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
           <div key={d} className="calendar-header__cell">{d}</div>
@@ -173,6 +166,7 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                 onDoubleClick={pickQuickResizeDate(d)}
                 onClick={(e) => { if (e.ctrlKey) pickQuickResizeDate(d)(e as any); }}
               >
+                {/* Sticky Date Label */}
                 <div className="sticky-date-label blue-date-label">
                   {d.getDate()}
                 </div>
@@ -187,7 +181,6 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                   const top = laneTops[rIdx][li] ?? DATE_PAD;
                   const left = (seg.offset / 7) * 100;
                   const width = (seg.span / 7) * 100;
-
                   const tooltip = e.title;
 
                   return (
@@ -202,8 +195,8 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                             width: `${width}%`,
                             padding: `${V_GUTTER}px ${H_GUTTER}px`,
                             boxSizing: "border-box",
+                            zIndex: 10,
                           }}
-
                       draggable
                       onDragStart={onDragStart(seg)}
                       onDragEnd={onDragEnd}
