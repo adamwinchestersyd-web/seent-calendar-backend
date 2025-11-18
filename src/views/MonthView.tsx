@@ -1,6 +1,6 @@
-// CACHE BUST v13
+// CACHE BUST v15 - TS Fixes
 import React from "react";
-import EventPillWeek from "../components/EventPillWeek.jsx"; // <-- Correct import
+import EventPillWeek from "../components/EventPillWeek.jsx";
 import {
   addDays,
   startOfMonthGrid,
@@ -98,7 +98,7 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
     if (JSON.stringify(nextRowHeights) !== JSON.stringify(rowHeights)) {
       setRowHeights(nextRowHeights);
     }
-  }, [weekData]); 
+  }, [weekData]);
 
   const laneTops = laneHeights.map((laneHs) => {
     const tops: number[] = [];
@@ -121,7 +121,6 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
     try {
       const data = JSON.parse(raw);
       if (onMove) onMove(data.evtId, targetDate);
-      else console.log("Dropped event:", data, "->", targetDate.toISOString().slice(0, 10));
     } catch {}
   };
 
@@ -150,13 +149,12 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
       if (!pendingResize) return;
       ev.preventDefault(); ev.stopPropagation();
       if (onResize) onResize(pendingResize.evtId!, pendingResize.edge, targetDate);
-      else console.log("Resize:", pendingResize, "->", targetDate.toISOString().slice(0, 10));
       setPendingResize(null);
     };
 
   return (
     <div className="calendar-root">
-      <div className="calendar-header sticky-header">
+      <div className="calendar-header sticky-header blue-header">
         {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
           <div key={d} className="calendar-header__cell">{d}</div>
         ))}
@@ -175,7 +173,7 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                 onDoubleClick={pickQuickResizeDate(d)}
                 onClick={(e) => { if (e.ctrlKey) pickQuickResizeDate(d)(e as any); }}
               >
-                <div className="sticky-date-label">
+                <div className="sticky-date-label blue-date-label">
                   {d.getDate()}
                 </div>
               </div>
@@ -216,15 +214,23 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                       onDragStart={onDragStart(seg)}
                       onDragEnd={onDragEnd}
                       onDoubleClick={beginQuickResize(seg)}
-                      // Click is handled by EventPillWeek
+                      onClick={(evt) => {
+                        if (evt.ctrlKey) { beginQuickResize(seg)(evt as any); return; }
+                        const rect = row.laneRefs[li][bi].current?.getBoundingClientRect();
+                        if (rect) onOpenEditor?.(e, rect as any);
+                      }}
                       title={tooltip}
                     >
                       <EventPillWeek
                         ev={e}
+                        // Fix: Pass required props
                         isMultiDay={!isSingleDay}
                         className={e.colorClass || "event--blue"}
                         style={{ width: "100%", ...e.colour ? {["--c"]: e.colour} : {} }}
-                        onOpenEditor={onOpenEditor}
+                        // Fix: Add types to callback
+                        onOpenEditor={(ev: any, rect: any) => {
+                          if (rect) onOpenEditor?.(ev, { clientY: rect.top, clientX: rect.left } as any);
+                        }}
                       />
                     </div>
                   );

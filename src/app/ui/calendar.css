@@ -359,3 +359,30 @@ html,body{ background:var(--bg); color:var(--text); }
 .calendar-editor-modal .modal-btn-ghost:hover {
   background: var(--btn-subtle-bg);
 }
+/* ==========================================================================
+   BRANDING UPDATES (Blue Headers)
+   ========================================================================== */
+
+/* The main header row (Mon, Tue, Wed...) */
+.calendar-root .blue-header {
+  background: #4834d4; /* Seen/Dashing Blue */
+  border-bottom: 1px solid #3c2bb5;
+}
+.calendar-root .blue-header .calendar-header__cell {
+  color: #ffffff;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 14px;
+}
+
+/* The numeric date labels inside the grid */
+.calendar-root .blue-date-label {
+  background: #4834d4; /* Match header */
+  color: #ffffff;
+  padding: 4px 8px;
+  border-bottom-right-radius: 8px;
+  font-weight: 700;
+  font-size: 14px;
+  box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+}

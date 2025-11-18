@@ -1,6 +1,6 @@
-// CACHE BUST v13
+// CACHE BUST v14
 import React from "react";
-import EventPillWeek from "../components/EventPillWeek.jsx"; // <-- Correct import
+import EventPillWeek from "../components/EventPillWeek.jsx"; 
 import {
   addDays,
   startOfWeek,
@@ -39,13 +39,12 @@ function useElementWidth(ref: React.RefObject<HTMLDivElement>) {
 
 export default function WeekView({ date, events, onOpenEditor }: Props) {
   const weekStart = startOfWeek(date); 
-  const weekEnd = endOfWeek(weekStart); // Sunday
+  const weekEnd = endOfWeek(weekStart); 
   const days = [...Array(7)].map((_, i) => addDays(weekStart, i));
 
   const segs = React.useMemo(
     () =>
       (events || [])
-        // Inclusive date filter for Sunday
         .filter((e) => {
           const start = new Date(e.start);
           const end = new Date(e.end);
@@ -70,7 +69,7 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
   const [sectionH, setSectionH] = React.useState(60);
   const rowRef = React.useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>;
   const rowWidth = useElementWidth(rowRef);
-  const BAR_MIN = 84; // 4 lines
+  const BAR_MIN = 84; 
   const LANE_GAP = 4;
   
   React.useLayoutEffect(() => {
@@ -151,7 +150,8 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
 
   return (
     <div className="calendar-root">
-      <div className="calendar-header sticky-header">
+      {/* --- UPDATED: blue-header added --- */}
+      <div className="calendar-header sticky-header blue-header">
         {days.map((d, i) => (
           <div key={i} className="calendar-header__cell">
             {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][i]} {d.getDate()}
@@ -182,6 +182,7 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
               const top = laneTops[li] ?? 0;
               const leftPct = (seg.offset / 7) * 100;
               const widthPct = (Math.max(1, seg.span) / 7) * 100;
+
               const isSingle = seg.span === 1;
 
               const tooltip = [
