@@ -1,4 +1,4 @@
-// CACHE BUST v50 - Fix Day View
+// CACHE BUST v38 - Fix DayView Link and Styling
 import React from "react";
 import { links } from "../app/config/links";
 import { NoteIcon, ScrewIcon, CrownIcon } from "../app/ui/icons";
@@ -36,7 +36,12 @@ export default function DayView({ date, events }: Props) {
             ) : (
               <div style={{ display: 'grid', gap: '12px' }}>
                 {visible.map((ev: any) => {
-                  const href = ev.caseId ? links.caseUrl(ev.caseId) : ev.url || "#";
+                  // --- FIX: Use the stable CRM URL structure ---
+                  const crmUrl = ev.caseId 
+                    ? `https://crm.zoho.com/crm/org640578001/tab/Cases/${ev.caseId}` 
+                    : ev.url || "#";
+                  // ---
+
                   const title =
                     `${ev.title}` +
                     (ev.caseHours ? ` (${ev.caseHours}h)` : "") +
@@ -80,10 +85,20 @@ export default function DayView({ date, events }: Props) {
 
                         <div>
                           <a
+                            // --- FIX: Use the correct class for styling ---
                             className="btn-secondary"
-                            href={href}
+                            href={crmUrl}
                             target="_blank"
                             rel="noreferrer"
+                            style={{ 
+                              padding: '6px 10px', 
+                              borderRadius: '8px',
+                              background: '#1f2327', 
+                              border: '1px solid var(--grid)', 
+                              color: 'var(--text)',
+                              textDecoration: 'none',
+                              display: 'inline-block'
+                            }}
                           >
                             View Record
                           </a>
