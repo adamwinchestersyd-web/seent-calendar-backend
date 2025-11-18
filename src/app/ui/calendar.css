@@ -269,3 +269,16 @@ html,body{ background:var(--bg); color:var(--text); }
 .event-pill-month.event-pill--manual {
   border-left: 3px solid #facc15; /* Yellow bar for manual entries */
 }
+
+/* --- FIX: Sunday / Date Bar Visual Bleed --- */
+/* Target the cell itself */
+.calendar-root .calendar-cell {
+  position: relative;
+  /* Prevent any default padding from grid that could cause misalignment */
+  padding: 0; 
+}
+/* Ensure the sticky bar is flush with the top border */
+.calendar-root .sticky-date-label {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}

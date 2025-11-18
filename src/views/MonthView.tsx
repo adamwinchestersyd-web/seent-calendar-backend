@@ -1,4 +1,4 @@
-// CACHE BUST v37 - Fix Missing Props in MonthView
+// CACHE BUST v28 - Final Visual Alignment Fix
 import React from "react";
 import EventPillMonth from "../components/EventPillMonth.jsx";
 import {
@@ -17,10 +17,10 @@ type Props = {
   onOpenEditor?: (ev: any, clickEvent: React.MouseEvent) => void;
 };
 
-// --- CONSTANTS FOR TALL PILLS ---
 const CELL_MIN_H = 150; 
 const DATE_HEADER_H = 28; 
-const EVENT_H = 94; // 90px pill + 4px gap
+const EVENT_H = 94; 
+const GAP = 4;
 
 type WeekRow = {
   week: Date[];
@@ -109,6 +109,7 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
               <div
                 key={i}
                 className="calendar-cell"
+                // --- REMOVED PADDING FROM CELL INLINE STYLE ---
                 onDragOver={onCellDragOver}
                 onDrop={onCellDrop(d)}
               >
@@ -122,7 +123,6 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
               {row.lanes.map((lane, laneIdx) =>
                 lane.map((seg, segIdx) => {
                   const e = seg.evt;
-                  
                   const top = DATE_HEADER_H + (laneIdx * EVENT_H);
                   const left = (seg.offset / 7) * 100;
                   const width = (seg.span / 7) * 100;
@@ -148,7 +148,6 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                     >
                       <EventPillMonth
                         ev={e}
-                        // --- FIXED: Added required props ---
                         style={{ width: "100%", height: "100%" }}
                         className=""
                         onOpenEditor={onOpenEditor}
