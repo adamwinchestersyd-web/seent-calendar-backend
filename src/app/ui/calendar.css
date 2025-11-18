@@ -102,18 +102,19 @@ html,body{ background:var(--bg); color:var(--text); }
 /* --- STICKY DATE LABEL --- */
 .calendar-root .sticky-date-label {
   position: sticky;
-  top: 45px; 
+  top: 0; /* Sticks to the very top of the cell */
   left: 0;
   z-index: 30;
-  padding: 4px 10px;
-  font-size: 14px;
+  padding: 6px 10px; /* Slightly more padding for a bar look */
+  font-size: 13px;
   font-weight: 700;
   color: #fff;
-  background: #4338ca; 
-  border-bottom-right-radius: 6px;
-  pointer-events: none;
-  width: fit-content;
-  box-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+  background: #4338ca; /* Matches blue header */
+  width: 100%; /* <-- Forces it to span the full day column */
+  box-sizing: border-box;
+  border-bottom: 1px solid rgba(0,0,0,0.1); /* Subtle separator */
+  text-align: left; /* Or center, depending on preference */
+  pointer-events: none; /* Clicks pass through to the cell */
 }
 
 
