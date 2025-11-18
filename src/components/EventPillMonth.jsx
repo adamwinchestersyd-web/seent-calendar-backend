@@ -1,61 +1,105 @@
-// src/components/EventPillMonth.jsx
+// CACHE BUST v35 - Dedicated Month Pill
 import React from "react";
 
-// Styles specific to the Month View pill
-// We use inline styles for layout and CSS classes for theme/colors
-const pillStyle = {
-  width: "100%",
-  height: "100%",
-  minHeight: "24px", // Standard height for month bars
-  padding: "2px 6px",
-  boxSizing: "border-box",
-  borderRadius: "4px",
-  cursor: "pointer",
-  display: "flex",
-  alignItems: "center",
+// Utility: clamp text to N lines using CSS-only
+const clampStyle = (lines) => ({
+  display: "-webkit-box",
+  WebkitBoxOrient: "vertical",
   overflow: "hidden",
-  whiteSpace: "nowrap",
-  fontSize: "12px",
-  lineHeight: "1.2",
-  color: "#fff",
-  position: "relative",
-  boxShadow: "0 1px 2px rgba(0,0,0,0.2)",
-};
+  WebkitLineClamp: lines,
+  wordBreak: "break-word",
+});
 
-export default function EventPillMonth({ ev, onOpenEditor }) {
-  // Background color from event or default blue
-  const bgStyle = {
-    background: ev.colour || "#3b82f6",
+export default function EventPillMonth({ ev, style, className, onOpenEditor }) {
+  // --- 4-Line Layout ---
+  // Line 1: Title (Bold)
+  // Line 2: Meta (WIP | Installer)
+  // Line 3-4: Notes (Italic)
+  
+  const titleStyle = { 
+    fontWeight: 700, 
+    fontSize: "12px",
+    lineHeight: "1.2",
+    marginBottom: "2px",
+    ...clampStyle(1) 
+  };
+  
+  const metaStyle = { 
+    opacity: 0.9, 
+    fontSize: "11px", 
+    lineHeight: "1.2",
+    marginBottom: "2px",
+    ...clampStyle(1) 
+  };
+  
+  const notesStyle = { 
+    opacity: 0.8, 
+    fontSize: "11px", 
+    fontStyle: "italic",
+    lineHeight: "1.1",
+    ...clampStyle(2) 
   };
 
-  // Combine for the main wrapper
-  const style = { ...pillStyle, ...bgStyle };
+  // Safe data extraction
+  const safeString = (val) => {
+    if (!val) return "";
+    if (typeof val === "string") return val;
+    if (val.name) return val.name;
+    return String(val);
+  };
 
-  // Click handler
+  const wip = safeString(ev.wipManager);
+  const ins = safeString(ev.installer);
+  const own = safeString(ev.caseOwner);
+  const line2 = [wip, ins, own].filter(Boolean).join(" | ");
+
+  // Container Style: 
+  // - Relative (so it fills the absolute wrapper from MonthView)
+  // - 100% Width/Height
+  // - Background color from event
+  const containerStyle = {
+    ...style,
+    width: "100%",
+    height: "100%",
+    background: ev.colour || "#3b82f6",
+    color: "#fff",
+    padding: "4px 6px",
+    borderRadius: "4px",
+    cursor: "pointer",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "flex-start",
+    boxSizing: "border-box",
+    overflow: "hidden",
+    boxShadow: "0 1px 2px rgba(0,0,0,0.2)",
+    position: "relative" 
+  };
+
   const onClick = (e) => {
     e.stopPropagation();
     if (onOpenEditor) {
       const rect = e.currentTarget.getBoundingClientRect();
-      // Pass click coordinates to parent
       onOpenEditor(ev, { clientY: rect.top, clientX: rect.left });
     }
   };
 
-  // Construct the label: "09:00 · Job Title" or just "Job Title"
-  const timeLabel = ev.startTime ? `${ev.startTime} · ` : "";
-  const label = `${timeLabel}${ev.title}`;
-
   return (
     <div 
       className={`event-pill-month ${ev.isManual ? "event-pill--manual" : ""}`}
-      style={style} 
+      style={containerStyle}
       title={ev.title}
       onClick={onClick}
     >
-      {/* Text Content */}
-      <div style={{ overflow: "hidden", textOverflow: "ellipsis", fontWeight: 600 }}>
-        {label}
+      {/* Title */}
+      <div style={titleStyle}>
+        {ev.title || "Untitled"}
       </div>
+
+      {/* Meta Info */}
+      {line2 && <div style={metaStyle}>{line2}</div>}
+
+      {/* Notes */}
+      {ev.pmNotes && <div style={notesStyle}>{ev.pmNotes}</div>}
     </div>
   );
 }

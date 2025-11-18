@@ -1,4 +1,4 @@
-// CACHE BUST v27 - Fix Sticky Dates
+// CACHE BUST v36 - Fix Missing Props
 import React from "react";
 import EventPillMonth from "../components/EventPillMonth.jsx";
 import {
@@ -17,9 +17,10 @@ type Props = {
   onOpenEditor?: (ev: any, clickEvent: React.MouseEvent) => void;
 };
 
-const CELL_MIN_H = 150;
-const DATE_HEADER_H = 28;
-const EVENT_H = 90;
+// --- CONSTANTS FOR TALL PILLS ---
+const CELL_MIN_H = 150; 
+const DATE_HEADER_H = 28; 
+const EVENT_H = 94; // 90px pill + 4px gap
 
 type WeekRow = {
   week: Date[];
@@ -58,7 +59,6 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
         });
 
       const lanes = packLanes(segs);
-      
       const laneRefs = lanes.map((lane: any[]) => 
         lane.map(() => React.createRef<HTMLDivElement | null>())
       );
@@ -112,7 +112,6 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                 onDragOver={onCellDragOver}
                 onDrop={onCellDrop(d)}
               >
-                {/* --- FIXED: Removed inline absolute positioning so sticky CSS works --- */}
                 <div className="sticky-date-label blue-date-label">
                   {d.getDate()}
                 </div>
@@ -123,6 +122,7 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
               {row.lanes.map((lane, laneIdx) =>
                 lane.map((seg, segIdx) => {
                   const e = seg.evt;
+                  
                   const top = DATE_HEADER_H + (laneIdx * EVENT_H);
                   const left = (seg.offset / 7) * 100;
                   const width = (seg.span / 7) * 100;
@@ -148,6 +148,9 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                     >
                       <EventPillMonth
                         ev={e}
+                        // --- FIXED: Passing required props ---
+                        style={{ width: "100%", height: "100%" }} 
+                        className=""
                         onOpenEditor={onOpenEditor}
                       />
                     </div>
