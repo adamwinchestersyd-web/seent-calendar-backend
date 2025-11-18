@@ -1,4 +1,4 @@
-// CACHE BUST v36 - Fix Missing Props
+// CACHE BUST v37 - Fix Missing Props in MonthView
 import React from "react";
 import EventPillMonth from "../components/EventPillMonth.jsx";
 import {
@@ -148,8 +148,8 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                     >
                       <EventPillMonth
                         ev={e}
-                        // --- FIXED: Passing required props ---
-                        style={{ width: "100%", height: "100%" }} 
+                        // --- FIXED: Added required props ---
+                        style={{ width: "100%", height: "100%" }}
                         className=""
                         onOpenEditor={onOpenEditor}
                       />

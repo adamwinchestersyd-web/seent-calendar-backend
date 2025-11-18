@@ -99,22 +99,28 @@ html,body{ background:var(--bg); color:var(--text); }
 .calendar-root .calendar-row:last-child{ border-bottom:0; }
 .calendar-root .calendar-cell{ position:relative; min-height:56px; }
 
-/* --- STICKY DATE LABEL --- */
+/* --- STICKY DATE LABEL (Full Width Bar) --- */
 .calendar-root .sticky-date-label {
   position: sticky;
-  top: 0; /* Sticks to the very top of the cell */
+  top: 0; /* Stick to the top of the cell's scrolling context */
   left: 0;
   z-index: 30;
-  padding: 6px 10px; /* Slightly more padding for a bar look */
+  padding: 6px 10px;
   font-size: 13px;
   font-weight: 700;
   color: #fff;
   background: #4338ca; /* Matches blue header */
-  width: 100%; /* <-- Forces it to span the full day column */
+  width: 100%; 
   box-sizing: border-box;
-  border-bottom: 1px solid rgba(0,0,0,0.1); /* Subtle separator */
-  text-align: left; /* Or center, depending on preference */
-  pointer-events: none; /* Clicks pass through to the cell */
+  border-bottom: 1px solid rgba(0,0,0,0.1);
+  text-align: left; /* Left align the number */
+  pointer-events: none; 
+  margin: 0; /* Remove any default margins */
+}
+
+/* Ensure cell has no padding that pushes the sticky label */
+.calendar-root .calendar-cell {
+  padding: 0 !important; /* Force remove padding for MonthView cells */
 }
 
 
