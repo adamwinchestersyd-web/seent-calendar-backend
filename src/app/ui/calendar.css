@@ -98,7 +98,14 @@ html,body{ background:var(--bg); color:var(--text); }
 }
 .calendar-root .calendar-row:last-child{ border-bottom:0; }
 .calendar-root .calendar-cell{ position:relative; min-height:56px; }
-
+/* --- STICKY HEADER (Day Names) --- */
+.calendar-root .sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 40; 
+  background: #2b2e32; 
+  border-bottom: 1px solid var(--grid);
+}
 /* --- STICKY DATE LABEL (Full Width Bar) --- */
 .calendar-root .sticky-date-label {
   position: sticky;
