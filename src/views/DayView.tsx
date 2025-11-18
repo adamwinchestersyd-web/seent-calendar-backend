@@ -1,14 +1,18 @@
+// CACHE BUST v50 - Fix Day View
 import React from "react";
 import { links } from "../app/config/links";
-import { toDate } from "../app/utils/calendar";
 import { NoteIcon, ScrewIcon, CrownIcon } from "../app/ui/icons";
 
 type Props = { date: Date; events: any[] };
 
 export default function DayView({ date, events }: Props) {
-  const visible = events.filter(
-    (e) => !(toDate(e.end) < date || toDate(e.start) > date)
-  );
+  // Filter events for this specific day
+  const visible = events.filter((e) => {
+    const start = new Date(e.start);
+    const end = new Date(e.end);
+    // Check if the day falls within the event's range
+    return date >= start && date <= end;
+  });
 
   const labelDate =
     date.toLocaleDateString(undefined, {
@@ -26,23 +30,26 @@ export default function DayView({ date, events }: Props) {
 
       <div className="calendar-grid">
         <div className="calendar-row" style={{ ["--cols" as any]: 1 }}>
-          <div className="calendar-cell p-3">
+          <div className="calendar-cell" style={{ padding: '12px' }}>
             {visible.length === 0 ? (
               <div className="day-empty">No events for this day.</div>
             ) : (
-              <div className="space-y-3">
+              <div style={{ display: 'grid', gap: '12px' }}>
                 {visible.map((ev: any) => {
                   const href = ev.caseId ? links.caseUrl(ev.caseId) : ev.url || "#";
                   const title =
                     `${ev.title}` +
                     (ev.caseHours ? ` (${ev.caseHours}h)` : "") +
                     (ev.startTime ? ` · ${ev.startTime}` : "");
+                  
+                  // Use manual color or state color
+                  const barColor = ev.colour || "#3b82f6";
 
                   return (
                     <div key={ev.id} className="day-card">
                       <div
                         className="day-card__bar"
-                        style={{ ["--c" as any]: ev.colour }}
+                        style={{ background: barColor }}
                         title={title}
                       >
                         <div className="truncate">{title}</div>

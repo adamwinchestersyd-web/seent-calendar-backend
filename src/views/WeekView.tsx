@@ -1,6 +1,6 @@
-// CACHE BUST v22 - Fix Types & Logic
+// CACHE BUST v50 - Fix Week View Popup
 import React from "react";
-import EventPillWeek from "../components/EventPillWeek.jsx"; 
+import EventPillWeek from "../components/EventPillWeek.jsx"; // <-- Uses correct component
 import {
   addDays,
   startOfWeek,
@@ -21,10 +21,7 @@ function useElementWidth(ref: React.RefObject<HTMLDivElement>) {
   React.useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const measure = () => {
-      const next = Math.round(el.getBoundingClientRect().width);
-      setW((prev) => (prev === next ? prev : next));
-    };
+    const measure = () => setW(Math.round(el.getBoundingClientRect().width));
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
@@ -38,12 +35,9 @@ function useElementWidth(ref: React.RefObject<HTMLDivElement>) {
 }
 
 export default function WeekView({ date, events, onOpenEditor }: Props) {
-  const weekStart = startOfWeek(date); 
-  const weekEnd = endOfWeek(weekStart); 
+  const weekStart = startOfWeek(date);
+  const weekEnd = endOfWeek(weekStart);
   const days = [...Array(7)].map((_, i) => addDays(weekStart, i));
-
-  // Logic to include Sunday events correctly
-  const nextWeekStart = addDays(weekStart, 7);
 
   const segs = React.useMemo(
     () =>
@@ -51,14 +45,14 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
         .filter((e) => {
           const start = new Date(e.start);
           const end = new Date(e.end);
-          // Include if it overlaps with [weekStart, nextWeekStart)
+          // Inclusive overlap check
           if (end < weekStart) return false;
-          if (start >= nextWeekStart) return false;
+          if (start > weekEnd) return false;
           return true;
         })
         .flatMap((e) => segmentEventAcrossRange(e, weekStart, weekEnd))
         .sort((a, b) => a.start.getTime() - b.start.getTime() || b.span - a.span),
-    [events, weekStart, weekEnd, nextWeekStart]
+    [events, weekStart, weekEnd]
   );
 
   const H_GUTTER = 4;
@@ -104,7 +98,7 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
     return () => cancelAnimationFrame(raf);
   }, [rowWidth, lanes, laneRefs, BAR_MIN, LANE_GAP, laneHeights, sectionH]);
 
-  // --- FIXED: Explicit calculation of tops ---
+  // Calculate tops
   const laneTops = React.useMemo(() => {
     const tops: number[] = [];
     let currentTop = 0;
@@ -115,41 +109,9 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
     return tops;
   }, [laneHeights, LANE_GAP]);
 
-  const onCellDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
-  };
-  const onCellDrop = (targetDate: Date) => (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    const raw = e.dataTransfer?.getData("application/json") || "";
-    try {
-      const data = JSON.parse(raw);
-      console.log("Dropped event:", data, "onto:", targetDate.toISOString().slice(0, 10));
-    } catch {}
-  };
-
   const onDragStart = (seg: any) => (e: React.DragEvent<HTMLDivElement>) => {
     const payload = JSON.stringify({ segId: seg.id, evtId: seg.evt?.id });
     e.dataTransfer?.setData("application/json", payload);
-  };
-  const onDragEnd = (_e: React.DragEvent<HTMLDivElement>) => {};
-
-  const [pendingResize, setPendingResize] = React.useState<{
-    segId: string; evtId?: string; edge: "start" | "end";
-  } | null>(null);
-
-  const beginQuickResize = (seg: any) => (ev: React.MouseEvent<HTMLDivElement>) => {
-    if (!(ev.ctrlKey || ev.detail === 2)) return;
-    ev.preventDefault(); ev.stopPropagation();
-    const rect = (ev.currentTarget as HTMLDivElement).getBoundingClientRect();
-    const edge: "start" | "end" = (ev.clientX - rect.left) < rect.width / 2 ? "start" : "end";
-    setPendingResize({ segId: seg.id, evtId: seg.evt?.id, edge });
-  };
-  const pickQuickResizeDate = (targetDate: Date) => (ev: React.MouseEvent<HTMLDivElement>) => {
-    if (!(ev.ctrlKey || ev.detail === 2)) return;
-    if (!pendingResize) return;
-    ev.preventDefault(); ev.stopPropagation();
-    setPendingResize(null);
   };
 
   return (
@@ -169,14 +131,7 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
           style={{ ["--cols" as any]: 7, position: "relative", minHeight: sectionH }}
         >
           {days.map((d, i) => (
-            <div
-              key={i}
-              className="calendar-cell"
-              onDragOver={onCellDragOver}
-              onDrop={onCellDrop(days[i])}
-              onDoubleClick={pickQuickResizeDate(d)}
-              onClick={(e) => { if (e.ctrlKey) pickQuickResizeDate(d)(e as any); }}
-            />
+            <div key={i} className="calendar-cell" />
           ))}
 
           {lanes.map((lane, li) =>
@@ -203,20 +158,16 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
                       }}
                   draggable
                   onDragStart={onDragStart(seg)}
-                  onDragEnd={onDragEnd}
-                  onDoubleClick={beginQuickResize(seg)}
                   title={tooltip}
                 >
-                <EventPillWeek
-                  ev={e}
-                  isMultiDay={!isSingle}
-                  className={e.colorClass || "event--blue"}
-                  style={{ width: "100%", ...e.colour ? {["--c"]: e.colour} : {} }}
-                  // --- FIXED: Added explicit 'any' types to callback ---
-                  onOpenEditor={(ev: any, rect: any) => {
-                     if (rect) onOpenEditor?.(ev, { clientY: rect.top, clientX: rect.left } as any);
-                  }}
-                />
+                  {/* --- FIXED: Use EventPillWeek and pass onOpenEditor --- */}
+                  <EventPillWeek
+                    ev={e}
+                    isMultiDay={!isSingle}
+                    className={e.colorClass || "event--blue"}
+                    style={{ width: "100%", ...e.colour ? {["--c"]: e.colour} : {} }}
+                    onOpenEditor={onOpenEditor}
+                  />
                 </div>
               );
             })
