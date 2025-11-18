@@ -1,4 +1,4 @@
-// CACHE BUST v30 - Final MonthView Alignment
+// CACHE BUST v31 - Final Sticky Date Bar Fix
 import React from "react";
 import EventPillWeek from "../components/EventPillWeek.jsx";
 import {
@@ -18,8 +18,7 @@ type Props = {
 };
 
 const CELL_MIN_H = 150; 
-// --- UPDATED CONSTANT: Main header block is now TALLER ---
-const DATE_HEADER_H = 50; 
+const DATE_HEADER_H = 45; 
 const EVENT_H = 94; 
 const GAP = 4;
 
@@ -88,16 +87,14 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
 
   return (
     <div className="calendar-root">
-      {/* --- COMBINED STICKY HEADER --- */}
       <div className="calendar-header sticky-header blue-header">
         {weeks[0].map((d, i) => (
           <div key={i} className="calendar-header__cell">
+            {/* Day Name and Date Numeral are now centered and combined */}
             <div className="header-content">
-              {/* Day Name */}
               <div className="header-day-name">
                 {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][i]}
               </div>
-              {/* Date Number */}
               <div className="header-date-num">
                 {d.getDate()}
               </div>
@@ -114,18 +111,15 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                 key={i}
                 className="calendar-cell"
                 onDragOver={onCellDragOver}
-                // Removed redundant date display
               >
+                {/* The date is now part of the sticky header above, not inside the cell */}
               </div>
             ))}
 
-            {/* Event Layer - uses absolute positioning relative to calendar-row */}
             <div className="absolute inset-0 pointer-events-none">
               {row.lanes.map((lane, laneIdx) =>
                 lane.map((seg, segIdx) => {
                   const e = seg.evt;
-                  
-                  // Top position is calculated from the TALLER header constant
                   const top = DATE_HEADER_H + (laneIdx * EVENT_H);
                   const left = (seg.offset / 7) * 100;
                   const width = (seg.span / 7) * 100;
@@ -151,8 +145,9 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                     >
                       <EventPillWeek
                         ev={e}
-                        style={{ width: "100%", height: "100%" }}
-                        className=""
+                        isMultiDay={!seg.span}
+                        className={e.colorClass || "event--blue"}
+                        style={{ width: "100%", ...e.colour ? {["--c"]: e.colour} : {} }}
                         onOpenEditor={(ev: any, rect: any) => {
                           if (rect) onOpenEditor?.(ev, { clientY: rect.top, clientX: rect.left } as any);
                         }}
