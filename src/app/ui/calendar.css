@@ -36,11 +36,11 @@ html,body{ background:var(--bg); color:var(--text); }
   background:var(--panel);
   color:var(--text);
   border-radius:14px;
-  /* overflow:hidden; <--- REMOVED to allow sticky positioning to work */
+  /* overflow:hidden; REMOVED for sticky headers */
   box-shadow:0 10px 30px rgba(0,0,0,.35);
   font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;
   margin-bottom:40px;
-  isolation: isolate; /* New stacking context */
+  isolation: isolate;
 }
 
 .calendar-root .calendar-header{
@@ -58,13 +58,28 @@ html,body{ background:var(--bg); color:var(--text); }
   color:var(--text);
 }
 
-/* --- STICKY HEADER UTILITY --- */
+/* --- STICKY HEADER --- */
 .calendar-root .sticky-header {
   position: sticky;
   top: 0;
-  z-index: 40; /* Above events */
-  background: #2b2e32; /* Must be opaque to hide scrolling content */
+  z-index: 40; 
+  background: #2b2e32; 
   border-bottom: 1px solid var(--grid);
+}
+
+/* --- BLUE HEADER (BRANDING) --- */
+.calendar-root .blue-header {
+  background: linear-gradient(90deg, #312e81 0%, #4338ca 100%); /* Deep Blue/Purple Gradient */
+  border-bottom: 1px solid #312e81;
+}
+.calendar-root .blue-header .calendar-header__cell {
+  color: #ffffff;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 14px;
+  text-align: center;
+  padding: 12px;
 }
 
 /* --------------------------------------------------------------------------
@@ -85,28 +100,33 @@ html,body{ background:var(--bg); color:var(--text); }
 .calendar-root .calendar-row:last-child{ border-bottom:0; }
 .calendar-root .calendar-cell{ position:relative; min-height:56px; }
 
-/* --- STICKY DATE LABEL (Month View) --- */
+/* --- STICKY DATE LABEL --- */
 .calendar-root .sticky-date-label {
   position: sticky;
-  top: 40px; /* Height of the main header approx */
+  top: 45px; /* Below the header */
   left: 0;
   z-index: 30;
-  padding: 8px;
-  font-size: 12px;
-  color: var(--text-muted);
-  /* Optional: add background if events slide under it, but transparent usually looks better */
-  pointer-events: none; /* Let clicks pass through to the cell */
+  padding: 4px 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  background: #4338ca; /* Matches header */
+  border-bottom-right-radius: 6px;
+  pointer-events: none;
+  width: fit-content;
+  box-shadow: 2px 2px 4px rgba(0,0,0,0.2);
 }
 
 
-/* ---------- EVENT PILLS: fixed four-line block, no collisions ---------- */
+/* ---------- EVENT PILLS ---------- */
 :root{
   --pill-fs: 12px;
-  --pill-lh: 16px;     /* equals ~1.333 of fs; keeps pixels integral */
+  --pill-lh: 16px;
   --pill-padY: 6px;
   --pill-padX: 8px;
 }
 
+/* --- FIXED: Removed position: absolute so it respects parent wrapper --- */
 .calendar-root .event,
 .calendar-root .event-pill{
   display:flex;
@@ -123,10 +143,16 @@ html,body{ background:var(--bg); color:var(--text); }
   color:#fff;
   text-shadow:0 1px 0 rgba(0,0,0,.35);
   padding:var(--pill-padY) var(--pill-padX);
+  cursor: pointer;
 
   /* hard lock height to exactly 4 lines of text */
   min-block-size: calc(var(--pill-padY)*2 + var(--pill-lh)*4);
   max-block-size: calc(var(--pill-padY)*2 + var(--pill-lh)*4);
+}
+
+/* Manual entry styling override */
+.calendar-root .event-pill--manual {
+  border-left: 4px solid #facc15; /* Yellow bar */
 }
 
 .calendar-root .event *{ margin:0; }
@@ -135,32 +161,21 @@ html,body{ background:var(--bg); color:var(--text); }
   position:absolute;
   inset:0;
   border-radius:inherit;
+  /* gradient based on --c */
   background:linear-gradient(
     90deg,
     color-mix(in srgb, var(--c, #5e6b7a) 88%, #000 12%) 0%,
     color-mix(in srgb, var(--c, #5e6b7a) 80%, #000 20%) 70%,
     color-mix(in srgb, var(--c, #5e6b7a) 65%, #000 35%) 100%
   );
+  z-index: 0;
 }
 
 .calendar-root .event__label{ position:relative; z-index:1; width:100%; }
-.calendar-root .event__title{
-  font-weight:700;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-}
-.calendar-root .event__people{
-  margin-top:5px;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; opacity:.95;
-}
-.calendar-root .event__notes{
-  margin-top:2px;
-  display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2;
-  overflow:hidden; opacity:.95;
-  word-break: break-word;
-}
+
 
 /* --------------------------------------------------------------------------
-   Day cards & Filters (scoped)
+   Day cards & Filters
 -------------------------------------------------------------------------- */
 .calendar-root .day-card{
   background:#23262a; border:1px solid var(--grid);
@@ -186,70 +201,10 @@ html,body{ background:var(--bg); color:var(--text); }
   color:var(--text); border-radius:8px; padding:6px 28px 6px 10px; font-size:13px;
 }
 .calendar-root .ui-select:focus{ outline:2px solid #d1d8e2; outline-offset:1px; }
-.calendar-root .seg{ display:inline-flex; border:1px solid var(--grid); border-radius:10px; overflow:hidden; }
-.calendar-root .seg-btn{ padding:6px 10px; font-size:13px; background:#1f2327; color:var(--text); border:0; cursor:pointer; }
-.calendar-root .seg-btn + .seg-btn{ border-left:1px solid var(--grid); }
-.calendar-root .seg-btn.is-active{ background:#0d1116; color:#fff; }
-.calendar-root .btn-secondary{
-  display:inline-flex; align-items:center; justify-content:center;
-  padding:6px 10px; font-size:13px; border-radius:8px;
-  background:#1f2327; border:1px solid var(--grid); color:var(--text);
-}
-.calendar-root .btn-secondary:hover{ background:#191d21; }
 
-
-/* ==========================================================================
-   TOOLBAR (Refactored)
-   ========================================================================== */
-.toolbar-root {
-  width: 100%;
-  background: var(--panel);
-  border-bottom: 1px solid var(--grid);
-}
-.toolbar-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  flex-wrap: wrap;
-}
-.toolbar-left, .toolbar-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.toolbar-center {
-  flex: 1;
-  text-align: center;
-  color: var(--text-muted);
-  font-size: 14px;
-}
-.toolbar-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 32px;
-  padding: 0 12px;
-  border-radius: 8px;
-  border: 1px solid var(--grid);
-  background: var(--panel);
-  color: var(--text);
-  font-size: 14px;
-  line-height: 16px;
-  cursor: pointer;
-  user-select: none;
-}
-.toolbar-btn.is-active {
-  background: rgba(255,255,255,0.08);
-}
-.toolbar-btn:hover {
-  background: var(--bg);
-}
-
-/* ==========================================================================
-   MODAL OVERRIDES (Fixes light text and dropdowns)
-   ========================================================================== */
-
+/* --------------------------------------------------------------------------
+   MODAL STYLES
+-------------------------------------------------------------------------- */
 .calendar-editor-modal {
   position: absolute;
   width: 380px;
@@ -264,125 +219,32 @@ html,body{ background:var(--bg); color:var(--text); }
   color-scheme: light; 
   border-top: 6px solid var(--green-test-bar); 
 }
-
+/* ... (Rest of modal styles from previous step remain the same) ... */
 .calendar-editor-modal input,
 .calendar-editor-modal select,
 .calendar-editor-modal textarea {
-  flex: 1;
-  height: 36px;
-  padding: 0 10px;
-  border-radius: 8px;
-  border: 1px solid var(--light-border);
-  background: var(--light-bg);
-  color: var(--light-text);
-  color-scheme: light;
-  width: 100%;
-  box-sizing: border-box; 
+  flex: 1; height: 36px; padding: 0 10px; border-radius: 8px;
+  border: 1px solid var(--light-border); background: var(--light-bg);
+  color: var(--light-text); color-scheme: light; width: 100%; box-sizing: border-box; 
 }
-
-.calendar-editor-modal textarea {
-  height: auto;
-  padding: 8px 10px;
-}
-
-.calendar-editor-modal .modal-title-input {
-  height: 40px;
-  font-size: 15px;
-  font-weight: 700;
-}
-
-.calendar-editor-modal .modal-row {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-.calendar-editor-modal .modal-label {
-  font-size: 13px;
-  width: 110px;
-  color: var(--light-text);
-  opacity: 0.9;
-  flex-shrink: 0; 
-}
-
-.calendar-editor-modal .modal-grid {
-  display: grid;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-.calendar-editor-modal .modal-grid-gap-sm {
-  display: grid;
-  gap: 6px;
-}
-
-.calendar-editor-modal .modal-info-text {
-  font-size: 14px;
-  color: var(--light-text-muted);
-}
+.calendar-editor-modal textarea { height: auto; padding: 8px 10px; }
+.calendar-editor-modal .modal-title-input { height: 40px; font-size: 15px; font-weight: 700; }
+.calendar-editor-modal .modal-row { display: flex; gap: 12px; align-items: center; }
+.calendar-editor-modal .modal-label { font-size: 13px; width: 110px; color: var(--light-text); opacity: 0.9; flex-shrink: 0; }
+.calendar-editor-modal .modal-grid { display: grid; gap: 12px; margin-bottom: 16px; }
+.calendar-editor-modal .modal-grid-gap-sm { display: grid; gap: 6px; }
+.calendar-editor-modal .modal-info-text { font-size: 14px; color: var(--light-text-muted); }
 .calendar-editor-modal .modal-notes-box {
-  color: var(--light-text-muted);
-  font-size: 13.5px;
-  line-height: 1.35;
-  background: var(--light-panel);
-  border: 1px solid var(--light-border);
-  border-radius: 8px;
-  padding: 8px 10px;
+  color: var(--light-text-muted); font-size: 13.5px; line-height: 1.35;
+  background: var(--light-panel); border: 1px solid var(--light-border);
+  border-radius: 8px; padding: 8px 10px;
 }
-
-.calendar-editor-modal .modal-actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-}
+.calendar-editor-modal .modal-actions { display: flex; gap: 8px; justifyContent: flex-end; }
 .calendar-editor-modal .modal-btn {
-  height: 36px;
-  padding: 0 14px;
-  border-radius: 10px;
-  border: 1px solid var(--light-border);
-  font-size: 14px;
-  cursor: pointer;
-  user-select: none;
+  height: 36px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--light-border);
+  font-size: 14px; cursor: pointer; user-select: none;
 }
-.calendar-editor-modal .modal-btn-primary {
-  background: var(--btn-primary-bg);
-  color: var(--btn-primary-text);
-  border-color: var(--btn-primary-bg);
-}
-.calendar-editor-modal .modal-btn-subtle {
-  background: var(--btn-subtle-bg);
-  color: var(--btn-subtle-text);
-}
-.calendar-editor-modal .modal-btn-ghost {
-  background: transparent;
-  color: var(--light-text);
-  border-color: transparent;
-}
-.calendar-editor-modal .modal-btn-ghost:hover {
-  background: var(--btn-subtle-bg);
-}
-/* ==========================================================================
-   BRANDING UPDATES (Blue Headers)
-   ========================================================================== */
-
-/* The main header row (Mon, Tue, Wed...) */
-.calendar-root .blue-header {
-  background: #4834d4; /* Seen/Dashing Blue */
-  border-bottom: 1px solid #3c2bb5;
-}
-.calendar-root .blue-header .calendar-header__cell {
-  color: #ffffff;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-size: 14px;
-}
-
-/* The numeric date labels inside the grid */
-.calendar-root .blue-date-label {
-  background: #4834d4; /* Match header */
-  color: #ffffff;
-  padding: 4px 8px;
-  border-bottom-right-radius: 8px;
-  font-weight: 700;
-  font-size: 14px;
-  box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
-}
+.calendar-editor-modal .modal-btn-primary { background: var(--btn-primary-bg); color: var(--btn-primary-text); border-color: var(--btn-primary-bg); }
+.calendar-editor-modal .modal-btn-subtle { background: var(--btn-subtle-bg); color: var(--btn-subtle-text); }
+.calendar-editor-modal .modal-btn-ghost { background: transparent; color: var(--light-text); border-color: transparent; }
+.calendar-editor-modal .modal-btn-ghost:hover { background: var(--btn-subtle-bg); }

@@ -1,6 +1,6 @@
-// CACHE BUST v15 - TS Fixes
+// CACHE BUST v15
 import React from "react";
-import EventPillWeek from "../components/EventPillWeek.jsx";
+import EventPillWeek from "../components/EventPillWeek.jsx"; 
 import {
   addDays,
   startOfMonthGrid,
@@ -76,7 +76,7 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
         for (const r of lane) {
           const el = r.current;
           if (el) {
-            const pillEl = el.querySelector('.event-pill') as HTMLDivElement;
+            const pillEl = el.firstElementChild;
             if (pillEl) {
               const h = Math.ceil(pillEl.getBoundingClientRect().height);
               if (h > maxH) maxH = h;
@@ -98,7 +98,7 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
     if (JSON.stringify(nextRowHeights) !== JSON.stringify(rowHeights)) {
       setRowHeights(nextRowHeights);
     }
-  }, [weekData]);
+  }, [weekData]); 
 
   const laneTops = laneHeights.map((laneHs) => {
     const tops: number[] = [];
@@ -114,10 +114,7 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
 
   const onCellDrop = (targetDate: Date) => (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    const raw =
-      e.dataTransfer?.getData("application/json") ||
-      e.dataTransfer?.getData("text/plain") ||
-      "";
+    const raw = e.dataTransfer?.getData("application/json") || "";
     try {
       const data = JSON.parse(raw);
       if (onMove) onMove(data.evtId, targetDate);
@@ -127,8 +124,6 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
   const onDragStart = (seg: any) => (e: React.DragEvent<HTMLDivElement>) => {
     const payload = JSON.stringify({ segId: seg.id, evtId: seg.evt?.id });
     e.dataTransfer?.setData("application/json", payload);
-    e.dataTransfer?.setData("text/plain", payload);
-    if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
   };
   const onDragEnd = (_e: React.DragEvent<HTMLDivElement>) => {};
 
@@ -154,6 +149,7 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
 
   return (
     <div className="calendar-root">
+      {/* Blue Header */}
       <div className="calendar-header sticky-header blue-header">
         {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
           <div key={d} className="calendar-header__cell">{d}</div>
@@ -173,6 +169,7 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                 onDoubleClick={pickQuickResizeDate(d)}
                 onClick={(e) => { if (e.ctrlKey) pickQuickResizeDate(d)(e as any); }}
               >
+                {/* Sticky Blue Date Label */}
                 <div className="sticky-date-label blue-date-label">
                   {d.getDate()}
                 </div>
@@ -188,13 +185,7 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                   const left = (seg.offset / 7) * 100;
                   const width = (seg.span / 7) * 100;
 
-                  const tooltip = [
-                    `${e.title}${e.caseHours ? ` (${e.caseHours}h)` : ""}${e.startTime ? ` @ ${to12h(e.startTime)}` : ""}`,
-                    e.wipManager ? `WIP: ${e.wipManager}` : "",
-                    e.installer ? `Installer: ${e.installer}` : "",
-                    e.caseOwner ? `Owner: ${e.caseOwner}` : "",
-                    e.pmNotes ? `Notes: ${e.pmNotes}` : "",
-                  ].filter(Boolean).join("\n");
+                  const tooltip = e.title;
 
                   return (
                     <div
@@ -223,14 +214,11 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                     >
                       <EventPillWeek
                         ev={e}
-                        // Fix: Pass required props
                         isMultiDay={!isSingleDay}
                         className={e.colorClass || "event--blue"}
+                        // FIX: Pass width: 100% so it fills the box
                         style={{ width: "100%", ...e.colour ? {["--c"]: e.colour} : {} }}
-                        // Fix: Add types to callback
-                        onOpenEditor={(ev: any, rect: any) => {
-                          if (rect) onOpenEditor?.(ev, { clientY: rect.top, clientX: rect.left } as any);
-                        }}
+                        onOpenEditor={onOpenEditor}
                       />
                     </div>
                   );

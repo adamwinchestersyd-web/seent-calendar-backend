@@ -1,4 +1,4 @@
-// CACHE BUST v14
+// CACHE BUST v15
 import React from "react";
 import EventPillWeek from "../components/EventPillWeek.jsx"; 
 import {
@@ -39,12 +39,13 @@ function useElementWidth(ref: React.RefObject<HTMLDivElement>) {
 
 export default function WeekView({ date, events, onOpenEditor }: Props) {
   const weekStart = startOfWeek(date); 
-  const weekEnd = endOfWeek(weekStart); 
+  const weekEnd = endOfWeek(weekStart);
   const days = [...Array(7)].map((_, i) => addDays(weekStart, i));
 
   const segs = React.useMemo(
     () =>
       (events || [])
+        // Inclusive date filter for Sunday
         .filter((e) => {
           const start = new Date(e.start);
           const end = new Date(e.end);
@@ -69,7 +70,7 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
   const [sectionH, setSectionH] = React.useState(60);
   const rowRef = React.useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>;
   const rowWidth = useElementWidth(rowRef);
-  const BAR_MIN = 84; 
+  const BAR_MIN = 84; // 4 lines
   const LANE_GAP = 4;
   
   React.useLayoutEffect(() => {
@@ -80,7 +81,8 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
         lane.forEach((_, bi) => {
           const el = laneRefs[li][bi]?.current;
           if (el) {
-            const pillEl = el.querySelector('.event-pill') as HTMLDivElement;
+            // Because we use .event-pill class now, we can target it
+            const pillEl = el.firstElementChild;
             if (pillEl) {
               const h = Math.ceil(pillEl.getBoundingClientRect().height);
               if (h > maxH) maxH = h;
@@ -112,10 +114,7 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
   };
   const onCellDrop = (targetDate: Date) => (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    const raw =
-      e.dataTransfer?.getData("application/json") ||
-      e.dataTransfer?.getData("text/plain") ||
-      "";
+    const raw = e.dataTransfer?.getData("application/json") || "";
     try {
       const data = JSON.parse(raw);
       console.log("Dropped event:", data, "onto:", targetDate.toISOString().slice(0, 10));
@@ -125,8 +124,6 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
   const onDragStart = (seg: any) => (e: React.DragEvent<HTMLDivElement>) => {
     const payload = JSON.stringify({ segId: seg.id, evtId: seg.evt?.id });
     e.dataTransfer?.setData("application/json", payload);
-    e.dataTransfer?.setData("text/plain", payload);
-    if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
   };
   const onDragEnd = (_e: React.DragEvent<HTMLDivElement>) => {};
 
@@ -144,13 +141,12 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
     if (!(ev.ctrlKey || ev.detail === 2)) return;
     if (!pendingResize) return;
     ev.preventDefault(); ev.stopPropagation();
-    console.log("Resize (week):", pendingResize, "->", targetDate.toISOString().slice(0,10));
     setPendingResize(null);
   };
 
   return (
     <div className="calendar-root">
-      {/* --- UPDATED: blue-header added --- */}
+      {/* Blue Header */}
       <div className="calendar-header sticky-header blue-header">
         {days.map((d, i) => (
           <div key={i} className="calendar-header__cell">
@@ -182,16 +178,9 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
               const top = laneTops[li] ?? 0;
               const leftPct = (seg.offset / 7) * 100;
               const widthPct = (Math.max(1, seg.span) / 7) * 100;
-
               const isSingle = seg.span === 1;
 
-              const tooltip = [
-                `${e.title}${e.caseHours ? ` (${e.caseHours}h)` : ""}${e.startTime ? ` @ ${to12h(e.startTime)}` : ""}`,
-                e.wipManager ? `WIP: ${e.wipManager}` : "",
-                e.installer ? `Installer: ${e.installer}` : "",
-                e.caseOwner ? `Owner: ${e.caseOwner}` : "",
-                e.pmNotes ? `Notes: ${e.pmNotes}` : "",
-              ].filter(Boolean).join("\n");
+              const tooltip = e.title;
 
               return (
                 <div
@@ -207,19 +196,17 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
                         pointerEvents: "auto",
                         zIndex: 2,
                       }}
-
                   draggable
                   onDragStart={onDragStart(seg)}
                   onDragEnd={onDragEnd}
                   onDoubleClick={beginQuickResize(seg)}
-                  // Click is handled by EventPillWeek
                   title={tooltip}
                 >
-                {/* --- UPDATED: Uses EventPillWeek --- */}
                 <EventPillWeek
                   ev={e}
                   isMultiDay={!isSingle}
                   className={e.colorClass || "event--blue"}
+                  // Pass style with width: 100% and color var
                   style={{ width: "100%", ...e.colour ? {["--c"]: e.colour} : {} }}
                   onOpenEditor={onOpenEditor}
                 />
