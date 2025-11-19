@@ -1,5 +1,5 @@
 // MonthView.tsx
-// CACHE BUST v41 - FINAL STABLE REPEATING STRUCTURE (Full Drop-in)
+// CACHE BUST v43 - FINAL REPLACING STICKY HEADER (Full Drop-in)
 import React from "react";
 import EventPillMonth from "../components/EventPillMonth.jsx"; 
 import {
@@ -19,7 +19,7 @@ type Props = {
 };
 
 const CELL_MIN_H = 150; 
-const DATE_HEADER_H = 45; // Height of the top Day Name header
+const DATE_HEADER_H = 45; // Height of the combined sticky bar
 const EVENT_H = 64; 
 const V_GUTTER = 2;
 const H_GUTTER = 4;
@@ -69,7 +69,7 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
   const rowHeights: number[] = React.useMemo(() => {
     return weekData.map((data: WeekRow) => {
       const maxLaneIndex = data.lanes.length;
-      // Height = Header Height + (Events * Height) + 10px bottom spacing
+      // Height = Sticky Header Height + (Events * Height) + 10px bottom spacing
       const contentH = DATE_HEADER_H + (maxLaneIndex * EVENT_H) + 10; 
       return Math.max(CELL_MIN_H, contentH);
     });
@@ -95,24 +95,21 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                 key={i}
                 className="calendar-cell"
               >
-                {/* 1. STICKY HEADER REPEATER */}
+                {/* 1. STICKY HEADER REPEATER (The only header) */}
                 <div className="sticky-date-full-header blue-header">
                   <div className="header-content-combined">
-                    {/* Day Name: Hide Day Name for Weeks 2+ */}
-                    {rIdx === 0 && (
-                        <div className="header-day-name">
-                          {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][i]}
-                        </div>
-                    )}
-                    {/* Date Number: Show Date Number for all weeks */}
+                    {/* Day Name: Render for ALL rows */}
+                    <div className="header-day-name">
+                      {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][i]}
+                    </div>
+                    {/* Date Number: Render for ALL rows */}
                     <div className="header-date-num">
                       {d.getDate()}
                     </div>
                   </div>
                 </div>
 
-                {/* 2. SPACER for Event Positioning (pushes events down 45px) */}
-                <div style={{height: `${DATE_HEADER_H}px`}}></div>
+                {/* 2. SPACER REMOVED. Events are positioned absolutely from the top. */}
               </div>
             ))}
 

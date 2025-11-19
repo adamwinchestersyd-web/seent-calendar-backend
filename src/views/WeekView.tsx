@@ -153,7 +153,7 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
 
   return (
     <div className="calendar-root">
-      {/* 1. TOP STICKY HEADER (Day Names AND Date Numbers) */}
+      {/* 1. TOP STICKY HEADER (Day Names AND Date Numbers combined) */}
       <div 
         className="calendar-header sticky-header blue-header"
         style={{ ["--cols" as any]: 7 }} 
@@ -189,7 +189,7 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
               onDoubleClick={pickQuickResizeDate(d)}
               onClick={(e) => { if (e.ctrlKey) pickQuickResizeDate(d)(e as any); }}
             >
-              {/* 2. IN-CELL DATE NUMBER (Hidden/Removed, as content is in the sticky header) */}
+              {/* REMOVED: In-cell date number is now in the sticky header */}
             </div>
           ))}
 
