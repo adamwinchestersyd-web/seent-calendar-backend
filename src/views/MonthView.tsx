@@ -1,4 +1,4 @@
-// CACHE BUST v32 - Final MonthView Alignment
+// CACHE BUST v33 - FINAL STICKY DATE BAR FIX
 import React from "react";
 import EventPillWeek from "../components/EventPillWeek.jsx";
 import {
@@ -18,8 +18,8 @@ type Props = {
 };
 
 const CELL_MIN_H = 150; 
-const DATE_HEADER_H = 45; 
-const EVENT_H = 94; 
+const DATE_HEADER_H = 45; // Height of the combined label
+const EVENT_H = 94; // 90px pill + 4px gap
 const V_GUTTER = 2;
 const H_GUTTER = 4;
 
@@ -85,6 +85,7 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
 
   return (
     <div className="calendar-root">
+      {/* 1. MAIN STICKY HEADER (Day Names) */}
       <div className="calendar-header sticky-header blue-header">
         {weeks[0].map((d, i) => (
           <div key={i} className="calendar-header__cell">
@@ -92,10 +93,6 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
               {/* Day Name */}
               <div className="header-day-name">
                 {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][i]}
-              </div>
-              {/* Date Number */}
-              <div className="header-date-num">
-                {d.getDate()}
               </div>
             </div>
           </div>
@@ -111,7 +108,7 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                 className="calendar-cell"
                 onDragOver={onCellDragOver}
               >
-                {/* --- FIX: Display the date again, positioned to be visible --- */}
+                {/* 2. DATE BAR INSIDE CELL (Sticky, Full Width) */}
                 <div className="sticky-date-label blue-date-label">
                   {d.getDate()}
                 </div>
@@ -137,7 +134,7 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                         left: `${left}%`,
                         width: `${width}%`,
                         height: `${EVENT_H - 4}px`, 
-                        padding: "0 4px", 
+                        padding: `${V_GUTTER}px ${H_GUTTER}px`,
                         boxSizing: "border-box",
                         zIndex: 10,
                       }}
