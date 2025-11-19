@@ -13,8 +13,8 @@
 .calendar-root .calendar-row-header-wrapper {
     /* *** CRITICAL FIX: Enforce 7-column Grid Layout *** */
     display: grid !important; 
-    grid-auto-flow: column;
-    grid-auto-columns: 1fr;
+    /* FIX: Use explicit template columns to force 7 horizontal cells */
+    grid-template-columns: repeat(7, 1fr) !important;
     
     width: 100%;
     
