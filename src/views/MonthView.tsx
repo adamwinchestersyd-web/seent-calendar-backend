@@ -1,5 +1,5 @@
 // MonthView.tsx
-// CACHE BUST v61 - FINAL RENDERING STABILITY (Full Drop-in)
+// CACHE BUST v51 - FINAL SOLUTION: SEPARATE REPEATER STRUCTURE (Full Drop-in)
 import React from "react";
 import EventPillMonth from "../components/EventPillMonth.jsx"; 
 import {
@@ -29,6 +29,27 @@ type WeekRow = {
   lanes: any[][];
   laneRefs: React.RefObject<HTMLDivElement | null>[][];
 };
+
+// --- NEW COMPONENT FOR REPEATING HEADER ---
+const MonthWeekHeader = React.memo(({ week }: { week: Date[] }) => (
+    <div className="calendar-header month-week-header sticky-header blue-header">
+        {week.map((d: Date, i: number) => (
+            <div key={i} className="calendar-header__cell">
+                <div className="header-content-combined">
+                    {/* Day Name */}
+                    <div className="header-day-name">
+                        {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][i]}
+                    </div>
+                    {/* Date Number */}
+                    <div className="header-date-num">
+                        {d.getDate()}
+                    </div>
+                </div>
+            </div>
+        ))}
+    </div>
+));
+MonthWeekHeader.displayName = 'MonthWeekHeader';
 
 export default function MonthView({ date, events, onMove, onResize, onOpenEditor }: Props) {
   const gridStart = React.useMemo(() => startOfMonthGrid(date), [date]);
@@ -67,109 +88,82 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
   }, [weeks, events]);
 
   const rowHeights: number[] = React.useMemo(() => {
-    const heights = weekData.map((data: WeekRow) => {
+    return weekData.map((data: WeekRow) => {
       const maxLaneIndex = data.lanes.length;
       // Height = Sticky Header Height + (Events * Height) + 10px bottom spacing
       const contentH = DATE_HEADER_H + (maxLaneIndex * EVENT_H) + 10; 
       return Math.max(CELL_MIN_H, contentH);
     });
-    // CRITICAL: Ensure this array has an initial size so the map loop doesn't crash 
-    return heights.length > 0 ? heights : weeks.map(() => CELL_MIN_H);
-  }, [weekData, weeks]); // Depend on weeks and weekData
+  }, [weekData]);
 
   const onDragStart = (seg: any) => (e: React.DragEvent<HTMLDivElement>) => {
     const payload = JSON.stringify({ segId: seg.id, evtId: seg.evt?.id });
     e.dataTransfer?.setData("application/json", payload);
   };
 
-  // --- CRITICAL FIX: Render a simplified layout until rowHeights is stable ---
-  const isReady = rowHeights.every(h => !isNaN(h));
-  if (!isReady && events.length > 0) {
-      return (
-          <div className="calendar-root">
-              <div className="p-4">Calculating MonthView dimensions...</div>
-          </div>
-      );
-  }
-  
   return (
     <div className="calendar-root">
       
       <div className="calendar-grid">
         {weekData.map((row: WeekRow, rIdx: number) => (
-          <div 
-            key={rIdx} 
-            className="calendar-row" 
-            style={{ ["--cols" as any]: 7, height: rowHeights[rIdx] }}
-          >
-            {/* 1. REPEATING FULL HEADER ROW */}
-            <div className="calendar-header sticky-header blue-header">
-              {row.week.map((d: Date, i: number) => (
-                <div key={i} className="calendar-header__cell">
-                  {/* The working WeekView header content structure: */}
-                  <div className="header-content-combined">
-                    {/* Day Name */}
-                    <div className="header-day-name">
-                      {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][i]}
-                    </div>
-                    {/* Date Number */}
-                    <div className="header-date-num">
-                      {d.getDate()}
-                    </div>
-                  </div>
+          <React.Fragment key={rIdx}>
+            {/* 1. REPEATING FULL HEADER ROW (Renders as a dedicated structural element) */}
+            <MonthWeekHeader week={row.week} />
+
+            <div 
+                className="calendar-row" 
+                style={{ ["--cols" as any]: 7, height: rowHeights[rIdx] }}
+            >
+                {/* 2. Standard Grid Cells (Data container) */}
+                {row.week.map((d: Date, i: number) => (
+                    <div key={i} className="calendar-cell" />
+                ))}
+                
+                {/* 3. Event Layer (positioned absolutely) */}
+                <div className="absolute inset-0 pointer-events-none">
+                    {row.lanes.map((lane: any[], laneIdx: number) =>
+                        lane.map((seg: any, bi: number) => {
+                            const e = seg.evt;
+                            
+                            // Position events below the header (starts after DATE_HEADER_H)
+                            const top = DATE_HEADER_H + (laneIdx * EVENT_H);
+                            const left = (seg.offset / 7) * 100;
+                            const width = (seg.span / 7) * 100;
+
+                            return (
+                                <div
+                                    key={seg.id}
+                                    ref={row.laneRefs[laneIdx][bi]}
+                                    className="pointer-events-auto"
+                                    style={{
+                                        position: "absolute",
+                                        top: `${top}px`,
+                                        left: `${left}%`,
+                                        width: `${width}%`,
+                                        height: `${EVENT_H - 4}px`, 
+                                        padding: `${V_GUTTER}px ${H_GUTTER}px`,
+                                        boxSizing: "border-box",
+                                        zIndex: 10,
+                                    }}
+                                    draggable
+                                    onDragStart={onDragStart(seg)}
+                                    title={e.title}
+                                >
+                                    <EventPillMonth 
+                                        ev={e}
+                                        className={e.colorClass || "event--blue"}
+                                        style={{ width: "100%", ...e.colour ? {["--c"]: e.colour} : {} }}
+                                        onOpenEditor={(ev: any, rect: any) => {
+                                            if (rect) onOpenEditor?.(ev, { clientY: rect.top, clientX: rect.left } as any);
+                                        }}
+                                    />
+                                </div>
+                            );
+                        })
+                    )}
                 </div>
-              ))}
             </div>
-
-            {/* 2. Standard Grid Cells (for visual vertical lines and click handling) */}
-            {row.week.map((d: Date, i: number) => (
-              <div key={i} className="calendar-cell" />
-            ))}
-            
-            {/* 3. Event Layer */}
-            <div className="absolute inset-0 pointer-events-none">
-              {row.lanes.map((lane: any[], laneIdx: number) =>
-                lane.map((seg, bi) => {
-                  const e = seg.evt;
-                  
-                  // Position events below the header (starts after DATE_HEADER_H)
-                  const top = DATE_HEADER_H + (laneIdx * EVENT_H);
-                  const left = (seg.offset / 7) * 100;
-                  const width = (seg.span / 7) * 100;
-
-                  return (
-                    <div
-                      key={seg.id}
-                      ref={row.laneRefs[laneIdx][bi]}
-                      className="pointer-events-auto"
-                      style={{
-                        position: "absolute",
-                        top: `${top}px`,
-                        left: `${left}%`,
-                        width: `${width}%`,
-                        height: `${EVENT_H - 4}px`, 
-                        padding: `${V_GUTTER}px ${H_GUTTER}px`,
-                        boxSizing: "border-box",
-                        zIndex: 10,
-                      }}
-                      draggable
-                      onDragStart={onDragStart(seg)}
-                      title={e.title}
-                    >
-                      <EventPillMonth 
-                        ev={e}
-                        className={e.colorClass || "event--blue"}
-                        style={{ width: "100%", ...e.colour ? {["--c"]: e.colour} : {} }}
-                        onOpenEditor={(ev: any, rect: any) => {
-                          if (rect) onOpenEditor?.(ev, { clientY: rect.top, clientX: rect.left } as any);
-                        }}
-                      />
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
+          </React.Fragment>
         ))}
       </div>
     </div>
