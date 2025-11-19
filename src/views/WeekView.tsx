@@ -1,6 +1,6 @@
-// CACHE BUST v50 - Fix Week View Popup
+// CACHE BUST v23 - Fix Types & Logic
 import React from "react";
-import EventPillWeek from "../components/EventPillWeek.jsx"; // <-- Uses correct component
+import EventPillWeek from "../components/EventPillWeek.jsx"; 
 import {
   addDays,
   startOfWeek,
@@ -21,7 +21,10 @@ function useElementWidth(ref: React.RefObject<HTMLDivElement>) {
   React.useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const measure = () => setW(Math.round(el.getBoundingClientRect().width));
+    const measure = () => {
+      const next = Math.round(el.getBoundingClientRect().width);
+      setW((prev) => (prev === next ? prev : next));
+    };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
@@ -35,9 +38,12 @@ function useElementWidth(ref: React.RefObject<HTMLDivElement>) {
 }
 
 export default function WeekView({ date, events, onOpenEditor }: Props) {
-  const weekStart = startOfWeek(date);
-  const weekEnd = endOfWeek(weekStart);
+  const weekStart = startOfWeek(date); 
+  const weekEnd = endOfWeek(weekStart); 
   const days = [...Array(7)].map((_, i) => addDays(weekStart, i));
+
+  // Logic to include Sunday events correctly
+  const nextWeekStart = addDays(weekStart, 7);
 
   const segs = React.useMemo(
     () =>
@@ -47,12 +53,12 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
           const end = new Date(e.end);
           // Inclusive overlap check
           if (end < weekStart) return false;
-          if (start > weekEnd) return false;
+          if (start >= nextWeekStart) return false;
           return true;
         })
         .flatMap((e) => segmentEventAcrossRange(e, weekStart, weekEnd))
         .sort((a, b) => a.start.getTime() - b.start.getTime() || b.span - a.span),
-    [events, weekStart, weekEnd]
+    [events, weekStart, weekEnd, nextWeekStart]
   );
 
   const H_GUTTER = 4;
@@ -98,7 +104,7 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
     return () => cancelAnimationFrame(raf);
   }, [rowWidth, lanes, laneRefs, BAR_MIN, LANE_GAP, laneHeights, sectionH]);
 
-  // Calculate tops
+  // --- FIXED: Explicit calculation of tops (solves 'forEach' on number error) ---
   const laneTops = React.useMemo(() => {
     const tops: number[] = [];
     let currentTop = 0;
@@ -109,9 +115,41 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
     return tops;
   }, [laneHeights, LANE_GAP]);
 
+  const onCellDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+  };
+  const onCellDrop = (targetDate: Date) => (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const raw = e.dataTransfer?.getData("application/json") || "";
+    try {
+      const data = JSON.parse(raw);
+      console.log("Dropped event:", data, "onto:", targetDate.toISOString().slice(0, 10));
+    } catch {}
+  };
+
   const onDragStart = (seg: any) => (e: React.DragEvent<HTMLDivElement>) => {
     const payload = JSON.stringify({ segId: seg.id, evtId: seg.evt?.id });
     e.dataTransfer?.setData("application/json", payload);
+  };
+  const onDragEnd = (_e: React.DragEvent<HTMLDivElement>) => {};
+
+  const [pendingResize, setPendingResize] = React.useState<{
+    segId: string; evtId?: string; edge: "start" | "end";
+  } | null>(null);
+
+  const beginQuickResize = (seg: any) => (ev: React.MouseEvent<HTMLDivElement>) => {
+    if (!(ev.ctrlKey || ev.detail === 2)) return;
+    ev.preventDefault(); ev.stopPropagation();
+    const rect = (ev.currentTarget as HTMLDivElement).getBoundingClientRect();
+    const edge: "start" | "end" = (ev.clientX - rect.left) < rect.width / 2 ? "start" : "end";
+    setPendingResize({ segId: seg.id, evtId: seg.evt?.id, edge });
+  };
+  const pickQuickResizeDate = (targetDate: Date) => (ev: React.MouseEvent<HTMLDivElement>) => {
+    if (!(ev.ctrlKey || ev.detail === 2)) return;
+    if (!pendingResize) return;
+    ev.preventDefault(); ev.stopPropagation();
+    setPendingResize(null);
   };
 
   return (
@@ -119,7 +157,14 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
       <div className="calendar-header sticky-header blue-header">
         {days.map((d, i) => (
           <div key={i} className="calendar-header__cell">
-            {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][i]} {d.getDate()}
+            <div className="header-content">
+              <div className="header-day-name">
+                {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][i]}
+              </div>
+              <div className="header-date-num">
+                {d.getDate()}
+              </div>
+            </div>
           </div>
         ))}
       </div>
@@ -131,7 +176,14 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
           style={{ ["--cols" as any]: 7, position: "relative", minHeight: sectionH }}
         >
           {days.map((d, i) => (
-            <div key={i} className="calendar-cell" />
+            <div
+              key={i}
+              className="calendar-cell"
+              onDragOver={onCellDragOver}
+              onDrop={onCellDrop(days[i])}
+              onDoubleClick={pickQuickResizeDate(d)}
+              onClick={(e) => { if (e.ctrlKey) pickQuickResizeDate(d)(e as any); }}
+            />
           ))}
 
           {lanes.map((lane, li) =>
@@ -141,6 +193,7 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
               const leftPct = (seg.offset / 7) * 100;
               const widthPct = (Math.max(1, seg.span) / 7) * 100;
               const isSingle = seg.span === 1;
+
               const tooltip = e.title;
 
               return (
@@ -160,14 +213,16 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
                   onDragStart={onDragStart(seg)}
                   title={tooltip}
                 >
-                  {/* --- FIXED: Use EventPillWeek and pass onOpenEditor --- */}
-                  <EventPillWeek
-                    ev={e}
-                    isMultiDay={!isSingle}
-                    className={e.colorClass || "event--blue"}
-                    style={{ width: "100%", ...e.colour ? {["--c"]: e.colour} : {} }}
-                    onOpenEditor={onOpenEditor}
-                  />
+                <EventPillWeek
+                  ev={e}
+                  isMultiDay={!isSingle}
+                  className={e.colorClass || "event--blue"}
+                  style={{ width: "100%", ...e.colour ? {["--c"]: e.colour} : {} }}
+                  // --- FIXED: Added explicit 'any' types to callback (solves implicit any errors) ---
+                  onOpenEditor={(ev: any, rect: any) => { 
+                     if (rect) onOpenEditor?.(ev, { clientY: rect.top, clientX: rect.left } as any);
+                  }}
+                />
                 </div>
               );
             })

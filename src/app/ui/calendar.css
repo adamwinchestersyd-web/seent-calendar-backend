@@ -210,3 +210,28 @@ html,body{ background:var(--bg); color:var(--text); }
 .calendar-editor-modal .modal-btn-subtle { background: var(--btn-subtle-bg); color: var(--btn-subtle-text); }
 .calendar-editor-modal .modal-btn-ghost { background: transparent; color: var(--light-text); border-color: transparent; }
 .calendar-editor-modal .modal-btn-ghost:hover { background: var(--btn-subtle-bg); }
+
+/* --- FIX: Combined Header Content (Day Name + Date) --- */
+.calendar-root .header-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    padding: 10px 0;
+}
+.calendar-root .header-day-name {
+    font-size: 13px;
+    opacity: 0.8;
+}
+.calendar-root .header-date-num {
+    font-size: 20px; 
+    font-weight: 900;
+    line-height: 1.1; 
+}
+
+/* FIX: Ensure header cell has no padding itself */
+.calendar-root .calendar-header__cell{
+  padding: 0; 
+}
