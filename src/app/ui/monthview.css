@@ -9,14 +9,20 @@
     min-height: 100%;
 }
 
-/* NEW: The single, fully-styled, repeating, sticky header bar (Day Name + Date) */
-.calendar-root .sticky-date-full-header {
-    position: sticky !important; /* Enforce stickiness */
-    top: 0 !important; /* Locks it to the top of the calendar-cell/viewport */
-    left: 0;
-    z-index: 30; /* Below modals, above events */
-    width: 100%;
-    box-sizing: border-box;
-    text-align: center;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+/* FIX: Styling for simple, non-sticky date number in Weeks 2-6 */
+.calendar-root .monthview-date-num-in-cell {
+    /* REMOVED: position: sticky, top: 45px, z-index: 30 */
+    position: relative; /* Standard positioning */
+    
+    font-size: 20px; 
+    font-weight: 900;
+    line-height: 1.1; 
+    color: var(--text); 
+    padding: 5px; 
+    width: 100%; 
+    box-sizing: border-box; 
+    text-align: right; 
+    
+    /* Ensure it has background to hide events */
+    background: var(--panel); 
 }
