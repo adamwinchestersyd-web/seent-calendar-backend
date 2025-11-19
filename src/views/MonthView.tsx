@@ -1,5 +1,5 @@
 // MonthView.tsx
-// CACHE BUST v48 - FIX GRID LINES AND EVENT MISPLACEMENT (Full Drop-in)
+// CACHE BUST v48 - RESTORING REPEATING STICKY HEADER STRUCTURE (Full Drop-in)
 import React from "react";
 import EventPillMonth from "../components/EventPillMonth.jsx"; 
 import {
@@ -87,20 +87,20 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
         {weekData.map((row: WeekRow, rIdx: number) => (
           <div 
             key={rIdx} 
-            className="calendar-row" /* Reverting to original calendar-row class */
+            className="calendar-row" 
             style={{ ["--cols" as any]: 7, height: rowHeights[rIdx] }}
           >
-            {/* 1. REPEATING FULL HEADER ROW (using dedicated structural classes) */}
-            <div className="calendar-header sticky-date-full-header blue-header">
+            {/* 1. REPEATING FULL HEADER ROW (Using standard classes for horizontal alignment) */}
+            <div className="calendar-header sticky-header blue-header">
               {row.week.map((d: Date, i: number) => (
                 <div key={i} className="calendar-header__cell">
                   {/* The working WeekView header content structure: */}
                   <div className="header-content-combined">
-                    {/* Day Name (Now renders for all 6 weeks) */}
+                    {/* Day Name */}
                     <div className="header-day-name">
                       {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][i]}
                     </div>
-                    {/* Date Number (Now renders for all 6 weeks) */}
+                    {/* Date Number */}
                     <div className="header-date-num">
                       {d.getDate()}
                     </div>
@@ -109,8 +109,7 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
               ))}
             </div>
 
-            {/* 2. Standard Grid Cells (for visual vertical lines) */}
-            {/* The calendar-row class should already be a grid, making these the cells */}
+            {/* 2. Standard Grid Cells (for visual vertical lines and click handling) */}
             {row.week.map((d: Date, i: number) => (
               <div key={i} className="calendar-cell" />
             ))}
