@@ -102,8 +102,8 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                 key={i}
                 className="calendar-cell"
               >
-                {/* 2. DATE NUMBER - Simple Non-Sticky Element (FIXED) */}
-                <div className="monthview-date-num-in-cell">
+                {/* 2. DATE NUMBER - Wrapped in a sticky container for visibility on scroll */}
+                <div className="sticky-date-num">
                     {d.getDate()}
                 </div>
                 
@@ -111,7 +111,6 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
 
               </div>
             ))}
-
             <div className="absolute inset-0 pointer-events-none">
               {row.lanes.map((lane, laneIdx) =>
                 lane.map((seg, bi) => {
@@ -119,7 +118,7 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                   
                   // Position events below the date bar (starts after DATE_HEADER_H)
                   // DATE_HEADER_H is used for all rows to ensure gap from the top of the cell
-                  const top = DATE_HEADER_H + (laneIdx * EVENT_H);
+                  //const top = DATE_HEADER_H + (laneIdx * EVENT_H);
                   const left = (seg.offset / 7) * 100;
                   const width = (seg.span / 7) * 100;
 

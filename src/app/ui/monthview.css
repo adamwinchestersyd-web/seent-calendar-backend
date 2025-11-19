@@ -10,15 +10,15 @@
 /* FIX: Sticky Date Bar (The duplicating header in rows 2-6) - REMOVED */
 
 /* NEW: Date number styling inside the cell, below the main sticky header */
-.calendar-root .monthview-date-num-in-cell {
+.calendar-root .sticky-date-num {
+    position: sticky; /* Make the date sticky */
+    top: 0; /* Sticks to the top of the calendar-cell */
+    left: 0;
+    z-index: 5; /* Keep it above the events (10) but below the main header (40) */
+    background: linear-gradient(90deg, #312e81 0%, #4338ca 100%) !important; 
     font-size: 20px; 
     font-weight: 900;
     line-height: 1.1; 
-    color: var(--text); /* Use the default text colour */
-    padding-top: 5px; /* Add some small padding from the top edge of the cell */
-    padding-left: 5px;
-    position: absolute; /* Position it absolutely within the cell */
-    top: 0;
-    left: 0;
-    z-index: 5; /* Keep it above the events */
+    color: var(--text); 
+    padding: 5px; /* Padding for visual spacing from cell edges */
 }
