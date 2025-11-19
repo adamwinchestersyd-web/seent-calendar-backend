@@ -1,5 +1,5 @@
 // MonthView.tsx
-// CACHE BUST v40 - ALIGNED DAY NAME HEADER + IN-CELL DATE NUMBER
+// CACHE BUST v41 - FINAL STABLE REPEATING STRUCTURE (Full Drop-in)
 import React from "react";
 import EventPillMonth from "../components/EventPillMonth.jsx"; 
 import {
@@ -82,18 +82,6 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
 
   return (
     <div className="calendar-root">
-      {/* 1. TOP STICKY HEADER (Day Names ONLY) */}
-      <div className="calendar-header sticky-header blue-header">
-        {weeks[0].map((d: Date, i: number) => (
-          <div key={i} className="calendar-header__cell">
-            <div className="header-content-day-name-only"> {/* New class for pure Day Name display */}
-              <div className="header-day-name">
-                {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][i]}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
       
       <div className="calendar-grid">
         {weekData.map((row: WeekRow, rIdx: number) => (
@@ -107,12 +95,23 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                 key={i}
                 className="calendar-cell"
               >
-                {/* 2. IN-CELL DATE NUMBER (Always Renders) */}
-                <div className="in-cell-date-number">
-                    {d.getDate()}
+                {/* 1. STICKY HEADER REPEATER */}
+                <div className="sticky-date-full-header blue-header">
+                  <div className="header-content-combined">
+                    {/* Day Name: Hide Day Name for Weeks 2+ */}
+                    {rIdx === 0 && (
+                        <div className="header-day-name">
+                          {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][i]}
+                        </div>
+                    )}
+                    {/* Date Number: Show Date Number for all weeks */}
+                    <div className="header-date-num">
+                      {d.getDate()}
+                    </div>
+                  </div>
                 </div>
-                
-                {/* 3. SPACER for Event Positioning (pushes events down 45px) */}
+
+                {/* 2. SPACER for Event Positioning (pushes events down 45px) */}
                 <div style={{height: `${DATE_HEADER_H}px`}}></div>
               </div>
             ))}

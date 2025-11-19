@@ -42,7 +42,7 @@ html,body{ background:var(--bg); color:var(--text); }
   isolation: isolate; 
 }
 
-/* Day Name Header Row (Used by WeekView and MonthView Week 1) */
+/* Day Name Header Row (Week 1 Header) */
 .calendar-root .calendar-header{
   display:grid;
   grid-auto-flow:column;
@@ -51,6 +51,10 @@ html,body{ background:var(--bg); color:var(--text); }
   border-bottom:1px solid var(--grid);
   padding: 0; 
   margin: 0;
+  /* FIX: Ensure the grid cells align perfectly with the background lines */
+  background-image:linear-gradient(to right, var(--grid) 1px, transparent 1px);
+  background-size:calc(100% / 7) 100%; 
+  background-repeat:repeat-x;
 }
 .calendar-root .calendar-header__cell{
   padding: 0; 
@@ -62,8 +66,8 @@ html,body{ background:var(--bg); color:var(--text); }
 
 /* --- STICKY HEADER (REINFORCED STICKINESS) --- */
 .calendar-root .sticky-header {
-  position: sticky !important; /* REINFORCED */
-  top: 0 !important; /* REINFORCED */
+  position: sticky !important; /* REINFORCED STICKINESS */
+  top: 0 !important; /* REINFORCED STICKINESS */
   z-index: 40; 
   background: #2b2e32; 
   border-bottom: 1px solid var(--grid);
@@ -74,33 +78,36 @@ html,body{ background:var(--bg); color:var(--text); }
   background: linear-gradient(90deg, #312e81 0%, #4338ca 100%) !important; 
   border-bottom: 1px solid #312e81;
 }
-.calendar-root .blue-header .calendar-header__cell {
-  color: #ffffff;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-size: 14px;
-  padding: 0; 
-}
 
-/* NEW: Style for Day Name Only header in MonthView/WeekView */
-.calendar-root .header-content-day-name-only { 
+/* FIX: Combined Header Content (Day Name + Date) */
+.calendar-root .header-content-combined { 
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     width: 100%;
     min-height: 45px; 
-    padding: 5px 0;
+    color: #ffffff;
+    font-weight: 700;
+    padding: 0; 
 }
 .calendar-root .header-day-name {
-    font-size: 14px;
+    font-size: 13px;
     text-transform: uppercase;
+    letter-spacing: 0.05em;
     opacity: 1; 
-    color: #ffffff; /* Ensure visibility */
+}
+.calendar-root .header-date-num {
+    font-size: 18px; 
+    font-weight: 900;
+    line-height: 1.1; 
+    margin-top: 2px; 
 }
 
-/* FIX: Ensure all grid cells are aligned */
+
+/* --------------------------------------------------------------------------
+   Grid
+-------------------------------------------------------------------------- */
 .calendar-root .calendar-grid{ position:relative; background:var(--panel); }
 .calendar-root .calendar-row{
   position:relative;

@@ -1,5 +1,4 @@
-// WeekView.tsx
-// CACHE BUST v40 - ALIGNED DAY NAME HEADER + IN-CELL DATE NUMBER (Full Drop-in)
+// CACHE BUST v41 - ALIGNED DAY NAME HEADER + IN-CELL DATE NUMBER (Full Drop-in)
 import React from "react";
 import EventPillWeek from "../components/EventPillWeek.jsx"; 
 import {
@@ -43,7 +42,6 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
   const weekEnd = endOfWeek(weekStart); 
   const days = [...Array(7)].map((_, i) => addDays(weekStart, i));
 
-  // Logic to include Sunday events correctly
   const nextWeekStart = addDays(weekStart, 7);
 
   const segs = React.useMemo(
@@ -52,7 +50,6 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
         .filter((e) => {
           const start = new Date(e.start);
           const end = new Date(e.end);
-          // Inclusive overlap check
           if (end < weekStart) return false;
           if (start >= nextWeekStart) return false;
           return true;
@@ -156,17 +153,21 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
 
   return (
     <div className="calendar-root">
-      {/* 1. TOP STICKY HEADER (Day Names ONLY - REINFORCED STICKINESS) */}
+      {/* 1. TOP STICKY HEADER (Day Names AND Date Numbers) */}
       <div 
         className="calendar-header sticky-header blue-header"
         style={{ ["--cols" as any]: 7 }} 
       >
         {days.map((d, i) => (
           <div key={i} className="calendar-header__cell">
-            {/* FIX: Use Day Name ONLY structure */}
-            <div className="header-content-day-name-only">
+            <div className="header-content-combined">
+              {/* Day Name */}
               <div className="header-day-name">
                 {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][i]}
+              </div>
+              {/* Date Number */}
+              <div className="header-date-num">
+                {d.getDate()}
               </div>
             </div>
           </div>
@@ -188,10 +189,7 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
               onDoubleClick={pickQuickResizeDate(d)}
               onClick={(e) => { if (e.ctrlKey) pickQuickResizeDate(d)(e as any); }}
             >
-              {/* 2. IN-CELL DATE NUMBER (WeekView specific rendering) */}
-              <div className="in-cell-date-number">
-                  {d.getDate()}
-              </div>
+              {/* 2. IN-CELL DATE NUMBER (Hidden/Removed, as content is in the sticky header) */}
             </div>
           ))}
 
@@ -227,7 +225,6 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
                   isMultiDay={!isSingle}
                   className={e.colorClass || "event--blue"}
                   style={{ width: "100%", ...e.colour ? {["--c"]: e.colour} : {} }}
-                  // --- FIXED: Added explicit 'any' types to callback (solves implicit any errors) ---
                   onOpenEditor={(ev: any, rect: any) => { 
                      if (rect) onOpenEditor?.(ev, { clientY: rect.top, clientX: rect.left } as any);
                   }}

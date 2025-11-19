@@ -9,16 +9,14 @@
     min-height: 100%;
 }
 
-/* NEW: Styling for in-cell date number (non-sticky) */
-.calendar-root .in-cell-date-number {
-    position: absolute; /* Place it in the top corner */
-    top: 5px;
-    right: 5px; 
-    z-index: 5; /* Above events, below main header */
-    
-    font-size: 20px; 
-    font-weight: 900;
-    line-height: 1.1; 
-    color: var(--text); 
-    padding: 5px; 
+/* NEW: The single, fully-styled, repeating, sticky header bar (Day Name + Date) */
+.calendar-root .sticky-date-full-header {
+    position: sticky !important; /* REINFORCED STICKINESS */
+    top: 0 !important; /* Locks it to the top of the calendar-cell/viewport */
+    left: 0;
+    z-index: 30; /* Below modals, above events */
+    width: 100%;
+    box-sizing: border-box;
+    text-align: center;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }
