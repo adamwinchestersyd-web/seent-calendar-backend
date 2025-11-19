@@ -1,4 +1,5 @@
-// CACHE BUST v9 - Incrementing to v1.6
+// Calendar.jsx
+// CACHE BUST v60 - FINAL CLICK FIX (Position Bypass)
 import * as React from "react";
 
 // Views
@@ -376,17 +377,18 @@ export default function Calendar() {
       open: true,
       mode: 'new', // Set mode to 'new'
       ev: createNewEvent(),
-      clickEvent: null, // Open in center
+      clickEvent: null, // Open in center (working path)
     });
   }, []);
   
   // Handler for clicking on an event
   const handleOpenEditor = React.useCallback((ev, clickEvent) => {
+    // CRITICAL FIX: Bypass the unreliable coordinate positioning by sending null
     setEditor({
       open: true,
       mode: ev.isManual ? 'edit' : 'view',
       ev: ev,
-      clickEvent: clickEvent,
+      clickEvent: null, // Force modal to use default center position
     });
   }, []);
   

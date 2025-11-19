@@ -1,5 +1,5 @@
 // EventEditor.tsx
-// CACHE BUST v59 - MODAL POSITIONING FIX (Full Drop-in)
+// CACHE BUST v62 - FINAL POSITIONING DEFENSE (Full Drop-in)
 import React from "react";
 import { useEscapeKey } from "../../hooks/useEscapeKey";
 
@@ -12,7 +12,7 @@ type Props = {
 };
 
 // Positioning hook
-function usePopupPosition(open: boolean, clickEvent: React.MouseEvent | null) { // Added 'open' to hook params
+function usePopupPosition(open: boolean, clickEvent: React.MouseEvent | null) {
   const ref = React.useRef<HTMLDivElement>(null);
   const [pos, setPos] = React.useState<React.CSSProperties>({
     top: -9999,
@@ -21,13 +21,11 @@ function usePopupPosition(open: boolean, clickEvent: React.MouseEvent | null) { 
   });
 
   React.useLayoutEffect(() => {
-    // If the modal isn't opening, hide it off-screen
     if (!open || !clickEvent || !ref.current) {
        setPos({ top: -9999, left: -9999, opacity: 0 });
        return;
     }
     
-    // --- CRITICAL FIX: Ensure pop dimensions are valid numbers before calculation ---
     const pop = ref.current.getBoundingClientRect();
     const popHeight = pop.height || 300; // Default to 300px if unrendered (NaN defense)
     const popWidth = pop.width || 400;   // Default to 400px if unrendered
@@ -37,21 +35,29 @@ function usePopupPosition(open: boolean, clickEvent: React.MouseEvent | null) { 
     const clickY = clickEvent.clientY + window.scrollY;
     const clickX = clickEvent.clientX;
 
-    // Calculate Y position (Centered vertically around the click, constrained by top/bottom)
+    // Calculate Y position
     const y = clickY - (popHeight / 2);
-    // Calculate X position (Centered horizontally around the click, constrained by left/right)
+    // Calculate X position
     const x = clickX - (popWidth / 2);
+
+    // Apply strict bounds and check for NaN/Infinity before setting state
+    const finalTop = Math.max(pad + window.scrollY, y);
+    const finalLeft = Math.max(pad, Math.min(x, vw - popWidth - pad));
+
+    if (!Number.isFinite(finalTop) || !Number.isFinite(finalLeft)) {
+        // Log error if calculation is bad, but return to prevent crash
+        console.error("Modal position calculation resulted in non-finite value (NaN/Infinity).");
+        return; 
+    }
 
     setPos({
       position: 'absolute',
-      // Ensure top is never negative and constrained by window scroll
-      top: Math.max(pad + window.scrollY, y),
-      // Ensure left is constrained by window width
-      left: Math.max(pad, Math.min(x, vw - popWidth - pad)),
+      top: finalTop,
+      left: finalLeft,
       opacity: 1,
       transform: 'none',
     });
-  }, [open, clickEvent]); // Added 'open' to dependency list
+  }, [open, clickEvent]);
 
   return { ref, style: pos };
 }
@@ -60,7 +66,6 @@ function usePopupPosition(open: boolean, clickEvent: React.MouseEvent | null) { 
 export default function EventEditor({ open, clickEvent, ev, onClose, onChangeDates }: Props) {
   const [start, setStart] = React.useState(ev?.start ?? "");
   const [end, setEnd] = React.useState(ev?.end ?? "");
-  // --- FIXED: Pass the 'open' state to the positioning hook ---
   const { ref, style: positionStyle } = usePopupPosition(open, open ? (clickEvent || null) : null);
 
   useEscapeKey(onClose); // Close on Escape key
