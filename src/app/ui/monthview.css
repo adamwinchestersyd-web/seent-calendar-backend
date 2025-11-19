@@ -11,14 +11,22 @@
 
 /* NEW: Wrapper for the Repeating Header Row */
 .calendar-root .calendar-row-header-wrapper {
-    /* Use grid layout to align with cells below */
-    display: grid;
+    /* *** CRITICAL FIX: Enforce 7-column Grid Layout *** */
+    display: grid !important; 
     grid-auto-flow: column;
     grid-auto-columns: 1fr;
+    
     width: 100%;
     
     /* Stickiness: This is the critical element */
     position: sticky !important; 
-    top: 0 !important; /* Locks it to the top of the calendar-row (which should be the viewport) */
+    top: 0 !important; /* Locks it to the top of the calendar-row/viewport */
     z-index: 30; 
+}
+
+/* NEW: The single, fully-styled, repeating, sticky header bar (Day Name + Date) 
+   NOTE: This class itself is applied to the wrapper, which is now a grid.
+*/
+.calendar-root .sticky-date-full-header {
+    /* No additional styling needed here; properties are inherited from .calendar-row-header-wrapper */
 }

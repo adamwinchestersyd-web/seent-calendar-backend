@@ -1,5 +1,5 @@
 // MonthView.tsx
-// CACHE BUST v44 - REPEATING WORKING HEADER (Full Drop-in)
+// CACHE BUST v45 - FIX VERTICAL STACKING (Full Drop-in)
 import React from "react";
 import EventPillMonth from "../components/EventPillMonth.jsx"; 
 import {
@@ -96,11 +96,11 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                 <div key={i} className="calendar-header__cell">
                   {/* The working WeekView header content structure: */}
                   <div className="header-content-combined">
-                    {/* Day Name */}
+                    {/* Day Name (Now renders for all 6 weeks) */}
                     <div className="header-day-name">
                       {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][i]}
                     </div>
-                    {/* Date Number */}
+                    {/* Date Number (Now renders for all 6 weeks) */}
                     <div className="header-date-num">
                       {d.getDate()}
                     </div>
