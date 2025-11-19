@@ -81,6 +81,7 @@ html,body{ background:var(--bg); color:var(--text); }
     text-transform: uppercase;
     letter-spacing: 0.05em;
     opacity: 1; 
+    text-align: center;
 }
 .calendar-root .header-date-num {
     font-size: 18px; 
