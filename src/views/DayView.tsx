@@ -1,5 +1,5 @@
 // DayView.tsx
-// CACHE BUST v50 - SINGLE COLUMN GRID (Full Drop-in)
+// CACHE BUST v51 - HORIZONTAL CARD LAYOUT (Full Drop-in)
 import React from "react";
 import { links } from "../app/config/links";
 import { NoteIcon, ScrewIcon, CrownIcon } from "../app/ui/icons";
@@ -63,24 +63,22 @@ export default function DayView({ date, events }: Props) {
       <div className="calendar-grid">
         {/* 2. GRID ROW - Force single column content */}
         <div className="calendar-row" style={{ ["--cols" as any]: 1, gridTemplateColumns: '1fr' }}>
-          <div className="calendar-cell" style={{ padding: '12px' }}>
+          <div className="calendar-cell">
             {visible.length === 0 ? (
-              <div className="day-empty">No events for this day.</div>
+              <div className="day-empty" style={{ padding: '12px' }}>No events for this day.</div>
             ) : (
-              <div style={{ display: 'grid', gap: '12px' }}>
+              // *** FIXED: Apply Flexbox to content wrapper for horizontal flow and wrapping ***
+              <div className="day-cards-wrapper">
                 {visible.map((ev: any) => {
-                  // --- FIX: Use the stable CRM URL structure ---
                   const crmUrl = ev.caseId 
                     ? `https://crm.zoho.com/crm/org640578001/tab/Cases/${ev.caseId}` 
                     : ev.url || "#";
-                  // ---
 
                   const title =
                     `${ev.title}` +
                     (ev.caseHours ? ` (${ev.caseHours}h)` : "") +
                     (ev.startTime ? ` · ${ev.startTime}` : "");
                   
-                  // Use manual color or state color
                   const barColor = ev.colour || "#3b82f6";
 
                   return (
@@ -118,7 +116,6 @@ export default function DayView({ date, events }: Props) {
 
                         <div>
                           <a
-                            // --- FIX: Use the correct class for styling ---
                             className="btn-secondary"
                             href={crmUrl}
                             target="_blank"
