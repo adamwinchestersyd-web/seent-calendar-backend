@@ -1,18 +1,49 @@
-// CACHE BUST v38 - Fix DayView Link and Styling
+// DayView.tsx
+// CACHE BUST v49 - FIX DAYVIEW FILTER (Full Drop-in)
 import React from "react";
 import { links } from "../app/config/links";
 import { NoteIcon, ScrewIcon, CrownIcon } from "../app/ui/icons";
 
 type Props = { date: Date; events: any[] };
 
+// Helper to check if two dates are the same calendar day, ignoring time
+const isSameDay = (d1: Date, d2: Date) => {
+    return d1.getFullYear() === d2.getFullYear() &&
+           d1.getMonth() === d2.getMonth() &&
+           d1.getDate() === d2.getDate();
+};
+
 export default function DayView({ date, events }: Props) {
   // Filter events for this specific day
   const visible = events.filter((e) => {
-    const start = new Date(e.start);
-    const end = new Date(e.end);
-    // Check if the day falls within the event's range
-    return date >= start && date <= end;
+    const eventStart = new Date(e.start);
+    const eventEnd = new Date(e.end);
+
+    // CRITICAL FIX: Convert target date to its start-of-day boundary
+    const targetStartOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    // And its end-of-day boundary (start of next day)
+    const targetEndOfDay = addDays(targetStartOfDay, 1);
+
+    // 1. Check for single-day event match
+    if (isSameDay(eventStart, targetStartOfDay)) {
+        return true;
+    }
+
+    // 2. Check for multi-day span:
+    // Event starts before the end of the target day, AND
+    // Event ends after the start of the target day.
+    // We add 1 day to eventEnd for correct comparison since End Date in CRM usually means the last day *of* the work.
+    const eventEndAdjusted = addDays(eventEnd, 1); 
+    
+    return eventStart < targetEndOfDay && eventEndAdjusted > targetStartOfDay;
   });
+
+  // Helper from calendar utils (needs to be available)
+  function addDays(date: Date, days: number): Date {
+      const result = new Date(date);
+      result.setDate(result.getDate() + days);
+      return result;
+  }
 
   const labelDate =
     date.toLocaleDateString(undefined, {
