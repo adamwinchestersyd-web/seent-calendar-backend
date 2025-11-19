@@ -1,5 +1,5 @@
 // EventPillMonth.jsx
-// CACHE BUST v52 - FULL EVENT PROPAGATION FIX
+// CACHE BUST v53 - FINAL CLICK FIX (Full Drop-in)
 import React from "react";
 
 // Utility: clamp text to N lines using CSS-only
@@ -74,7 +74,7 @@ export default function EventPillMonth({ ev, style, className, onOpenEditor }) {
   };
 
   const onClick = (e) => {
-    e.stopPropagation(); // *** CRITICAL: Stop event from hitting the cell/row ***
+    e.stopPropagation(); // CRITICAL: Prevent hitting the cell/row below
     if (onOpenEditor) {
       const rect = e.currentTarget.getBoundingClientRect();
       // Call the parent handler with the event data and screen position

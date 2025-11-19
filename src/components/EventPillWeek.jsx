@@ -1,4 +1,5 @@
-// src/components/EventPillWeek.jsx
+// EventPillWeek.jsx
+// CACHE BUST v53 - FINAL CLICK FIX (Full Drop-in)
 import React from "react";
 
 // utility: clamp text to N lines using CSS-only (no JS measuring)
@@ -9,7 +10,6 @@ const clampStyle = (lines) => ({
   WebkitLineClamp: lines,
 });
 
-// --- FIXED: Added 'style' prop ---
 export default function EventPillWeek({ ev, isMultiDay, className, style, onOpenEditor }) {
   const ref = React.useRef(null);
 
@@ -26,7 +26,7 @@ export default function EventPillWeek({ ev, isMultiDay, className, style, onOpen
   // Merge incoming style (width: 100%) with our background color
   const colorStyle = {
     ...style, 
-    position: "relative", // <--- FORCE RELATIVE
+    position: "relative",
     background: ev.colour || "#3b82f6",
     boxSizing: "border-box",
   };
@@ -38,8 +38,7 @@ export default function EventPillWeek({ ev, isMultiDay, className, style, onOpen
   ].filter(Boolean).join(" ");
 
   const onClick = (e) => {
-    e.stopPropagation(); // *** ADDED: Stop event propagation to parents ***
-    // If onOpenEditor is passed, we need to find the DOM rect
+    e.stopPropagation(); // CRITICAL: Prevent hitting the cell/row below
     if (onOpenEditor) {
       const rect = e.currentTarget.getBoundingClientRect();
       onOpenEditor(ev, { clientY: rect.top, clientX: rect.left });
