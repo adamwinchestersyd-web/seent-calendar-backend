@@ -9,17 +9,6 @@
     min-height: 100%;
 }
 
-/* NEW: Wrapper for the entire Row (Header + Cells) */
-.calendar-root .calendar-row-with-header {
-    position: relative;
-    /* FIX: Force min-height on the outer row container, but keep its children vertical */
-    display: flex; 
-    flex-direction: column;
-    width: 100%;
-    /* REMOVED: Grid properties are applied to the inner repeater */
-}
-
-
 /* NEW: Header Repeater Bar (This must be horizontal and sticky) */
 .calendar-root .month-header-repeater {
     /* *** CRITICAL FIX: ENFORCE HORIZONTAL GRID *** */
@@ -34,18 +23,14 @@
     z-index: 30; 
 }
 
-/* Standard calendar-row (used for visual cells) must be horizontal */
-.calendar-root .calendar-row {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    width: 100%;
-    /* No sticky properties here */
+/* Ensure the shared calendar-header__cell is rendered correctly inside the repeater */
+.calendar-root .month-header-repeater .calendar-header__cell {
+    /* We must ensure the cell itself uses the full grid slot and doesn't wrap */
+    display: block; 
+    box-sizing: border-box;
 }
 
-/* We must ensure the component structure in MonthView.tsx is updated to use the appropriate classes,
-   which is not possible to represent fully here, but relies on:
-   <div className="calendar-header sticky-date-full-header blue-header"> 
-*/
+/* This class itself is applied to the wrapper */
 .calendar-root .sticky-date-full-header {
-    /* No additional styling needed here; properties are inherited from .month-header-repeater */
+    /* No additional styling needed here */
 }
