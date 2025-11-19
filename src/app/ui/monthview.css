@@ -11,10 +11,10 @@
 
 /* FIX: Sticky Date Number Styling */
 .calendar-root .monthview-date-num-in-cell {
-    position: sticky; 
+    position: sticky; /* Make the date sticky */
     top: 45px; /* Sticks 45px below the main Day Name header (DATE_HEADER_H) */
     left: 0;
-    z-index: 30; 
+    z-index: 30; /* Below main header (40), above pills (10) */
     
     font-size: 20px; 
     font-weight: 900;
@@ -25,11 +25,11 @@
     box-sizing: border-box; 
     text-align: right; 
     
-    /* *** ADDED: CRITICAL BACKGROUND *** */
+    /* *** CRITICAL FIX: Add background to make repeating date number visible *** */
     background: var(--panel); 
 }
 
-/* FIX: Remove duplicated date number on Week 1 only. */
+/* FIX: Hide the duplicate date number on Week 1 only. */
 .calendar-root .calendar-row:first-child .monthview-date-num-in-cell {
     display: none; 
 }
