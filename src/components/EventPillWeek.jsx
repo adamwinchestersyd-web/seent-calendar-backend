@@ -1,5 +1,5 @@
 // EventPillWeek.jsx
-// CACHE BUST v54 - FINAL CLICK FIX (Full Drop-in)
+// CACHE BUST v56 - FINAL CLICK FIX (Inline Enforcement)
 import React from "react";
 
 // utility: clamp text to N lines using CSS-only (no JS measuring)
@@ -13,7 +13,7 @@ const clampStyle = (lines) => ({
 export default function EventPillWeek({ ev, isMultiDay, className, style, onOpenEditor }) {
   const ref = React.useRef(null);
 
-  // ... (styles and calculations remain)
+  // 1 line for title, 1 for meta, 2 for notes = 4 lines total
   const titleStyle = { fontWeight: 600, ...clampStyle(1) };
   const metaStyle  = { opacity: 0.9, fontSize: 12, ...clampStyle(1) };
   const notesStyle = { opacity: 0.9, fontSize: 12, ...clampStyle(2) };
@@ -38,8 +38,8 @@ export default function EventPillWeek({ ev, isMultiDay, className, style, onOpen
   ].filter(Boolean).join(" ");
 
   const onClick = (e) => {
-    e.stopPropagation(); // CRITICAL: Prevent hitting the cell/row below
-    e.nativeEvent.stopImmediatePropagation(); // ADDED: Stop native event immediately
+    e.stopPropagation(); 
+    e.nativeEvent.stopImmediatePropagation(); // Defensive fix for cancellation
     if (onOpenEditor) {
       const rect = e.currentTarget.getBoundingClientRect();
       onOpenEditor(ev, { clientY: rect.top, clientX: rect.left });
@@ -50,7 +50,7 @@ export default function EventPillWeek({ ev, isMultiDay, className, style, onOpen
     <div 
       ref={ref}
       className={pillClasses} 
-      style={colorStyle} 
+      style={{...colorStyle, cursor: 'pointer'}} // Enforce pointer cursor
       title={ev.title}
       onClick={onClick}
     >
