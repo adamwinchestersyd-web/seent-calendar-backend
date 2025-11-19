@@ -8,3 +8,8 @@
 .calendar-root .monthview-grid {
     min-height: 100%;
 }
+.calendar-root .month-week-header {
+    /* FIX: Ensure it is a standard block element that maintains sticky positioning */
+    display: block;
+    width: 100%;
+}
