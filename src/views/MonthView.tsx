@@ -1,5 +1,5 @@
 // MonthView.tsx
-// CACHE BUST v43 - FINAL REPLACING STICKY HEADER (Full Drop-in)
+// CACHE BUST v44 - REPEATING WORKING HEADER (Full Drop-in)
 import React from "react";
 import EventPillMonth from "../components/EventPillMonth.jsx"; 
 import {
@@ -90,29 +90,31 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
             className="calendar-row" 
             style={{ ["--cols" as any]: 7, height: rowHeights[rIdx] }}
           >
-            {row.week.map((d: Date, i: number) => (
-              <div
-                key={i}
-                className="calendar-cell"
-              >
-                {/* 1. STICKY HEADER REPEATER (The only header) */}
-                <div className="sticky-date-full-header blue-header">
+            {/* 1. REPEATING FULL HEADER ROW */}
+            <div className="calendar-row-header-wrapper sticky-date-full-header blue-header">
+              {row.week.map((d: Date, i: number) => (
+                <div key={i} className="calendar-header__cell">
+                  {/* The working WeekView header content structure: */}
                   <div className="header-content-combined">
-                    {/* Day Name: Render for ALL rows */}
+                    {/* Day Name */}
                     <div className="header-day-name">
                       {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][i]}
                     </div>
-                    {/* Date Number: Render for ALL rows */}
+                    {/* Date Number */}
                     <div className="header-date-num">
                       {d.getDate()}
                     </div>
                   </div>
                 </div>
+              ))}
+            </div>
 
-                {/* 2. SPACER REMOVED. Events are positioned absolutely from the top. */}
-              </div>
+            {/* 2. Standard Grid Cells (for visual vertical lines) */}
+            {row.week.map((d: Date, i: number) => (
+              <div key={i} className="calendar-cell" />
             ))}
-
+            
+            {/* 3. Event Layer */}
             <div className="absolute inset-0 pointer-events-none">
               {row.lanes.map((lane: any[], laneIdx: number) =>
                 lane.map((seg: any, bi: number) => {

@@ -9,14 +9,16 @@
     min-height: 100%;
 }
 
-/* NEW: The single, fully-styled, repeating, sticky header bar (Day Name + Date) */
-.calendar-root .sticky-date-full-header {
-    position: sticky !important; /* REINFORCED STICKINESS */
-    top: 0 !important; /* Locks it to the top of the calendar-cell/viewport */
-    left: 0;
-    z-index: 30; /* Below modals, above events */
+/* NEW: Wrapper for the Repeating Header Row */
+.calendar-root .calendar-row-header-wrapper {
+    /* Use grid layout to align with cells below */
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
     width: 100%;
-    box-sizing: border-box;
-    text-align: center;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    
+    /* Stickiness: This is the critical element */
+    position: sticky !important; 
+    top: 0 !important; /* Locks it to the top of the calendar-row (which should be the viewport) */
+    z-index: 30; 
 }
