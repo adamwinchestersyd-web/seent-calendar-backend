@@ -44,7 +44,7 @@ html,body{ background:var(--bg); color:var(--text); }
 
 /* Day Name Header Row (Week 1 Header) */
 .calendar-root .calendar-header{
-  /* FIX: Ensure standard grid properties */
+  /* *** CRITICAL FIX: ENFORCE HORIZONTAL GRID TEMPLATE *** */
   display:grid !important;
   grid-template-columns: repeat(7, 1fr) !important; /* Force 7 columns horizontally */
   
@@ -65,6 +65,12 @@ html,body{ background:var(--bg); color:var(--text); }
   font-size:13px;
   letter-spacing:.02em;
   color:var(--text);
+  /* FIX: Apply necessary padding and text styling directly to the cell */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 45px;
 }
 
 /* --- STICKY HEADER (REINFORCED STICKINESS) --- */
@@ -82,29 +88,23 @@ html,body{ background:var(--bg); color:var(--text); }
   border-bottom: 1px solid #312e81;
 }
 
-/* FIX: Combined Header Content (Day Name + Date) */
-.calendar-root .header-content-combined { 
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-    min-height: 45px; 
-    color: #ffffff;
-    font-weight: 700;
-    padding: 0; 
-}
+/* FIX: Individual Day Name and Date Number Styles */
+/* .header-content-combined class REMOVED */
+
 .calendar-root .header-day-name {
     font-size: 13px;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     opacity: 1; 
+    color: #ffffff;
+    line-height: 1.1;
 }
 .calendar-root .header-date-num {
     font-size: 18px; 
     font-weight: 900;
     line-height: 1.1; 
     margin-top: 2px; 
+    color: #ffffff;
 }
 
 
@@ -115,7 +115,6 @@ html,body{ background:var(--bg); color:var(--text); }
 .calendar-root .calendar-row{
   position:relative;
   display:grid;
-  
   /* CRITICAL FIX: ENSURE VERTICAL GUIDELINE VISIBILITY AND GRID LAYOUT */
   grid-template-columns: repeat(7, 1fr) !important;
   grid-auto-flow:column;
