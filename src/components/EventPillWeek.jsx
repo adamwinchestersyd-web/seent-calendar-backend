@@ -1,5 +1,5 @@
 // EventPillWeek.jsx
-// CACHE BUST v56 - FINAL CLICK FIX (Inline Enforcement)
+// CACHE BUST v57 - SYNTHETIC MOUSE DOWN FIX (Full Drop-in)
 import React from "react";
 
 // utility: clamp text to N lines using CSS-only (no JS measuring)
@@ -37,14 +37,27 @@ export default function EventPillWeek({ ev, isMultiDay, className, style, onOpen
     ev.isManual ? "event-pill--manual" : ""
   ].filter(Boolean).join(" ");
 
-  const onClick = (e) => {
-    e.stopPropagation(); 
-    e.nativeEvent.stopImmediatePropagation(); // Defensive fix for cancellation
-    if (onOpenEditor) {
-      const rect = e.currentTarget.getBoundingClientRect();
-      onOpenEditor(ev, { clientY: rect.top, clientX: rect.left });
-    }
-  };
+  // --- CRITICAL FIX: Attach native event listener ---
+  React.useEffect(() => {
+    const node = ref.current;
+    if (!node || !onOpenEditor) return;
+
+    const handleMouseDown = (e) => {
+        // Prevent event from bubbling up and triggering grid/cell handlers
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        
+        // Use coordinates from the native event
+        onOpenEditor(ev, { clientY: e.clientY, clientX: e.clientX });
+    };
+
+    // Attach listener to capture event early
+    node.addEventListener('mousedown', handleMouseDown);
+
+    return () => {
+        node.removeEventListener('mousedown', handleMouseDown);
+    };
+  }, [ev, onOpenEditor]); // Re-attach if event data or handler changes
 
   return (
     <div 
@@ -52,7 +65,7 @@ export default function EventPillWeek({ ev, isMultiDay, className, style, onOpen
       className={pillClasses} 
       style={{...colorStyle, cursor: 'pointer'}} // Enforce pointer cursor
       title={ev.title}
-      onClick={onClick}
+      // onClick REMOVED!
     >
       <div className="event__fill" style={{ background: ev.colour || "#3b82f6" }} /> 
       

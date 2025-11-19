@@ -1,5 +1,5 @@
 // EventPillMonth.jsx
-// CACHE BUST v56 - FINAL CLICK FIX (Inline Enforcement)
+// CACHE BUST v57 - SYNTHETIC MOUSE DOWN FIX (Full Drop-in)
 import React from "react";
 
 // Utility: clamp text to N lines using CSS-only
@@ -12,6 +12,8 @@ const clampStyle = (lines) => ({
 });
 
 export default function EventPillMonth({ ev, style, className, onOpenEditor }) {
+  const ref = React.useRef(null);
+
   // ... (style definitions remain)
   const titleStyle = { 
     fontWeight: 700, 
@@ -69,21 +71,31 @@ export default function EventPillMonth({ ev, style, className, onOpenEditor }) {
     position: "relative" 
   };
 
-  const onClick = (e) => {
-    e.stopPropagation(); // CRITICAL: Prevent hitting the cell/row below
-    e.nativeEvent.stopImmediatePropagation(); // Defensive fix for cancellation
-    if (onOpenEditor) {
-      const rect = e.currentTarget.getBoundingClientRect();
-      onOpenEditor(ev, { clientY: rect.top, clientX: rect.left });
-    }
-  };
+  // --- CRITICAL FIX: Attach native event listener ---
+  React.useEffect(() => {
+    const node = ref.current;
+    if (!node || !onOpenEditor) return;
+
+    const handleMouseDown = (e) => {
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        onOpenEditor(ev, { clientY: e.clientY, clientX: e.clientX });
+    };
+
+    node.addEventListener('mousedown', handleMouseDown);
+
+    return () => {
+        node.removeEventListener('mousedown', handleMouseDown);
+    };
+  }, [ev, onOpenEditor]);
 
   return (
     <div 
+      ref={ref}
       className={`event-pill-month ${ev.isManual ? "event-pill--manual" : ""}`}
       style={{...containerStyle, cursor: 'pointer'}} // Enforce pointer cursor
       title={ev.title}
-      onClick={onClick}
+      // onClick REMOVED!
     >
       {/* Title */}
       <div style={titleStyle}>
