@@ -1,5 +1,5 @@
 // WeekView.tsx
-// CACHE BUST v53 - FINAL STABLE CLICK FIX (Full Drop-in)
+// CACHE BUST v58 - REMOVING DEFENSIVE RETURN (Full Drop-in)
 import React from "react";
 import EventPillWeek from "../components/EventPillWeek.jsx"; 
 import {
@@ -152,6 +152,9 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
     setPendingResize(null);
   };
 
+  // --- CRITICAL FIX: REMOVING DEFENSIVE RETURN ---
+  // The component must render to allow useLayoutEffect to run and calculate dimensions.
+
   return (
     <div className="calendar-root">
       {/* 1. TOP STICKY HEADER (Day Names AND Date Numbers combined) */}
@@ -186,7 +189,8 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
           {lanes.map((lane, li) =>
             lane.map((seg, bi) => {
               const e = seg.evt;
-              const top = laneTops[li] || 0;
+              // CRITICAL FIX: Default top to 0 if laneTops[li] is undefined during early renders
+              const top = laneTops[li] || 0; 
               const leftPct = (seg.offset / 7) * 100;
               const widthPct = (Math.max(1, seg.span) / 7) * 100;
               const isSingle = seg.span === 1;
@@ -197,10 +201,10 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
                 <div
                   key={seg.id}
                   ref={laneRefs[li][bi]}
-                  className="pointer-events-auto" /* CRITICAL: Re-enable pointer events */
+                  className="pointer-events-auto"
                   style={{
                         position: "absolute",
-                        top,
+                        top: `${top}px`, // This should now resolve to '0px' if laneTops is not ready
                         left: `${leftPct}%`,
                         width: `${widthPct}%`,
                         padding: `${V_GUTTER}px ${H_GUTTER}px`,
