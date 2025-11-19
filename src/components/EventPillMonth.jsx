@@ -1,4 +1,5 @@
-// CACHE BUST v35 - Dedicated Month Pill
+// EventPillMonth.jsx
+// CACHE BUST v52 - FULL EVENT PROPAGATION FIX
 import React from "react";
 
 // Utility: clamp text to N lines using CSS-only
@@ -54,9 +55,6 @@ export default function EventPillMonth({ ev, style, className, onOpenEditor }) {
   const line2 = [wip, ins, own].filter(Boolean).join(" | ");
 
   // Container Style: 
-  // - Relative (so it fills the absolute wrapper from MonthView)
-  // - 100% Width/Height
-  // - Background color from event
   const containerStyle = {
     ...style,
     width: "100%",
@@ -76,9 +74,10 @@ export default function EventPillMonth({ ev, style, className, onOpenEditor }) {
   };
 
   const onClick = (e) => {
-    e.stopPropagation();
+    e.stopPropagation(); // *** CRITICAL: Stop event from hitting the cell/row ***
     if (onOpenEditor) {
       const rect = e.currentTarget.getBoundingClientRect();
+      // Call the parent handler with the event data and screen position
       onOpenEditor(ev, { clientY: rect.top, clientX: rect.left });
     }
   };
