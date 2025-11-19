@@ -107,11 +107,13 @@ html,body{ background:var(--bg); color:var(--text); }
 }
 .calendar-root .calendar-row:last-child{ border-bottom:0; }
 
-/* FIX: Ensure cell has relative positioning and NO internal padding */
+/* FIX: Ensure cell has relative positioning and NO internal padding (ALIGMENT FIX) */
 .calendar-root .calendar-cell{ 
   position:relative; 
   min-height:56px;
   padding: 0; 
+  box-sizing: border-box;
+  border: none; /* Ensures no invisible borders shift the content */
 }
 
 /* ---------- EVENT PILLS (Unchanged) ---------- */
