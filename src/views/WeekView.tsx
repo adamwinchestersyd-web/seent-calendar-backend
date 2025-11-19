@@ -1,5 +1,5 @@
 // WeekView.tsx
-// CACHE BUST v59 - NaN DEFENSE ONLY (Full Drop-in)
+// CACHE BUST v60 - DEBUGGING ENABLED (Full Drop-in)
 import React from "react";
 import EventPillWeek from "../components/EventPillWeek.jsx"; 
 import {
@@ -152,8 +152,7 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
     setPendingResize(null);
   };
 
-  // --- CRITICAL FIX: REMOVING DEFENSIVE RETURN (allows rendering) ---
-  // We rely on 'top = laneTops[li] || 0;' to prevent NaN.
+  // --- CRITICAL FIX: The logic here is stable as it relies on 'top = laneTops[li] || 0;' ---
 
   return (
     <div className="calendar-root">
@@ -199,7 +198,6 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
           {lanes.map((lane, li) =>
             lane.map((seg, bi) => {
               const e = seg.evt;
-              // CRITICAL FIX: Default top to 0 if laneTops[li] is undefined during early renders
               const top = laneTops[li] || 0; 
               const leftPct = (seg.offset / 7) * 100;
               const widthPct = (Math.max(1, seg.span) / 7) * 100;
@@ -214,7 +212,7 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
                   className="pointer-events-auto"
                   style={{
                         position: "absolute",
-                        top: `${top}px`, // This should now resolve to '0px' if laneTops is not ready
+                        top: `${top}px`,
                         left: `${leftPct}%`,
                         width: `${widthPct}%`,
                         padding: `${V_GUTTER}px ${H_GUTTER}px`,
@@ -231,6 +229,9 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
                   className={e.colorClass || "event--blue"}
                   style={{ width: "100%", ...e.colour ? {["--c"]: e.colour} : {} }}
                   onOpenEditor={(ev: any, rect: any) => { 
+                     // *** DEBUG LOGGING ADDED ***
+                     console.log(`[CLICK DEBUG] Pill ID: ${e.id}, Title: ${e.title}, Coords: (${rect.clientX}, ${rect.clientY})`);
+                     
                      if (rect) onOpenEditor?.(ev, { clientY: rect.top, clientX: rect.left } as any);
                   }}
                 />
