@@ -1,5 +1,5 @@
 // MonthView.tsx
-// CACHE BUST v38 - ADOPTING WORKING WEEKVIEW HEADER
+// CACHE BUST v39 - REPEATING FULL HEADER (Day Name + Date)
 import React from "react";
 import EventPillMonth from "../components/EventPillMonth.jsx"; 
 import {
@@ -19,8 +19,8 @@ type Props = {
 };
 
 const CELL_MIN_H = 150; 
-const DATE_HEADER_H = 45; // Height of the successful WeekView header bar
-const EVENT_H = 64; // Approx. 60px pill height + 4px gap (for EventPillMonth)
+const DATE_HEADER_H = 45; // Height of the combined sticky bar
+const EVENT_H = 64; 
 const V_GUTTER = 2;
 const H_GUTTER = 4;
 
@@ -69,7 +69,7 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
   const rowHeights: number[] = React.useMemo(() => {
     return weekData.map((data: WeekRow) => {
       const maxLaneIndex = data.lanes.length;
-      // Height = Header Height + (Events * Height) + 10px bottom spacing
+      // Height = Sticky Header Height + (Events * Height) + 10px bottom spacing
       const contentH = DATE_HEADER_H + (maxLaneIndex * EVENT_H) + 10; 
       return Math.max(CELL_MIN_H, contentH);
     });
@@ -82,22 +82,7 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
 
   return (
     <div className="calendar-root">
-      {/* 1. WEEK 1 HEADER (Adopts the proven WeekView structure) */}
-      <div className="calendar-header sticky-header blue-header">
-        {weeks[0].map((d: Date, i: number) => (
-          <div key={i} className="calendar-header__cell">
-            {/* Using the standard header-content structure that worked in WeekView */}
-            <div className="header-content-combined">
-              <div className="header-day-name">
-                {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][i]}
-              </div>
-              <div className="header-date-num">
-                {d.getDate()}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+      {/* 1. MAIN HEADER (REMOVED: The repeating sticky element handles the header) */}
       
       <div className="calendar-grid">
         {weekData.map((row: WeekRow, rIdx: number) => (
@@ -111,17 +96,21 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                 key={i}
                 className="calendar-cell"
               >
-                {/* 2. REPEATING DATE NUMBER (Visible only in Weeks 2-6) */}
-                {rIdx > 0 && (
-                    <div className="monthview-date-num-in-cell">
-                        {d.getDate()}
+                {/* 2. REPEATING FULL HEADER (Day Name + Date Number) */}
+                <div className="sticky-date-full-header blue-header">
+                  <div className="header-content-combined">
+                    {/* Day Name - Only display the day name for the first row (Week 1) */}
+                    {rIdx === 0 && (
+                        <div className="header-day-name">
+                          {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][i]}
+                        </div>
+                    )}
+                    {/* Date Number - Display for all rows */}
+                    <div className="header-date-num">
+                      {d.getDate()}
                     </div>
-                )}
-                
-                {/* 3. SPACER for Week 1 events (pushes them down below the Week 1 sticky header) */}
-                {rIdx === 0 && (
-                    <div style={{height: `${DATE_HEADER_H}px`}}></div>
-                )}
+                  </div>
+                </div>
               </div>
             ))}
 

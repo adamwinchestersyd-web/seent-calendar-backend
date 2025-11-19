@@ -1,4 +1,4 @@
-// CACHE BUST v23 - Fix Types & Logic
+// CACHE BUST v39 - ENFORCE 7 COLUMN GRID & STICKINESS
 import React from "react";
 import EventPillWeek from "../components/EventPillWeek.jsx"; 
 import {
@@ -15,6 +15,8 @@ type Props = {
   events: any[];
   onOpenEditor?: (ev: any, clickEvent: React.MouseEvent) => void;
 };
+
+// ... (rest of helper functions: useElementWidth, etc.)
 
 function useElementWidth(ref: React.RefObject<HTMLDivElement>) {
   const [w, setW] = React.useState(0);
@@ -104,7 +106,6 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
     return () => cancelAnimationFrame(raf);
   }, [rowWidth, lanes, laneRefs, BAR_MIN, LANE_GAP, laneHeights, sectionH]);
 
-  // --- FIXED: Explicit calculation of tops (solves 'forEach' on number error) ---
   const laneTops = React.useMemo(() => {
     const tops: number[] = [];
     let currentTop = 0;
@@ -154,12 +155,16 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
 
   return (
     <div className="calendar-root">
-      <div className="calendar-header sticky-header blue-header">
+      {/* FIXED: Explicitly enforce 7-column grid in the header */}
+      <div 
+        className="calendar-header sticky-header blue-header"
+        style={{ ["--cols" as any]: 7 }} 
+      >
         {days.map((d, i) => (
           <div key={i} className="calendar-header__cell">
-            <div className="header-content">
+            <div className="header-content-combined">
               <div className="header-day-name">
-                {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][i]}
+                {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][i]}
               </div>
               <div className="header-date-num">
                 {d.getDate()}
