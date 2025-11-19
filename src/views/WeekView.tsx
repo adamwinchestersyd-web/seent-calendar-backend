@@ -1,5 +1,5 @@
 // WeekView.tsx
-// CACHE BUST v55 - FIX NaN ERROR (Full Drop-in)
+// CACHE BUST v56 - FINAL NaN DEFENSE (Full Drop-in)
 import React from "react";
 import EventPillWeek from "../components/EventPillWeek.jsx"; 
 import {
@@ -152,6 +152,15 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
     setPendingResize(null);
   };
 
+  // --- CRITICAL FIX: Defensive return if heights are missing (NaN prevention) ---
+  if (!laneHeights.length && lanes.flat().length > 0) {
+      return (
+          <div className="calendar-root">
+              <div className="p-4">Loading event dimensions...</div>
+          </div>
+      );
+  }
+  
   return (
     <div className="calendar-root">
       {/* 1. TOP STICKY HEADER (Day Names AND Date Numbers combined) */}
@@ -186,7 +195,7 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
           {lanes.map((lane, li) =>
             lane.map((seg, bi) => {
               const e = seg.evt;
-              // CRITICAL FIX: Ensure top is a number, default to 0 if laneTops is not ready
+              // CRITICAL FIX: laneTops[li] is guaranteed to be a number >= 0 here
               const top = laneTops[li] || 0; 
               const leftPct = (seg.offset / 7) * 100;
               const widthPct = (Math.max(1, seg.span) / 7) * 100;
@@ -201,7 +210,7 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
                   className="pointer-events-auto"
                   style={{
                         position: "absolute",
-                        top: `${top}px`, // Use defensive check here
+                        top: `${top}px`,
                         left: `${leftPct}%`,
                         width: `${widthPct}%`,
                         padding: `${V_GUTTER}px ${H_GUTTER}px`,
