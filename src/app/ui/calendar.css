@@ -82,20 +82,29 @@ html,body{ background:var(--bg); color:var(--text); }
 }
 
 /* Header Content (Day Name) - ensures the main header is 45px tall */
+/* Header Content (Day Name) - ensures the main header is 45px tall */
 .calendar-root .header-content {
     display: flex;
-    flex-direction: column;
+    flex-direction: column; /* Stack Day Name on Date Number */
     justify-content: center;
     align-items: center;
     width: 100%;
     min-height: 45px; 
 }
 .calendar-root .header-day-name {
-    font-size: 14px;
-    opacity: 1; 
+    font-size: 13px; /* Smaller font for Day Name */
+    opacity: 1;
+    line-height: 1.1; /* Tighter spacing */
 }
-/* Date Number styles are defined in monthview.css, not here. */
 
+/* ADDED: Style to make the date number visually fit inside the blue header */
+.calendar-root .header-date-num {
+    font-size: 18px; 
+    font-weight: 900;
+    line-height: 1.1; 
+    color: #ffffff; /* Ensure visibility against the blue background */
+    margin-top: 2px; /* Small separation from the Day Name */
+}
 
 /* --------------------------------------------------------------------------
    Grid

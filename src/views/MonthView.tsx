@@ -91,8 +91,13 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
         {weeks[0].map((d: Date, i: number) => (
           <div key={i} className="calendar-header__cell">
             <div className="header-content">
+              {/* Day Name */}
               <div className="header-day-name">
                 {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][i]}
+              </div>
+              {/* ADDED: Date Number to the main sticky header */}
+              <div className="header-date-num monthview-date-num-override">
+                {d.getDate()}
               </div>
             </div>
           </div>
