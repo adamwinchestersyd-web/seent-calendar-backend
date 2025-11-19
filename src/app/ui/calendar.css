@@ -125,8 +125,23 @@ html,body{ background:var(--bg); color:var(--text); }
   padding: 0; 
 }
 
-/* --- STICKY DATE LABEL (Removed as separate element) --- */
-/* The date is now part of the header */
+/* --- STICKY DATE LABEL (Bar inside the Cell) --- */
+.calendar-root .sticky-date-label {
+  position: sticky;
+  top: 0; 
+  left: 0;
+  z-index: 30;
+  padding: 6px 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  background: #4338ca; 
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center; 
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
 
 /* ---------- EVENT PILLS (Rest of CSS is unchanged) ---------- */
 :root{
@@ -180,7 +195,7 @@ html,body{ background:var(--bg); color:var(--text); }
 
 
 /* --------------------------------------------------------------------------
-   MODAL STYLES (Omitted)
+   MODAL STYLES (Unchanged)
 -------------------------------------------------------------------------- */
 .calendar-editor-modal {
   position: absolute; width: 380px; background: var(--light-bg); color: var(--light-text); border: 1px solid var(--light-border); border-radius: 12px; box-shadow: 0 12px 32px rgba(0,0,0,.22); padding: 18px; z-index: 9999; transition: opacity 150ms ease-in-out; color-scheme: light; border-top: 6px solid var(--green-test-bar); 
