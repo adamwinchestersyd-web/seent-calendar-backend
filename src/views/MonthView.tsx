@@ -1,5 +1,5 @@
 // MonthView.tsx
-// CACHE BUST v49 - REMOVING GIANT BLUE BOX (Full Drop-in)
+// CACHE BUST v50 - STRUCTURAL RESTORATION (Full Drop-in)
 import React from "react";
 import EventPillMonth from "../components/EventPillMonth.jsx"; 
 import {
@@ -90,7 +90,7 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
             className="calendar-row" 
             style={{ ["--cols" as any]: 7, height: rowHeights[rIdx] }}
           >
-            {/* 1. REPEATING FULL HEADER ROW - APPLY BLUE HEADER TO THE GRID ROW ITSELF */}
+            {/* 1. REPEATING FULL HEADER ROW */}
             <div className="calendar-header sticky-header blue-header">
               {row.week.map((d: Date, i: number) => (
                 <div key={i} className="calendar-header__cell">

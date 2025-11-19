@@ -88,9 +88,18 @@ html,body{ background:var(--bg); color:var(--text); }
   border-bottom: 1px solid #312e81;
 }
 
-/* FIX: Individual Day Name and Date Number Styles */
-/* .header-content-combined class REMOVED */
-
+/* FIX: Combined Header Content (Day Name + Date) */
+.calendar-root .header-content-combined { 
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    min-height: 45px; 
+    color: #ffffff;
+    font-weight: 700;
+    padding: 0; 
+}
 .calendar-root .header-day-name {
     font-size: 13px;
     text-transform: uppercase;
