@@ -1,4 +1,5 @@
-// CACHE BUST v4
+// EventEditor.tsx
+// CACHE BUST v59 - MODAL POSITIONING FIX (Full Drop-in)
 import React from "react";
 import { useEscapeKey } from "../../hooks/useEscapeKey";
 
@@ -11,7 +12,7 @@ type Props = {
 };
 
 // Positioning hook
-function usePopupPosition(clickEvent: React.MouseEvent | null) {
+function usePopupPosition(open: boolean, clickEvent: React.MouseEvent | null) { // Added 'open' to hook params
   const ref = React.useRef<HTMLDivElement>(null);
   const [pos, setPos] = React.useState<React.CSSProperties>({
     top: -9999,
@@ -20,25 +21,37 @@ function usePopupPosition(clickEvent: React.MouseEvent | null) {
   });
 
   React.useLayoutEffect(() => {
-    if (!clickEvent || !ref.current) {
+    // If the modal isn't opening, hide it off-screen
+    if (!open || !clickEvent || !ref.current) {
        setPos({ top: -9999, left: -9999, opacity: 0 });
        return;
     }
+    
+    // --- CRITICAL FIX: Ensure pop dimensions are valid numbers before calculation ---
     const pop = ref.current.getBoundingClientRect();
+    const popHeight = pop.height || 300; // Default to 300px if unrendered (NaN defense)
+    const popWidth = pop.width || 400;   // Default to 400px if unrendered
+    
     const pad = 12;
     const vw = window.innerWidth;
     const clickY = clickEvent.clientY + window.scrollY;
-    const y = clickY - (pop.height / 2);
     const clickX = clickEvent.clientX;
-    const x = clickX - (pop.width / 2);
+
+    // Calculate Y position (Centered vertically around the click, constrained by top/bottom)
+    const y = clickY - (popHeight / 2);
+    // Calculate X position (Centered horizontally around the click, constrained by left/right)
+    const x = clickX - (popWidth / 2);
+
     setPos({
       position: 'absolute',
+      // Ensure top is never negative and constrained by window scroll
       top: Math.max(pad + window.scrollY, y),
-      left: Math.max(pad, Math.min(x, vw - pop.width - pad)),
+      // Ensure left is constrained by window width
+      left: Math.max(pad, Math.min(x, vw - popWidth - pad)),
       opacity: 1,
       transform: 'none',
     });
-  }, [clickEvent, open]);
+  }, [open, clickEvent]); // Added 'open' to dependency list
 
   return { ref, style: pos };
 }
@@ -47,7 +60,8 @@ function usePopupPosition(clickEvent: React.MouseEvent | null) {
 export default function EventEditor({ open, clickEvent, ev, onClose, onChangeDates }: Props) {
   const [start, setStart] = React.useState(ev?.start ?? "");
   const [end, setEnd] = React.useState(ev?.end ?? "");
-  const { ref, style: positionStyle } = usePopupPosition(open ? (clickEvent || null) : null);
+  // --- FIXED: Pass the 'open' state to the positioning hook ---
+  const { ref, style: positionStyle } = usePopupPosition(open, open ? (clickEvent || null) : null);
 
   useEscapeKey(onClose); // Close on Escape key
   
