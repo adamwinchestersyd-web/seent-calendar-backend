@@ -1,5 +1,5 @@
 // EventPillMonth.jsx
-// CACHE BUST v53 - FINAL CLICK FIX (Full Drop-in)
+// CACHE BUST v54 - FINAL CLICK FIX (Simplified DOM)
 import React from "react";
 
 // Utility: clamp text to N lines using CSS-only
@@ -12,11 +12,21 @@ const clampStyle = (lines) => ({
 });
 
 export default function EventPillMonth({ ev, style, className, onOpenEditor }) {
-  // --- 4-Line Layout ---
-  // Line 1: Title (Bold)
-  // Line 2: Meta (WIP | Installer)
-  // Line 3-4: Notes (Italic)
-  
+  // ... (safeString helper remains)
+  const safeString = (val) => {
+    if (!val) return "";
+    if (typeof val === "string") return val;
+    if (val.name) return val.name;
+    return String(val);
+  };
+
+  // ... (wip, ins, own, line2 calculations remain)
+  const wip = safeString(ev.wipManager);
+  const ins = safeString(ev.installer);
+  const own = safeString(ev.caseOwner);
+  const line2 = [wip, ins, own].filter(Boolean).join(" | ");
+
+  // ... (style definitions remain)
   const titleStyle = { 
     fontWeight: 700, 
     fontSize: "12px",
@@ -41,19 +51,6 @@ export default function EventPillMonth({ ev, style, className, onOpenEditor }) {
     ...clampStyle(2) 
   };
 
-  // Safe data extraction
-  const safeString = (val) => {
-    if (!val) return "";
-    if (typeof val === "string") return val;
-    if (val.name) return val.name;
-    return String(val);
-  };
-
-  const wip = safeString(ev.wipManager);
-  const ins = safeString(ev.installer);
-  const own = safeString(ev.caseOwner);
-  const line2 = [wip, ins, own].filter(Boolean).join(" | ");
-
   // Container Style: 
   const containerStyle = {
     ...style,
@@ -75,9 +72,9 @@ export default function EventPillMonth({ ev, style, className, onOpenEditor }) {
 
   const onClick = (e) => {
     e.stopPropagation(); // CRITICAL: Prevent hitting the cell/row below
+    e.nativeEvent.stopImmediatePropagation(); // ADDED: Stop native event immediately
     if (onOpenEditor) {
       const rect = e.currentTarget.getBoundingClientRect();
-      // Call the parent handler with the event data and screen position
       onOpenEditor(ev, { clientY: rect.top, clientX: rect.left });
     }
   };
@@ -88,6 +85,8 @@ export default function EventPillMonth({ ev, style, className, onOpenEditor }) {
       style={containerStyle}
       title={ev.title}
       onClick={onClick}
+      // ADDED: Force z-index high, although pointer-events:auto should be enough
+      data-testid="event-pill" 
     >
       {/* Title */}
       <div style={titleStyle}>
