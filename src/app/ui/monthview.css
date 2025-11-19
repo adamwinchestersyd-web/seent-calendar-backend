@@ -9,12 +9,37 @@
     min-height: 100%;
 }
 
-/* NEW: The single, fully-styled, repeating, sticky header bar (Day Name + Date) 
-   We remove the failed grid definitions and let the generic .calendar-header handle it.
-*/
-.calendar-root .calendar-row-header-wrapper {
-    /* REMOVED: display: grid, grid-template-columns, etc. */
-    /* This element's children will now spread horizontally due to the fix in calendar.css */
+/* NEW: Wrapper for the entire Row (Header + Cells) */
+.calendar-root .calendar-row-with-header {
+    position: relative;
+    /* FIX: Force min-height on the outer row container, but keep its children vertical */
+    display: flex; 
+    flex-direction: column;
+    width: 100%;
+    /* REMOVED: Grid properties are applied to the inner repeater */
+}
+
+
+/* NEW: Header Repeater Bar (This must be horizontal and sticky) */
+.calendar-root .month-header-repeater {
+    /* *** CRITICAL FIX: ENFORCE HORIZONTAL GRID *** */
+    display: grid !important; 
+    grid-template-columns: repeat(7, 1fr) !important;
+    
+    width: 100%;
+    
+    /* Stickiness: This is the critical element */
+    position: sticky !important; 
+    top: 0 !important; /* Locks it to the top of the calendar-row/viewport */
+    z-index: 30; 
+}
+
+/* Standard calendar-row (used for visual cells) must be horizontal */
+.calendar-root .calendar-row {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    width: 100%;
+    /* No sticky properties here */
 }
 
 /* We must ensure the component structure in MonthView.tsx is updated to use the appropriate classes,
@@ -22,8 +47,5 @@
    <div className="calendar-header sticky-date-full-header blue-header"> 
 */
 .calendar-root .sticky-date-full-header {
-    position: sticky !important; 
-    top: 0 !important; 
-    z-index: 30; 
-    width: 100%;
+    /* No additional styling needed here; properties are inherited from .month-header-repeater */
 }

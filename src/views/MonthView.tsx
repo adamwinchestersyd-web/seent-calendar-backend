@@ -1,5 +1,5 @@
 // MonthView.tsx
-// CACHE BUST v45 - FIX VERTICAL STACKING (Full Drop-in)
+// CACHE BUST v46 - FIX FINAL STACKING (Full Drop-in)
 import React from "react";
 import EventPillMonth from "../components/EventPillMonth.jsx"; 
 import {
@@ -87,11 +87,11 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
         {weekData.map((row: WeekRow, rIdx: number) => (
           <div 
             key={rIdx} 
-            className="calendar-row" 
-            style={{ ["--cols" as any]: 7, height: rowHeights[rIdx] }}
+            className="calendar-row-with-header" /* NEW CLASS TO WRAP EVERYTHING */
+            style={{ ["--cols" as any]: 7, minHeight: rowHeights[rIdx] }}
           >
-            {/* 1. REPEATING FULL HEADER ROW */}
-            <div className="calendar-header sticky-date-full-header blue-header"> 
+            {/* 1. REPEATING FULL HEADER ROW - FIX: Use a dedicated class for the repeater */}
+            <div className="month-header-repeater sticky-date-full-header blue-header">
               {row.week.map((d: Date, i: number) => (
                 <div key={i} className="calendar-header__cell">
                   {/* The working WeekView header content structure: */}
