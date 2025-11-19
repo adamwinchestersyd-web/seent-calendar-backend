@@ -1,5 +1,5 @@
 /* ==========================================================================
-   CALENDAR (scoped, drop-in)
+   CALENDAR (Shared/Global)
    ========================================================================== */
 
 /* ---- Theme ---- */
@@ -49,7 +49,7 @@ html,body{ background:var(--bg); color:var(--text); }
   background:var(--panel-strong);
   border-bottom:1px solid var(--grid);
 }
-/* FIX: Ensure header cell has NO vertical padding to control height */
+/* FIX: Ensure header cell has no padding */
 .calendar-root .calendar-header__cell{
   padding: 0; 
   font-weight:600;
@@ -78,10 +78,28 @@ html,body{ background:var(--bg); color:var(--text); }
   text-transform: uppercase;
   letter-spacing: 0.05em;
   font-size: 14px;
-  padding: 12px 0; /* FIX: Restored padding for Day Name vertical height */
-  text-align: center;
+  padding: 0; /* Ensures the inner content controls height */
 }
 
+/* FIX: Combined Header Content (Day Name + Date) */
+.calendar-root .header-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    padding: 10px 0;
+}
+.calendar-root .header-day-name {
+    font-size: 13px;
+    opacity: 0.8;
+}
+.calendar-root .header-date-num {
+    font-size: 20px; 
+    font-weight: 900;
+    line-height: 1.1; 
+}
 
 /* --------------------------------------------------------------------------
    Grid
@@ -107,10 +125,10 @@ html,body{ background:var(--bg); color:var(--text); }
   padding: 0; 
 }
 
-/* --- STICKY DATE LABEL (Bar inside the Cell) --- */
+/* --- STICKY DATE LABEL (Bar inside the Cell - Used in Month View Rows 2+) --- */
 .calendar-root .sticky-date-label {
   position: sticky;
-  top: 0; /* FIX: Sticks to the top of the cell's boundary */
+  top: 0; 
   left: 0;
   z-index: 30;
   padding: 6px 0;
@@ -118,7 +136,7 @@ html,body{ background:var(--bg); color:var(--text); }
   font-weight: 700;
   color: #fff;
   background: #4338ca; 
-  width: 100%; /* Spans entire day grid */
+  width: 100%;
   box-sizing: border-box;
   text-align: center; 
   box-shadow: 0 1px 2px rgba(0,0,0,0.2);
@@ -210,28 +228,3 @@ html,body{ background:var(--bg); color:var(--text); }
 .calendar-editor-modal .modal-btn-subtle { background: var(--btn-subtle-bg); color: var(--btn-subtle-text); }
 .calendar-editor-modal .modal-btn-ghost { background: transparent; color: var(--light-text); border-color: transparent; }
 .calendar-editor-modal .modal-btn-ghost:hover { background: var(--btn-subtle-bg); }
-
-/* --- FIX: Combined Header Content (Day Name + Date) --- */
-.calendar-root .header-content {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-    height: 100%;
-    padding: 10px 0;
-}
-.calendar-root .header-day-name {
-    font-size: 13px;
-    opacity: 0.8;
-}
-.calendar-root .header-date-num {
-    font-size: 20px; 
-    font-weight: 900;
-    line-height: 1.1; 
-}
-
-/* FIX: Ensure header cell has no padding itself */
-.calendar-root .calendar-header__cell{
-  padding: 0; 
-}

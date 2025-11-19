@@ -1,4 +1,4 @@
-// CACHE BUST v33 - FINAL STICKY LOGIC
+// CACHE BUST v33 - FINAL STICKY DATE BAR FIX
 import React from "react";
 import EventPillWeek from "../components/EventPillWeek.jsx";
 import {
@@ -18,7 +18,7 @@ type Props = {
 };
 
 const CELL_MIN_H = 150; 
-const DATE_HEADER_H = 45; // Height of the combined header block (approx 45px)
+const DATE_HEADER_H = 45; // Height of the combined label
 const EVENT_H = 94; // 90px pill + 4px gap
 const V_GUTTER = 2;
 const H_GUTTER = 4;
@@ -80,15 +80,16 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
 
   return (
     <div className="calendar-root">
-      {/* 1. MAIN STICKY HEADER (Day Names + Dates) */}
+      {/* 1. MAIN STICKY HEADER (Day Names) */}
       <div className="calendar-header sticky-header blue-header">
         {weeks[0].map((d, i) => (
           <div key={i} className="calendar-header__cell">
-            {/* --- FIX: Combined Day Name and Date in ONE DIV --- */}
             <div className="header-content">
+              {/* Day Name */}
               <div className="header-day-name">
                 {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][i]}
               </div>
+              {/* Date Number */}
               <div className="header-date-num">
                 {d.getDate()}
               </div>
@@ -104,18 +105,12 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
               <div
                 key={i}
                 className="calendar-cell"
-                // No drag handlers on cell to prevent interference
               >
-                {/* 2. DATE NUMERAL BAR INSIDE CELL (Only for subsequent weeks) */}
-                {rIdx > 0 && (
-                    <div className="sticky-date-label blue-date-label">
-                      {d.getDate()}
-                    </div>
-                )}
-                {/* FIX: First row needs a spacer to align events below the header */}
-                {rIdx === 0 && (
-                    <div style={{height: `${DATE_HEADER_H}px`, padding: '6px 0'}}></div>
-                )}
+                {/* 2. DATE BAR INSIDE CELL (Sticky, Full Width) */}
+                {/* FIX: This now has the full width and correct sticky position */}
+                <div className="sticky-date-label blue-date-label">
+                  {d.getDate()}
+                </div>
               </div>
             ))}
 
@@ -123,7 +118,7 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
               {row.lanes.map((lane, laneIdx) =>
                 lane.map((seg, bi) => {
                   const e = seg.evt;
-                  const top = (rIdx === 0 ? DATE_HEADER_H : 0) + (laneIdx * EVENT_H);
+                  const top = DATE_HEADER_H + (laneIdx * EVENT_H);
                   const left = (seg.offset / 7) * 100;
                   const width = (seg.span / 7) * 100;
 
@@ -138,7 +133,7 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                         left: `${left}%`,
                         width: `${width}%`,
                         height: `${EVENT_H - 4}px`, 
-                        padding: "0 4px", 
+                        padding: `${V_GUTTER}px ${H_GUTTER}px`, // Re-add vertical padding for pill separation
                         boxSizing: "border-box",
                         zIndex: 10,
                       }}
