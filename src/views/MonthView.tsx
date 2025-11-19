@@ -1,5 +1,5 @@
 // MonthView.tsx
-// CACHE BUST v46 - FIX FINAL STACKING (Full Drop-in)
+// CACHE BUST v47 - FINAL STRUCTURAL FIX: Merging Repeater into Grid
 import React from "react";
 import EventPillMonth from "../components/EventPillMonth.jsx"; 
 import {
@@ -87,11 +87,11 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
         {weekData.map((row: WeekRow, rIdx: number) => (
           <div 
             key={rIdx} 
-            className="calendar-row-with-header" /* NEW CLASS TO WRAP EVERYTHING */
+            className="calendar-week-row" /* NEW CLASS for the outer row wrapper */
             style={{ ["--cols" as any]: 7, minHeight: rowHeights[rIdx] }}
           >
-            {/* 1. REPEATING FULL HEADER ROW - FIX: Use a dedicated class for the repeater */}
-            <div className="month-header-repeater sticky-date-full-header blue-header">
+            {/* 1. REPEATING FULL HEADER ROW (using dedicated structural classes) */}
+            <div className="calendar-row month-header-repeater sticky-date-full-header blue-header">
               {row.week.map((d: Date, i: number) => (
                 <div key={i} className="calendar-header__cell">
                   {/* The working WeekView header content structure: */}
@@ -110,9 +110,11 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
             </div>
 
             {/* 2. Standard Grid Cells (for visual vertical lines) */}
-            {row.week.map((d: Date, i: number) => (
-              <div key={i} className="calendar-cell" />
-            ))}
+            <div className="month-cell-grid">
+              {row.week.map((d: Date, i: number) => (
+                <div key={i} className="calendar-cell" />
+              ))}
+            </div>
             
             {/* 3. Event Layer */}
             <div className="absolute inset-0 pointer-events-none">
