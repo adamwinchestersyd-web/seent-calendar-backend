@@ -9,27 +9,15 @@
     min-height: 100%;
 }
 
-/* FIX: Sticky Date Number Styling */
-.calendar-root .monthview-date-num-in-cell {
-    position: sticky; /* Make the date sticky */
-    top: 45px; /* Sticks 45px below the main Day Name header (DATE_HEADER_H) */
+/* NEW: The single, fully-styled, repeating, sticky header bar (Day Name + Date) */
+.calendar-root .sticky-date-full-header {
+    position: sticky; /* Make the bar sticky */
+    top: 0; /* Locks it to the top of the calendar-cell (Week 1 sticks to viewport, Week 2 sticks to Week 1's bottom) */
     left: 0;
-    z-index: 30; /* Below main header (40), above pills (10) */
-    
-    font-size: 20px; 
-    font-weight: 900;
-    line-height: 1.1; 
-    color: var(--text); 
-    padding: 5px; 
-    width: 100%; 
-    box-sizing: border-box; 
-    text-align: right; 
-    
-    /* *** CRITICAL FIX: Add background to make repeating date number visible *** */
-    background: var(--panel); 
-}
-
-/* FIX: Hide the duplicate date number on Week 1 only. */
-.calendar-root .calendar-row:first-child .monthview-date-num-in-cell {
-    display: none; 
+    z-index: 30; /* Below modals, above events */
+    width: 100%;
+    box-sizing: border-box;
+    text-align: center;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    /* Inherits blue background and text from .blue-header */
 }
