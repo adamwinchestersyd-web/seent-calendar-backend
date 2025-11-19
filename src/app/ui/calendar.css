@@ -78,7 +78,7 @@ html,body{ background:var(--bg); color:var(--text); }
   text-transform: uppercase;
   letter-spacing: 0.05em;
   font-size: 14px;
-  padding: 0; /* Ensures the inner content controls height */
+  padding: 0; 
 }
 
 /* FIX: Combined Header Content (Day Name + Date) */
@@ -125,23 +125,29 @@ html,body{ background:var(--bg); color:var(--text); }
   padding: 0; 
 }
 
-/* --- STICKY DATE LABEL (Bar inside the Cell - Used in Month View Rows 2+) --- */
-.calendar-root .sticky-date-label {
+/* --- REPEATING STICKY HEADER FOR MONTHVIEW ROWS --- */
+.calendar-root .monthview-date-row {
   position: sticky;
-  top: 0; 
+  top: 45px; /* Sticks directly below the main Day Name header */
   left: 0;
-  z-index: 30;
-  padding: 6px 0;
-  font-size: 13px;
-  font-weight: 700;
-  color: #fff;
-  background: #4338ca; 
+  z-index: 35; /* Above subsequent event pills but below main header (40) */
+  background: linear-gradient(90deg, #312e81 0%, #4338ca 100%); 
+  border-bottom: 1px solid #312e81;
   width: 100%;
-  box-sizing: border-box;
-  text-align: center; 
-  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  padding: 0;
 }
-
+.calendar-root .monthview-date-cell {
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 14px;
+  text-align: center;
+  padding: 6px 0;
+  height: 45px; /* Matches height of the main header */
+}
+/* This is the magic: the Date Labels (event content) start below this bar */
+.calendar-root .events-start-spacer {
+  height: 45px; /* Spacer to push events down below the date bar */
+}
 
 /* ---------- EVENT PILLS (Rest of CSS is unchanged) ---------- */
 :root{

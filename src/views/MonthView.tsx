@@ -1,4 +1,4 @@
-// CACHE BUST v33 - FINAL MONTH VIEW STRUCTURAL FIX
+// CACHE BUST v34 - FINAL STICKY LOGIC
 import React from "react";
 import EventPillWeek from "../components/EventPillWeek.jsx";
 import {
@@ -18,7 +18,7 @@ type Props = {
 };
 
 const CELL_MIN_H = 150; 
-const DATE_HEADER_H = 45; // Height of the combined label
+const DATE_HEADER_H = 45; // Height of the single header bar in subsequent rows
 const EVENT_H = 94; // 90px pill + 4px gap
 const V_GUTTER = 2;
 const H_GUTTER = 4;
@@ -68,6 +68,7 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
   const rowHeights = React.useMemo(() => {
     return weekData.map((data) => {
       const maxLaneIndex = data.lanes.length;
+      // Height = Date Bar Height + (Events * Height) + 10px bottom spacing
       const contentH = DATE_HEADER_H + (maxLaneIndex * EVENT_H) + 10; 
       return Math.max(CELL_MIN_H, contentH);
     });
@@ -80,18 +81,13 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
 
   return (
     <div className="calendar-root">
-      {/* 1. MAIN STICKY HEADER (Combined Day Names and Dates) */}
+      {/* 1. MAIN HEADER (Day Names ONLY - Sticks to viewport top) */}
       <div className="calendar-header sticky-header blue-header">
         {weeks[0].map((d, i) => (
           <div key={i} className="calendar-header__cell">
             <div className="header-content">
-              {/* Day Name */}
               <div className="header-day-name">
                 {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][i]}
-              </div>
-              {/* Date Number */}
-              <div className="header-date-num">
-                {d.getDate()}
               </div>
             </div>
           </div>
@@ -106,16 +102,27 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                 key={i}
                 className="calendar-cell"
               >
-                {/* 2. DATE BAR INSIDE CELL (Sticky, Full Width) - Only for subsequent weeks */}
-                {rIdx > 0 && (
-                    <div className="sticky-date-label blue-date-label">
+                {/* 2. REPEATING STICKY DATE BAR (Day Name + Date) */}
+                {/* Sticks to top: 0 of the cell, effectively replacing the top header on scroll */}
+                <div 
+                  className="sticky-date-label blue-header" 
+                  style={{ top: rIdx === 0 ? 0 : `${DATE_HEADER_H}px` }} 
+                >
+                  <div className="header-content">
+                    <div className="header-day-name">
+                      {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][i]}
+                    </div>
+                    <div className="header-date-num">
                       {d.getDate()}
                     </div>
-                )}
-                {/* FIX: Spacer for first row to align events below the combined header */}
+                  </div>
+                </div>
+                
+                {/* 3. SPACER: Ensure events start below the date bar */}
                 {rIdx === 0 && (
                     <div style={{height: `${DATE_HEADER_H}px`}}></div>
                 )}
+
               </div>
             ))}
 
@@ -124,7 +131,7 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                 lane.map((seg, bi) => {
                   const e = seg.evt;
                   
-                  // Position below the entire sticky header block (DATE_HEADER_H)
+                  // Position events below the date bar (starts after DATE_HEADER_H)
                   const top = (rIdx === 0 ? DATE_HEADER_H : 0) + (laneIdx * EVENT_H);
                   const left = (seg.offset / 7) * 100;
                   const width = (seg.span / 7) * 100;
@@ -140,7 +147,7 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                         left: `${left}%`,
                         width: `${width}%`,
                         height: `${EVENT_H - 4}px`, 
-                        padding: "0 4px", 
+                        padding: `${V_GUTTER}px ${H_GUTTER}px`,
                         boxSizing: "border-box",
                         zIndex: 10,
                       }}
