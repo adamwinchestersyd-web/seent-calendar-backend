@@ -1,5 +1,5 @@
 // MonthView.tsx
-// CACHE BUST v49 - FIX COLLAPSED HEADER (Full Drop-in)
+// CACHE BUST v49 - REMOVING GIANT BLUE BOX (Full Drop-in)
 import React from "react";
 import EventPillMonth from "../components/EventPillMonth.jsx"; 
 import {
@@ -90,16 +90,20 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
             className="calendar-row" 
             style={{ ["--cols" as any]: 7, height: rowHeights[rIdx] }}
           >
-            {/* 1. REPEATING FULL HEADER ROW */}
+            {/* 1. REPEATING FULL HEADER ROW - APPLY BLUE HEADER TO THE GRID ROW ITSELF */}
             <div className="calendar-header sticky-header blue-header">
               {row.week.map((d: Date, i: number) => (
                 <div key={i} className="calendar-header__cell">
-                  {/* FIX: Simplified structure to rely on CSS Grid */}
-                  <div className="header-day-name">
-                    {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][i]}
-                  </div>
-                  <div className="header-date-num">
-                    {d.getDate()}
+                  {/* The working WeekView header content structure: */}
+                  <div className="header-content-combined">
+                    {/* Day Name */}
+                    <div className="header-day-name">
+                      {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][i]}
+                    </div>
+                    {/* Date Number */}
+                    <div className="header-date-num">
+                      {d.getDate()}
+                    </div>
                   </div>
                 </div>
               ))}
