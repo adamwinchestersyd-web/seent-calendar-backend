@@ -382,15 +382,14 @@ export default function Calendar() {
   }, []);
   
   // Handler for clicking on an event
-  const handleOpenEditor = React.useCallback((ev, clickEvent) => {
-    // CRITICAL FIX: Bypass the unreliable coordinate positioning by sending null
+const handleOpenEditor = React.useCallback((ev, clickEvent) => {
     setEditor({
       open: true,
       mode: ev.isManual ? 'edit' : 'view',
       ev: ev,
-      clickEvent: null, // Force modal to use default center position
+      clickEvent: clickEvent, // Pass the coordinates provided by the pill
     });
-  }, []);
+}, []);
   
   // Handler to close the editor
   const handleCloseEditor = React.useCallback(() => {
