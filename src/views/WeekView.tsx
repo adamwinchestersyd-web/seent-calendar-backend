@@ -1,5 +1,5 @@
 // WeekView.tsx
-// CACHE BUST v58 - REMOVING DEFENSIVE RETURN (Full Drop-in)
+// CACHE BUST v59 - NaN DEFENSE ONLY (Full Drop-in)
 import React from "react";
 import EventPillWeek from "../components/EventPillWeek.jsx"; 
 import {
@@ -152,8 +152,8 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
     setPendingResize(null);
   };
 
-  // --- CRITICAL FIX: REMOVING DEFENSIVE RETURN ---
-  // The component must render to allow useLayoutEffect to run and calculate dimensions.
+  // --- CRITICAL FIX: REMOVING DEFENSIVE RETURN (allows rendering) ---
+  // We rely on 'top = laneTops[li] || 0;' to prevent NaN.
 
   return (
     <div className="calendar-root">
@@ -184,7 +184,17 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
           className="calendar-row"
           style={{ ["--cols" as any]: 7, position: "relative", minHeight: sectionH }}
         >
-          {/* REMOVED: Redundant calendar-cell loop */}
+          {/* RETAINING THE EMPTY CELL LOOP TO PREVENT REGRESSION (Structural Stability) */}
+          {days.map((d, i) => (
+            <div
+              key={i}
+              className="calendar-cell"
+              onDragOver={onCellDragOver}
+              onDrop={onCellDrop(days[i])}
+              onDoubleClick={pickQuickResizeDate(d)}
+              onClick={(e) => { if (e.ctrlKey) pickQuickResizeDate(d)(e as any); }}
+            />
+          ))}
 
           {lanes.map((lane, li) =>
             lane.map((seg, bi) => {
