@@ -38,6 +38,7 @@ export default function EventPillWeek({ ev, isMultiDay, className, style, onOpen
   ].filter(Boolean).join(" ");
 
   const onClick = (e) => {
+    e.stopPropagation(); // *** ADDED: Stop event propagation to parents ***
     // If onOpenEditor is passed, we need to find the DOM rect
     if (onOpenEditor) {
       const rect = e.currentTarget.getBoundingClientRect();
