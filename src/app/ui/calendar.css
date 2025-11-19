@@ -2,13 +2,44 @@
    CALENDAR (Shared/Global)
    ========================================================================== */
 
-// ... (Theme and root styles remain)
+/* ---- Theme ---- */
+:root{
+  --bg:#2f3236;
+  --panel:#2b2e32;
+  --panel-strong:rgba(198, 213, 232, 0.278);
+  --grid:rgba(243,235,235,.236);
+  --text:#e5e8ed;
+  --text-muted:#a9b0b9;
+  --shadow:0 6px 14px rgba(0,0,0,.35), 0 1px 0 rgba(255,255,255,.04) inset;
+  
+  /* Light theme (for modals) */
+  --light-bg: #ffffff;
+  --light-text: #0f1723;
+  --light-text-muted: #666;
+  --light-border: #e5e7eb;
+  --light-panel: #f9fafb;
+  --btn-primary-bg: #111827;
+  --btn-primary-text: #fff;
+  --btn-subtle-bg: #f3f4f6;
+  --btn-subtle-text: #111827;
+  --green-test-bar: #22c55e;
+}
+
+/* page bg so the calendar works in isolation */
+html,body{ background:var(--bg); color:var(--text); }
 
 /* --------------------------------------------------------------------------
    Container + Header
 -------------------------------------------------------------------------- */
 .calendar-root{
-// ... (calendar-root styles remain)
+  --pill-lines: 4;
+  background:var(--panel);
+  color:var(--text);
+  border-radius:14px;
+  box-shadow:0 10px 30px rgba(0,0,0,.35);
+  font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;
+  margin-bottom:40px;
+  isolation: isolate; 
 }
 
 /* Day Name Header Row (Week 1 Header) */
@@ -29,28 +60,51 @@
   background-repeat:repeat-x;
 }
 .calendar-root .calendar-header__cell{
-// ... (cell styles remain)
+  padding: 0; 
+  font-weight:600;
+  font-size:13px;
+  letter-spacing:.02em;
+  color:var(--text);
 }
 
 /* --- STICKY HEADER (REINFORCED STICKINESS) --- */
 .calendar-root .sticky-header {
-// ... (sticky styles remain)
+  position: sticky !important; 
+  top: 0 !important; 
+  z-index: 40; 
+  background: #2b2e32; 
+  border-bottom: 1px solid var(--grid);
 }
 
 /* --- BLUE HEADER (BRANDING) --- */
 .calendar-root .blue-header {
-// ... (blue styles remain)
+  background: linear-gradient(90deg, #312e81 0%, #4338ca 100%) !important; 
+  border-bottom: 1px solid #312e81;
 }
 
 /* FIX: Combined Header Content (Day Name + Date) */
 .calendar-root .header-content-combined { 
-// ... (combined styles remain)
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    min-height: 45px; 
+    color: #ffffff;
+    font-weight: 700;
+    padding: 0; 
 }
 .calendar-root .header-day-name {
-// ... (day name styles remain)
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 1; 
 }
 .calendar-root .header-date-num {
-// ... (date number styles remain)
+    font-size: 18px; 
+    font-weight: 900;
+    line-height: 1.1; 
+    margin-top: 2px; 
 }
 
 
@@ -61,13 +115,13 @@
 .calendar-root .calendar-row{
   position:relative;
   display:grid;
-  /* Ensure this row definition is strong */
+  /* FIX: Ensure the row template is explicitly 7 columns */
   grid-template-columns: repeat(7, 1fr) !important;
   grid-auto-flow:column;
   min-height:56px;
   border-bottom:1px solid var(--grid);
   
-  /* *** CRITICAL FIX: ENSURE VERTICAL GUIDELINE VISIBILITY *** */
+  /* CRITICAL FIX: ENSURE VERTICAL GUIDELINE VISIBILITY */
   background-image:linear-gradient(to right, var(--grid) 1px, transparent 1px);
   background-size:calc(100% / 7) 100%; 
   background-repeat:repeat-x;
