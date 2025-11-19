@@ -125,29 +125,7 @@ html,body{ background:var(--bg); color:var(--text); }
   padding: 0; 
 }
 
-/* --- REPEATING STICKY HEADER FOR MONTHVIEW ROWS --- */
-.calendar-root .monthview-date-row {
-  position: sticky;
-  top: 45px; /* Sticks directly below the main Day Name header */
-  left: 0;
-  z-index: 35; /* Above subsequent event pills but below main header (40) */
-  background: linear-gradient(90deg, #312e81 0%, #4338ca 100%); 
-  border-bottom: 1px solid #312e81;
-  width: 100%;
-  padding: 0;
-}
-.calendar-root .monthview-date-cell {
-  color: #ffffff;
-  font-weight: 700;
-  font-size: 14px;
-  text-align: center;
-  padding: 6px 0;
-  height: 45px; /* Matches height of the main header */
-}
-/* This is the magic: the Date Labels (event content) start below this bar */
-.calendar-root .events-start-spacer {
-  height: 45px; /* Spacer to push events down below the date bar */
-}
+/* --- REPEATING STICKY HEADER FOR MONTHVIEW ROWS --- (REMOVED) */
 
 /* ---------- EVENT PILLS (Rest of CSS is unchanged) ---------- */
 :root{

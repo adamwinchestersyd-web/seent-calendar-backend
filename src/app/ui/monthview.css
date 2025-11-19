@@ -7,19 +7,18 @@
     min-height: 100%;
 }
 
-/* FIX: Sticky Date Bar (The duplicating header in rows 2-6) */
-.calendar-root .monthview-date-label {
-  position: sticky;
-  top: 0; 
-  left: 0;
-  z-index: 30;
-  padding: 6px 0;
-  font-size: 13px;
-  font-weight: 700;
-  color: #fff;
-  background: #4338ca; 
-  width: 100%;
-  box-sizing: border-box;
-  text-align: center; 
-  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+/* FIX: Sticky Date Bar (The duplicating header in rows 2-6) - REMOVED */
+
+/* NEW: Date number styling inside the cell, below the main sticky header */
+.calendar-root .monthview-date-num-in-cell {
+    font-size: 20px; 
+    font-weight: 900;
+    line-height: 1.1; 
+    color: var(--text); /* Use the default text colour */
+    padding-top: 5px; /* Add some small padding from the top edge of the cell */
+    padding-left: 5px;
+    position: absolute; /* Position it absolutely within the cell */
+    top: 0;
+    left: 0;
+    z-index: 5; /* Keep it above the events */
 }
