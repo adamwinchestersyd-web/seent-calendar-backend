@@ -1,4 +1,5 @@
-// CACHE BUST v41 - ALIGNED DAY NAME HEADER + IN-CELL DATE NUMBER (Full Drop-in)
+// WeekView.tsx
+// CACHE BUST v55 - FIX NaN ERROR (Full Drop-in)
 import React from "react";
 import EventPillWeek from "../components/EventPillWeek.jsx"; 
 import {
@@ -180,23 +181,13 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
           className="calendar-row"
           style={{ ["--cols" as any]: 7, position: "relative", minHeight: sectionH }}
         >
-          {days.map((d, i) => (
-            <div
-              key={i}
-              className="calendar-cell"
-              onDragOver={onCellDragOver}
-              onDrop={onCellDrop(days[i])}
-              onDoubleClick={pickQuickResizeDate(d)}
-              onClick={(e) => { if (e.ctrlKey) pickQuickResizeDate(d)(e as any); }}
-            >
-              {/* REMOVED: In-cell date number is now in the sticky header */}
-            </div>
-          ))}
+          {/* REMOVED: Redundant calendar-cell loop */}
 
           {lanes.map((lane, li) =>
             lane.map((seg, bi) => {
               const e = seg.evt;
-              const top = laneTops[li] || 0;
+              // CRITICAL FIX: Ensure top is a number, default to 0 if laneTops is not ready
+              const top = laneTops[li] || 0; 
               const leftPct = (seg.offset / 7) * 100;
               const widthPct = (Math.max(1, seg.span) / 7) * 100;
               const isSingle = seg.span === 1;
@@ -207,9 +198,10 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
                 <div
                   key={seg.id}
                   ref={laneRefs[li][bi]}
+                  className="pointer-events-auto"
                   style={{
                         position: "absolute",
-                        top,
+                        top: `${top}px`, // Use defensive check here
                         left: `${leftPct}%`,
                         width: `${widthPct}%`,
                         padding: `${V_GUTTER}px ${H_GUTTER}px`,

@@ -540,7 +540,7 @@ export default function Calendar() {
 
   const viewNode =
     view === "day" ? (
-      <DayView date={date} events={colouredEvents} />
+      <DayView date={date} events={colouredEvents} onOpenEditor={handleOpenEditor} />
     ) : view === "week" ? (
       <WeekView
         date={date}
