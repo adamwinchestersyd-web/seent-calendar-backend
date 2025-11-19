@@ -1,5 +1,5 @@
 // DayView.tsx
-// CACHE BUST v49 - FIX DAYVIEW FILTER (Full Drop-in)
+// CACHE BUST v50 - SINGLE COLUMN GRID (Full Drop-in)
 import React from "react";
 import { links } from "../app/config/links";
 import { NoteIcon, ScrewIcon, CrownIcon } from "../app/ui/icons";
@@ -55,12 +55,14 @@ export default function DayView({ date, events }: Props) {
 
   return (
     <div className="calendar-root">
-      <div className="calendar-header">
+      {/* 1. HEADER - Force single column header */}
+      <div className="calendar-header" style={{ ["--cols" as any]: 1, display: 'grid' }}>
         <div className="calendar-header__cell">{labelDate}</div>
       </div>
 
       <div className="calendar-grid">
-        <div className="calendar-row" style={{ ["--cols" as any]: 1 }}>
+        {/* 2. GRID ROW - Force single column content */}
+        <div className="calendar-row" style={{ ["--cols" as any]: 1, gridTemplateColumns: '1fr' }}>
           <div className="calendar-cell" style={{ padding: '12px' }}>
             {visible.length === 0 ? (
               <div className="day-empty">No events for this day.</div>
