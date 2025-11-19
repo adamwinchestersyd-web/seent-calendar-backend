@@ -1,6 +1,7 @@
-// CACHE BUST v34 - FINAL STICKY LOGIC
+// MonthView.tsx
+// CACHE BUST v35 - FINAL STICKY REPLACING LOGIC
 import React from "react";
-import EventPillMonth from "../components/EventPillMonth.jsx";
+import EventPillMonth from "../components/EventPillMonth.jsx"; // Use the correct pill
 import {
   addDays,
   startOfMonthGrid,
@@ -18,8 +19,8 @@ type Props = {
 };
 
 const CELL_MIN_H = 150; 
-const DATE_HEADER_H = 45; // Height of the single header bar in subsequent rows
-const EVENT_H = 64; // 90px pill + 4px gap
+const DATE_HEADER_H = 45; // Height of the new sticky header bar
+const EVENT_H = 64; // Approx. 60px pill height + 4px gap (Adjusted for Month Pill)
 const V_GUTTER = 2;
 const H_GUTTER = 4;
 
@@ -68,7 +69,7 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
   const rowHeights = React.useMemo(() => {
     return weekData.map((data) => {
       const maxLaneIndex = data.lanes.length;
-      // Height = Date Bar Height + (Events * Height) + 10px bottom spacing
+      // Height = Sticky Header Height + (Events * Height) + 10px bottom spacing
       const contentH = DATE_HEADER_H + (maxLaneIndex * EVENT_H) + 10; 
       return Math.max(CELL_MIN_H, contentH);
     });
@@ -81,34 +82,32 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
 
   return (
     <div className="calendar-root">
-      {/* 1. MAIN HEADER (Day Names ONLY - Sticks to viewport top) */}
-      <div className="calendar-header sticky-header blue-header">
-        {weeks[0].map((d, i) => (
-          <div key={i} className="calendar-header__cell">
-            <div className="header-content">
-              <div className="header-day-name">
-                {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][i]}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
+      {/* 1. MAIN HEADER (Day Names ONLY) - We're removing this and putting the full header in the cells. */}
+      {/* Since the repeating sticky bar is designed to be the main header, we don't need this. */}
+      
       <div className="calendar-grid">
         {weekData.map((row, rIdx) => (
-          <div key={rIdx} className="calendar-row" style={{ ["--cols" as any]: 7, height: rowHeights[rIdx] }}>
+          <div 
+            key={rIdx} 
+            className="calendar-row" 
+            style={{ ["--cols" as any]: 7, height: rowHeights[rIdx] }}
+          >
             {row.week.map((d, i) => (
               <div
                 key={i}
                 className="calendar-cell"
               >
-                {/* 2. DATE NUMBER - Wrapped in a sticky container for visibility on scroll */}
-                <div className="sticky-date-num">
-                    {d.getDate()}
+                {/* 2. STICKY REPLACING HEADER (Day Name + Date Number) */}
+                <div className="sticky-date-replacer blue-header">
+                  <div className="header-content">
+                    <div className="header-day-name">
+                      {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][i]}
+                    </div>
+                    <div className="header-date-num">
+                      {d.getDate()}
+                    </div>
+                  </div>
                 </div>
-                
-                {/* 3. SPACER (Removed) */}
-
               </div>
             ))}
 
@@ -117,8 +116,7 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                 lane.map((seg, bi) => {
                   const e = seg.evt;
                   
-                  // Position events below the date bar (starts after DATE_HEADER_H)
-                  // DATE_HEADER_H is used for all rows to ensure gap from the top of the cell
+                  // Position events below the sticky header bar (starts after DATE_HEADER_H)
                   const top = DATE_HEADER_H + (laneIdx * EVENT_H);
                   const left = (seg.offset / 7) * 100;
                   const width = (seg.span / 7) * 100;
@@ -144,7 +142,6 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                     >
                       <EventPillMonth
                         ev={e}
-                        //isMultiDay={!seg.span}
                         className={e.colorClass || "event--blue"}
                         style={{ width: "100%", ...e.colour ? {["--c"]: e.colour} : {} }}
                         onOpenEditor={(ev: any, rect: any) => {
