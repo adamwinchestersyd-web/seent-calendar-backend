@@ -1,5 +1,5 @@
 // EventEditor.tsx
-// CACHE BUST v64 - TOP-RIGHT MOUSE POSITIONING (Full Drop-in)
+// CACHE BUST v64 - FINAL MODAL POSITIONING (Absolute Center Fix)
 import React from "react";
 import { useEscapeKey } from "../../hooks/useEscapeKey";
 
@@ -12,63 +12,31 @@ type Props = {
 };
 
 // Positioning hook
-function usePopupPosition(open: boolean, clickEvent: React.MouseEvent | null) {
+function usePopupPosition(open: boolean) {
   const ref = React.useRef<HTMLDivElement>(null);
   const [pos, setPos] = React.useState<React.CSSProperties>({
     top: -9999,
     left: -9999,
     opacity: 0,
-    position: 'fixed' // Use fixed position to avoid scroll issues
+    position: 'absolute'
   });
 
   React.useLayoutEffect(() => {
-    if (!open || !clickEvent || !ref.current) {
-       setPos({ top: -9999, left: -9999, opacity: 0, position: 'fixed' });
+    if (!open || !ref.current) {
+       setPos({ top: -9999, left: -9999, opacity: 0, position: 'absolute' });
        return;
     }
     
-    // --- POSITIONING LOGIC FOR TOP RIGHT HAND SIDE OF CLICK ---
-    const pop = ref.current.getBoundingClientRect();
-    const pad = 12;
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    
-    const clickY = clickEvent.clientY;
-    const clickX = clickEvent.clientX;
-
-    // Offset (Move modal slightly up and right/left relative to click)
-    const offsetY = -20; // Move 20px up from the click point
-    const offsetX = 20; // Move 20px right from the click point
-
-    let finalTop = clickY + offsetY;
-    let finalLeft = clickX + offsetX;
-    
-    // Ensure finalLeft is constrained (stay on screen)
-    if (finalLeft + pop.width + pad > vw) {
-        // If it overflows right, move it to the left of the click point
-        finalLeft = clickX - pop.width - offsetX;
-    }
-    
-    // Ensure finalTop is constrained (stay on screen)
-    if (finalTop < pad) {
-        finalTop = pad;
-    } else if (finalTop + pop.height > vh) {
-        // If it overflows bottom, move it up to the bottom edge
-        finalTop = vh - pop.height - pad;
-    }
-    
-    // Apply strict final checks
-    const finalTopSafe = Number.isFinite(finalTop) ? finalTop : vh * 0.5;
-    const finalLeftSafe = Number.isFinite(finalLeft) ? finalLeft : vw * 0.5;
-
+    // --- FINAL FIX: Use absolute positioning and place at a fixed visible offset ---
+    // This bypasses unreliable coordinate reading and viewport centering crashes.
     setPos({
-      position: 'fixed',
-      top: finalTopSafe,
-      left: finalLeftSafe,
+      position: 'absolute',
+      top: 100, // Fixed offset from the top (ensures visibility)
+      left: '50%',
+      transform: 'translateX(-50%)', // Center horizontally
       opacity: 1,
-      transform: 'none',
     });
-  }, [open, clickEvent]);
+  }, [open]);
 
   return { ref, style: pos };
 }
@@ -77,8 +45,8 @@ function usePopupPosition(open: boolean, clickEvent: React.MouseEvent | null) {
 export default function EventEditor({ open, clickEvent, ev, onClose, onChangeDates }: Props) {
   const [start, setStart] = React.useState(ev?.start ?? "");
   const [end, setEnd] = React.useState(ev?.end ?? "");
-  // --- FIXED: Pass clickEvent again, rely on hook constraints ---
-  const { ref, style: positionStyle } = usePopupPosition(open, open ? (clickEvent || null) : null); 
+  // --- FIXED: Do not pass clickEvent to hook, rely solely on 'open' ---
+  const { ref, style: positionStyle } = usePopupPosition(open); 
 
   useEscapeKey(onClose); // Close on Escape key
   
