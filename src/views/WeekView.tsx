@@ -1,5 +1,5 @@
 // WeekView.tsx
-// CACHE BUST v57 - FINAL DEFENSE FIX (Full Drop-in)
+// CACHE BUST v53 - FINAL STABLE CLICK FIX (Full Drop-in)
 import React from "react";
 import EventPillWeek from "../components/EventPillWeek.jsx"; 
 import {
@@ -152,17 +152,6 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
     setPendingResize(null);
   };
 
-  // --- CRITICAL FIX: Defensive return if heights are zero/NaN ---
-  const isReady = !laneHeights.length && segs.length > 0;
-  if (isReady) {
-      // Return a temporary null or simple structure until layout is ready
-      return (
-          <div className="calendar-root">
-              <div className="p-4">Calculating WeekView layout...</div>
-          </div>
-      );
-  }
-
   return (
     <div className="calendar-root">
       {/* 1. TOP STICKY HEADER (Day Names AND Date Numbers combined) */}
@@ -197,8 +186,7 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
           {lanes.map((lane, li) =>
             lane.map((seg, bi) => {
               const e = seg.evt;
-              // CRITICAL FIX: Default to 0 if laneTops[li] is undefined (which causes NaN)
-              const top = laneTops[li] || 0; 
+              const top = laneTops[li] || 0;
               const leftPct = (seg.offset / 7) * 100;
               const widthPct = (Math.max(1, seg.span) / 7) * 100;
               const isSingle = seg.span === 1;
@@ -209,10 +197,10 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
                 <div
                   key={seg.id}
                   ref={laneRefs[li][bi]}
-                  className="pointer-events-auto"
+                  className="pointer-events-auto" /* CRITICAL: Re-enable pointer events */
                   style={{
                         position: "absolute",
-                        top: `${top}px`,
+                        top,
                         left: `${leftPct}%`,
                         width: `${widthPct}%`,
                         padding: `${V_GUTTER}px ${H_GUTTER}px`,

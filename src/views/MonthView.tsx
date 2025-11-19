@@ -1,5 +1,5 @@
 // MonthView.tsx
-// CACHE BUST v57 - FINAL DEFENSE FIX (Full Drop-in)
+// CACHE BUST v56 - FINAL NaN DEFENSE (Full Drop-in)
 import React from "react";
 import EventPillMonth from "../components/EventPillMonth.jsx"; 
 import {
@@ -67,29 +67,27 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
   }, [weeks, events]);
 
   const rowHeights: number[] = React.useMemo(() => {
-    const heights = weekData.map((data: WeekRow) => {
+    return weekData.map((data: WeekRow) => {
       const maxLaneIndex = data.lanes.length;
       // Height = Sticky Header Height + (Events * Height) + 10px bottom spacing
       const contentH = DATE_HEADER_H + (maxLaneIndex * EVENT_H) + 10; 
       return Math.max(CELL_MIN_H, contentH);
     });
-    // CRITICAL: Ensure this array has an initial size so the map loop doesn't crash 
-    return heights.length > 0 ? heights : weeks.map(() => CELL_MIN_H);
-  }, [weekData, weeks]); // Depend on weeks and weekData
+  }, [weekData]);
 
   const onDragStart = (seg: any) => (e: React.DragEvent<HTMLDivElement>) => {
     const payload = JSON.stringify({ segId: seg.id, evtId: seg.evt?.id });
     e.dataTransfer?.setData("application/json", payload);
   };
 
-  // --- CRITICAL FIX: The rendering loop relies on event dimensions being calculated.
-  // The moment an event exists, rowHeights must be stable.
-  const hasEvents = events.length > 0;
-  const isReady = !hasEvents || (rowHeights.length > 0 && !rowHeights.some(isNaN));
-
-  if (!isReady) {
-      // NOTE: We don't render a loading screen here. We proceed and trust the defensive 
-      // check in the height array above will use CELL_MIN_H if not ready.
+  // --- CRITICAL FIX: Defensive return if heights are missing (NaN prevention) ---
+  const allLanes = weekData.flatMap(w => w.lanes).flat();
+  if (allLanes.length > 0 && rowHeights.some(h => isNaN(h))) {
+      return (
+          <div className="calendar-root">
+              <div className="p-4">Loading event dimensions...</div>
+          </div>
+      );
   }
   
   return (
@@ -134,7 +132,6 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                   const e = seg.evt;
                   
                   // Position events below the header (starts after DATE_HEADER_H)
-                  // CRITICAL: Ensure top is calculated using stable rowHeights
                   const top = DATE_HEADER_H + (laneIdx * EVENT_H);
                   const left = (seg.offset / 7) * 100;
                   const width = (seg.span / 7) * 100;
