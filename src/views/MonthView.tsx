@@ -1,5 +1,5 @@
 // MonthView.tsx
-// CACHE BUST v53 - FINAL CLICK FIX (Full Drop-in)
+// CACHE BUST v50 - STRUCTURAL RESTORATION (Full Drop-in)
 import React from "react";
 import EventPillMonth from "../components/EventPillMonth.jsx"; 
 import {
@@ -109,7 +109,10 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
               ))}
             </div>
 
-            {/* 2. Standard Grid Cells (REMOVED: Now handled by events/grid overlay) */}
+            {/* 2. Standard Grid Cells (for visual vertical lines and click handling) */}
+            {row.week.map((d: Date, i: number) => (
+              <div key={i} className="calendar-cell" />
+            ))}
             
             {/* 3. Event Layer */}
             <div className="absolute inset-0 pointer-events-none">
@@ -126,7 +129,7 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                     <div
                       key={seg.id}
                       ref={row.laneRefs[laneIdx][bi]}
-                      className="pointer-events-auto" /* CRITICAL: Re-enable pointer events */
+                      className="pointer-events-auto"
                       style={{
                         position: "absolute",
                         top: `${top}px`,

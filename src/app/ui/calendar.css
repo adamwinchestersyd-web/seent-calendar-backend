@@ -85,7 +85,7 @@ html,body{ background:var(--bg); color:var(--text); }
 /* --- BLUE HEADER (BRANDING) --- */
 .calendar-root .blue-header {
   background: linear-gradient(90deg, #312e81 0%, #4338ca 100%) !important; 
-  border-bottom: 1px solid #312e31;
+  border-bottom: 1px solid #312e81;
 }
 
 /* FIX: Combined Header Content (Day Name + Date) */
@@ -124,6 +124,7 @@ html,body{ background:var(--bg); color:var(--text); }
 .calendar-root .calendar-row{
   position:relative;
   display:grid;
+  
   /* CRITICAL FIX: ENSURE VERTICAL GUIDELINE VISIBILITY AND GRID LAYOUT */
   grid-template-columns: repeat(var(--cols, 7), 1fr) !important;
   grid-auto-flow:column;
@@ -155,7 +156,57 @@ html,body{ background:var(--bg); color:var(--text); }
   border: none; 
 }
 
-/* ---------- EVENT PILLS (Unchanged) ---------- */
+/* --------------------------------------------------------------------------
+   DAY VIEW CARD STYLES (NEW)
+-------------------------------------------------------------------------- */
+/* Wrapper to enable horizontal flow and wrapping */
+.calendar-root .day-cards-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px; /* Spacing between cards */
+    padding: 12px; /* Inner padding for the cell */
+}
+
+/* Individual Card (max 5 across) */
+.calendar-root .day-card {
+    /* Max width for 5 cards across (100% / 5 = 20%) minus gap adjustment */
+    width: 100%; 
+    max-width: calc(20% - 10px); /* 10px accounts for gaps */
+    min-width: 300px; /* Prevent cards from becoming too narrow */
+
+    /* REQUIRED: Border */
+    border: 1px solid var(--grid);
+    border-radius: 8px;
+    background: var(--panel);
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.calendar-root .day-card__bar {
+    padding: 8px 12px;
+    font-weight: 600;
+    font-size: 14px;
+    color: white;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.calendar-root .day-card__body {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.calendar-root .day-card__people,
+.calendar-root .day-card__notes {
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+/* --- EVENT PILLS (Unchanged) --- */
+
 :root{
   --pill-fs: 12px;
   --pill-lh: 16px;

@@ -180,7 +180,18 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
           className="calendar-row"
           style={{ ["--cols" as any]: 7, position: "relative", minHeight: sectionH }}
         >
-          {/* REMOVED: Redundant calendar-cell loop */}
+          {days.map((d, i) => (
+            <div
+              key={i}
+              className="calendar-cell"
+              onDragOver={onCellDragOver}
+              onDrop={onCellDrop(days[i])}
+              onDoubleClick={pickQuickResizeDate(d)}
+              onClick={(e) => { if (e.ctrlKey) pickQuickResizeDate(d)(e as any); }}
+            >
+              {/* REMOVED: In-cell date number is now in the sticky header */}
+            </div>
+          ))}
 
           {lanes.map((lane, li) =>
             lane.map((seg, bi) => {
@@ -196,7 +207,6 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
                 <div
                   key={seg.id}
                   ref={laneRefs[li][bi]}
-                  className="pointer-events-auto"
                   style={{
                         position: "absolute",
                         top,
