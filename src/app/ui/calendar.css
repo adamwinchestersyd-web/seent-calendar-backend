@@ -44,7 +44,7 @@ html,body{ background:var(--bg); color:var(--text); }
 
 /* Day Name Header Row (Week 1 Header) */
 .calendar-root .calendar-header{
-  /* *** CRITICAL FIX: ENFORCE HORIZONTAL GRID TEMPLATE *** */
+  /* FIX: Ensure standard grid properties */
   display:grid !important;
   grid-template-columns: repeat(7, 1fr) !important; /* Force 7 columns horizontally */
   
@@ -115,13 +115,13 @@ html,body{ background:var(--bg); color:var(--text); }
 .calendar-root .calendar-row{
   position:relative;
   display:grid;
-  /* FIX: Ensure the row template is explicitly 7 columns */
+  
+  /* CRITICAL FIX: ENSURE VERTICAL GUIDELINE VISIBILITY AND GRID LAYOUT */
   grid-template-columns: repeat(7, 1fr) !important;
   grid-auto-flow:column;
   min-height:56px;
   border-bottom:1px solid var(--grid);
   
-  /* CRITICAL FIX: ENSURE VERTICAL GUIDELINE VISIBILITY */
   background-image:linear-gradient(to right, var(--grid) 1px, transparent 1px);
   background-size:calc(100% / 7) 100%; 
   background-repeat:repeat-x;
