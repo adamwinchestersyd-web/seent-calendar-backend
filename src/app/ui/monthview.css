@@ -9,24 +9,21 @@
     min-height: 100%;
 }
 
-/* NEW: Wrapper for the Repeating Header Row */
+/* NEW: The single, fully-styled, repeating, sticky header bar (Day Name + Date) 
+   We remove the failed grid definitions and let the generic .calendar-header handle it.
+*/
 .calendar-root .calendar-row-header-wrapper {
-    /* *** CRITICAL FIX: Enforce 7-column Grid Layout *** */
-    display: grid !important; 
-    /* FIX: Use explicit template columns to force 7 horizontal cells */
-    grid-template-columns: repeat(7, 1fr) !important;
-    
-    width: 100%;
-    
-    /* Stickiness: This is the critical element */
-    position: sticky !important; 
-    top: 0 !important; /* Locks it to the top of the calendar-row/viewport */
-    z-index: 30; 
+    /* REMOVED: display: grid, grid-template-columns, etc. */
+    /* This element's children will now spread horizontally due to the fix in calendar.css */
 }
 
-/* NEW: The single, fully-styled, repeating, sticky header bar (Day Name + Date) 
-   NOTE: This class itself is applied to the wrapper, which is now a grid.
+/* We must ensure the component structure in MonthView.tsx is updated to use the appropriate classes,
+   which is not possible to represent fully here, but relies on:
+   <div className="calendar-header sticky-date-full-header blue-header"> 
 */
 .calendar-root .sticky-date-full-header {
-    /* No additional styling needed here; properties are inherited from .calendar-row-header-wrapper */
+    position: sticky !important; 
+    top: 0 !important; 
+    z-index: 30; 
+    width: 100%;
 }

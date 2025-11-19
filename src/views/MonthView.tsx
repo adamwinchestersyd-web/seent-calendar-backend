@@ -91,7 +91,7 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
             style={{ ["--cols" as any]: 7, height: rowHeights[rIdx] }}
           >
             {/* 1. REPEATING FULL HEADER ROW */}
-            <div className="calendar-row-header-wrapper sticky-date-full-header blue-header">
+            <div className="calendar-header sticky-date-full-header blue-header"> 
               {row.week.map((d: Date, i: number) => (
                 <div key={i} className="calendar-header__cell">
                   {/* The working WeekView header content structure: */}

@@ -44,13 +44,16 @@ html,body{ background:var(--bg); color:var(--text); }
 
 /* Day Name Header Row (Week 1 Header) */
 .calendar-root .calendar-header{
-  display:grid;
+  /* *** CRITICAL FIX: ENFORCE HORIZONTAL GRID TEMPLATE *** */
+  display:grid !important;
+  grid-template-columns: repeat(7, 1fr) !important; /* Force 7 columns horizontally */
+  
   grid-auto-flow:column;
-  grid-auto-columns:1fr;
   background:var(--panel-strong);
   border-bottom:1px solid var(--grid);
   padding: 0; 
   margin: 0;
+  
   /* FIX: Ensure the grid cells align perfectly with the background lines */
   background-image:linear-gradient(to right, var(--grid) 1px, transparent 1px);
   background-size:calc(100% / 7) 100%; 
@@ -66,8 +69,8 @@ html,body{ background:var(--bg); color:var(--text); }
 
 /* --- STICKY HEADER (REINFORCED STICKINESS) --- */
 .calendar-root .sticky-header {
-  position: sticky !important; /* REINFORCED STICKINESS */
-  top: 0 !important; /* REINFORCED STICKINESS */
+  position: sticky !important; 
+  top: 0 !important; 
   z-index: 40; 
   background: #2b2e32; 
   border-bottom: 1px solid var(--grid);
