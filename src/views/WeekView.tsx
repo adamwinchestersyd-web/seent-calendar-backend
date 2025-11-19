@@ -1,4 +1,5 @@
-// CACHE BUST v39 - ENFORCE 7 COLUMN GRID & STICKINESS
+// WeekView.tsx
+// CACHE BUST v40 - ALIGNED DAY NAME HEADER + IN-CELL DATE NUMBER (Full Drop-in)
 import React from "react";
 import EventPillWeek from "../components/EventPillWeek.jsx"; 
 import {
@@ -15,8 +16,6 @@ type Props = {
   events: any[];
   onOpenEditor?: (ev: any, clickEvent: React.MouseEvent) => void;
 };
-
-// ... (rest of helper functions: useElementWidth, etc.)
 
 function useElementWidth(ref: React.RefObject<HTMLDivElement>) {
   const [w, setW] = React.useState(0);
@@ -65,6 +64,9 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
 
   const H_GUTTER = 4;
   const V_GUTTER = 2;
+  const LANE_GAP = 4;
+  const BAR_MIN = 84; 
+  
   const lanes = React.useMemo(() => packLanes(segs), [segs]);
   const laneRefs = React.useMemo(
     () => lanes.map((lane) => lane.map(() => React.createRef<HTMLDivElement>())),
@@ -75,8 +77,7 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
   const [sectionH, setSectionH] = React.useState(60);
   const rowRef = React.useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>;
   const rowWidth = useElementWidth(rowRef);
-  const BAR_MIN = 84; 
-  const LANE_GAP = 4;
+  
   
   React.useLayoutEffect(() => {
     if (!rowWidth) return;
@@ -155,19 +156,17 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
 
   return (
     <div className="calendar-root">
-      {/* FIXED: Explicitly enforce 7-column grid in the header */}
+      {/* 1. TOP STICKY HEADER (Day Names ONLY - REINFORCED STICKINESS) */}
       <div 
         className="calendar-header sticky-header blue-header"
         style={{ ["--cols" as any]: 7 }} 
       >
         {days.map((d, i) => (
           <div key={i} className="calendar-header__cell">
-            <div className="header-content-combined">
+            {/* FIX: Use Day Name ONLY structure */}
+            <div className="header-content-day-name-only">
               <div className="header-day-name">
                 {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][i]}
-              </div>
-              <div className="header-date-num">
-                {d.getDate()}
               </div>
             </div>
           </div>
@@ -188,7 +187,12 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
               onDrop={onCellDrop(days[i])}
               onDoubleClick={pickQuickResizeDate(d)}
               onClick={(e) => { if (e.ctrlKey) pickQuickResizeDate(d)(e as any); }}
-            />
+            >
+              {/* 2. IN-CELL DATE NUMBER (WeekView specific rendering) */}
+              <div className="in-cell-date-number">
+                  {d.getDate()}
+              </div>
+            </div>
           ))}
 
           {lanes.map((lane, li) =>

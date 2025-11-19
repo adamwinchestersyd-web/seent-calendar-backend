@@ -1,5 +1,5 @@
 // MonthView.tsx
-// CACHE BUST v39 - REPEATING FULL HEADER (Day Name + Date)
+// CACHE BUST v40 - ALIGNED DAY NAME HEADER + IN-CELL DATE NUMBER
 import React from "react";
 import EventPillMonth from "../components/EventPillMonth.jsx"; 
 import {
@@ -19,7 +19,7 @@ type Props = {
 };
 
 const CELL_MIN_H = 150; 
-const DATE_HEADER_H = 45; // Height of the combined sticky bar
+const DATE_HEADER_H = 45; // Height of the top Day Name header
 const EVENT_H = 64; 
 const V_GUTTER = 2;
 const H_GUTTER = 4;
@@ -69,7 +69,7 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
   const rowHeights: number[] = React.useMemo(() => {
     return weekData.map((data: WeekRow) => {
       const maxLaneIndex = data.lanes.length;
-      // Height = Sticky Header Height + (Events * Height) + 10px bottom spacing
+      // Height = Header Height + (Events * Height) + 10px bottom spacing
       const contentH = DATE_HEADER_H + (maxLaneIndex * EVENT_H) + 10; 
       return Math.max(CELL_MIN_H, contentH);
     });
@@ -82,7 +82,18 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
 
   return (
     <div className="calendar-root">
-      {/* 1. MAIN HEADER (REMOVED: The repeating sticky element handles the header) */}
+      {/* 1. TOP STICKY HEADER (Day Names ONLY) */}
+      <div className="calendar-header sticky-header blue-header">
+        {weeks[0].map((d: Date, i: number) => (
+          <div key={i} className="calendar-header__cell">
+            <div className="header-content-day-name-only"> {/* New class for pure Day Name display */}
+              <div className="header-day-name">
+                {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][i]}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
       
       <div className="calendar-grid">
         {weekData.map((row: WeekRow, rIdx: number) => (
@@ -96,21 +107,13 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                 key={i}
                 className="calendar-cell"
               >
-                {/* 2. REPEATING FULL HEADER (Day Name + Date Number) */}
-                <div className="sticky-date-full-header blue-header">
-                  <div className="header-content-combined">
-                    {/* Day Name - Only display the day name for the first row (Week 1) */}
-                    {rIdx === 0 && (
-                        <div className="header-day-name">
-                          {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][i]}
-                        </div>
-                    )}
-                    {/* Date Number - Display for all rows */}
-                    <div className="header-date-num">
-                      {d.getDate()}
-                    </div>
-                  </div>
+                {/* 2. IN-CELL DATE NUMBER (Always Renders) */}
+                <div className="in-cell-date-number">
+                    {d.getDate()}
                 </div>
+                
+                {/* 3. SPACER for Event Positioning (pushes events down 45px) */}
+                <div style={{height: `${DATE_HEADER_H}px`}}></div>
               </div>
             ))}
 

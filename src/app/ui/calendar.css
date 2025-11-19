@@ -49,7 +49,6 @@ html,body{ background:var(--bg); color:var(--text); }
   grid-auto-columns:1fr;
   background:var(--panel-strong);
   border-bottom:1px solid var(--grid);
-  /* FIX: Ensure the grid has no unwanted spacing */
   padding: 0; 
   margin: 0;
 }
@@ -61,10 +60,10 @@ html,body{ background:var(--bg); color:var(--text); }
   color:var(--text);
 }
 
-/* --- STICKY HEADER (FIXED STICKINESS FOR WEEKS 1) --- */
+/* --- STICKY HEADER (REINFORCED STICKINESS) --- */
 .calendar-root .sticky-header {
-  position: sticky;
-  top: 0;
+  position: sticky !important; /* REINFORCED */
+  top: 0 !important; /* REINFORCED */
   z-index: 40; 
   background: #2b2e32; 
   border-bottom: 1px solid var(--grid);
@@ -84,36 +83,24 @@ html,body{ background:var(--bg); color:var(--text); }
   padding: 0; 
 }
 
-/* FIX: Combined Header Content (Day Name + Date) - Corrects alignment and sizing */
-.calendar-root .header-content-combined { 
+/* NEW: Style for Day Name Only header in MonthView/WeekView */
+.calendar-root .header-content-day-name-only { 
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     width: 100%;
     min-height: 45px; 
-    color: #ffffff;
-    font-weight: 700;
-    /* FIX: Ensure the combined content takes up the full grid cell */
     padding: 5px 0;
 }
 .calendar-root .header-day-name {
-    font-size: 13px;
+    font-size: 14px;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
     opacity: 1; 
-}
-.calendar-root .header-date-num {
-    font-size: 18px; 
-    font-weight: 900;
-    line-height: 1.1; 
-    margin-top: 2px; 
+    color: #ffffff; /* Ensure visibility */
 }
 
-
-/* --------------------------------------------------------------------------
-   Grid
--------------------------------------------------------------------------- */
+/* FIX: Ensure all grid cells are aligned */
 .calendar-root .calendar-grid{ position:relative; background:var(--panel); }
 .calendar-root .calendar-row{
   position:relative;
@@ -122,9 +109,8 @@ html,body{ background:var(--bg); color:var(--text); }
   grid-auto-columns:1fr;
   min-height:56px;
   border-bottom:1px solid var(--grid);
-  /* FIX: Explicitly set 7 columns */
   background-image:linear-gradient(to right, var(--grid) 1px, transparent 1px);
-  background-size:calc(100% / 7) 100%; /* Force 7 columns */
+  background-size:calc(100% / 7) 100%; 
   background-repeat:repeat-x;
 }
 .calendar-root .calendar-row:last-child{ border-bottom:0; }

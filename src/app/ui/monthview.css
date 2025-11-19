@@ -9,20 +9,16 @@
     min-height: 100%;
 }
 
-/* FIX: Styling for simple, non-sticky date number in Weeks 2-6 */
-.calendar-root .monthview-date-num-in-cell {
-    /* REMOVED: position: sticky, top: 45px, z-index: 30 */
-    position: relative; /* Standard positioning */
+/* NEW: Styling for in-cell date number (non-sticky) */
+.calendar-root .in-cell-date-number {
+    position: absolute; /* Place it in the top corner */
+    top: 5px;
+    right: 5px; 
+    z-index: 5; /* Above events, below main header */
     
     font-size: 20px; 
     font-weight: 900;
     line-height: 1.1; 
     color: var(--text); 
     padding: 5px; 
-    width: 100%; 
-    box-sizing: border-box; 
-    text-align: right; 
-    
-    /* Ensure it has background to hide events */
-    background: var(--panel); 
 }
