@@ -102,7 +102,7 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                 key={i}
                 className="calendar-cell"
               >
-                {/* 2. DATE NUMBER - Simple Non-Sticky Element */}
+                {/* 2. DATE NUMBER - Simple Non-Sticky Element (FIXED) */}
                 <div className="monthview-date-num-in-cell">
                     {d.getDate()}
                 </div>
