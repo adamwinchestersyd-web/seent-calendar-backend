@@ -1,6 +1,6 @@
 // CACHE BUST v34 - FINAL STICKY LOGIC
 import React from "react";
-import EventPillWeek from "../components/EventPillWeek.jsx";
+import EventPillMonth from "../components/EventPillMonth.jsx";
 import {
   addDays,
   startOfMonthGrid,
@@ -19,7 +19,7 @@ type Props = {
 
 const CELL_MIN_H = 150; 
 const DATE_HEADER_H = 45; // Height of the single header bar in subsequent rows
-const EVENT_H = 94; // 90px pill + 4px gap
+const EVENT_H = 64; // 90px pill + 4px gap
 const V_GUTTER = 2;
 const H_GUTTER = 4;
 
@@ -142,9 +142,9 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                       onDragStart={onDragStart(seg)}
                       title={e.title}
                     >
-                      <EventPillWeek
+                      <EventPillMonth
                         ev={e}
-                        isMultiDay={!seg.span}
+                        //isMultiDay={!seg.span}
                         className={e.colorClass || "event--blue"}
                         style={{ width: "100%", ...e.colour ? {["--c"]: e.colour} : {} }}
                         onOpenEditor={(ev: any, rect: any) => {
