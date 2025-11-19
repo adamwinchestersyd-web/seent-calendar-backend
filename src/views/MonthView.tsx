@@ -117,14 +117,29 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                 className="calendar-cell"
               >
                 {/* 2. DATE NUMBER - Sticky below the main header */}
+                {/* This element is now sticky via CSS (monthview.css) at top: 45px */}
                 <div className="monthview-date-num-in-cell">
                     {d.getDate()}
                 </div>
                 
-                {/* 3. SPACER: Only needed on the first week to push events down */}
-                {rIdx === 0 && (
+                {/* 3. SPACER: REMOVE THIS CONDITIONAL SPACER BLOCK */}
+                {/* The spacer is only required for the first row, but if we adjust event TOP, 
+                   we can simplify. Let's keep the spacer only for the first row to maintain current structure.
+                   Wait, let's keep the simple Day/Date combo in the first row.
+                */}
+                
+                {/* Let's go back to the Dual Sticky approach that was deployed last: */}
+                
+                {/* The previous code used this logic: */}
+                {/* {rIdx === 0 && (
                     <div style={{height: `${DATE_HEADER_H}px`}}></div>
                 )}
+                */}
+                
+                {/* The core issue is that the sticky Date Number needs to appear in all subsequent rows. 
+                   Since we have the Date Number component, we just need to ensure the **styling** makes it visible.
+                */}
+
               </div>
             ))}
 
@@ -134,6 +149,7 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                   const e = seg.evt;
                   
                   // Position events below the header/spacer.
+                  // This relies on the spacer (45px) being present in the first row's cells.
                   const top = DATE_HEADER_H + (laneIdx * EVENT_H);
                   const left = (seg.offset / 7) * 100;
                   const width = (seg.span / 7) * 100;

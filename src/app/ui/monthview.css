@@ -9,24 +9,27 @@
     min-height: 100%;
 }
 
-/* Fix: Hide the separate date number on the first row */
-.calendar-root .calendar-row:first-child .monthview-date-num-in-cell {
-    display: none; 
-}
-
 /* FIX: Sticky Date Number Styling */
 .calendar-root .monthview-date-num-in-cell {
-    position: sticky; /* Make the date sticky */
+    position: sticky; 
     top: 45px; /* Sticks 45px below the main Day Name header (DATE_HEADER_H) */
     left: 0;
-    z-index: 30; /* Below main header (40), above pills (10) */
+    z-index: 30; 
+    
     font-size: 20px; 
     font-weight: 900;
     line-height: 1.1; 
     color: var(--text); 
     padding: 5px; 
-    width: 100%; /* Must fill the width of the cell */
+    width: 100%; 
     box-sizing: border-box; 
-    text-align: right; /* Align right for a cleaner look */
-    background: var(--panel); /* Give it a background so it doesn't show events underneath */
+    text-align: right; 
+    
+    /* *** ADDED: CRITICAL BACKGROUND *** */
+    background: var(--panel); 
+}
+
+/* FIX: Remove duplicated date number on Week 1 only. */
+.calendar-root .calendar-row:first-child .monthview-date-num-in-cell {
+    display: none; 
 }
