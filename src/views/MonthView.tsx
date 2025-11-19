@@ -1,7 +1,7 @@
 // MonthView.tsx
-// CACHE BUST v35 - FINAL STICKY REPLACING LOGIC
+// CACHE BUST v36 - FINAL DUAL STICKY HEADER FIX
 import React from "react";
-import EventPillMonth from "../components/EventPillMonth.jsx"; // Use the correct pill
+import EventPillMonth from "../components/EventPillMonth.jsx"; 
 import {
   addDays,
   startOfMonthGrid,
@@ -10,6 +10,7 @@ import {
   packLanes,
 } from "../app/utils/calendar";
 
+// --- START TYPE FIX ---
 type Props = {
   date: Date;
   events: any[];
@@ -17,10 +18,11 @@ type Props = {
   onResize?: (evtId: string, edge: "start" | "end", targetDate: Date) => void;
   onOpenEditor?: (ev: any, clickEvent: React.MouseEvent) => void;
 };
+// --- END TYPE FIX ---
 
 const CELL_MIN_H = 150; 
-const DATE_HEADER_H = 45; // Height of the new sticky header bar
-const EVENT_H = 64; // Approx. 60px pill height + 4px gap (Adjusted for Month Pill)
+const DATE_HEADER_H = 45; // Height of the main Day Name header / sticky date bar
+const EVENT_H = 64; // Approx. 60px pill height + 4px gap (for EventPillMonth)
 const V_GUTTER = 2;
 const H_GUTTER = 4;
 
@@ -31,9 +33,10 @@ type WeekRow = {
 };
 
 export default function MonthView({ date, events, onMove, onResize, onOpenEditor }: Props) {
+  // --- START USEMEMO FIX (Resolves 'Cannot find name' errors) ---
   const gridStart = React.useMemo(() => startOfMonthGrid(date), [date]);
   
-  const weeks = React.useMemo(() => {
+  const weeks: Date[][] = React.useMemo(() => {
     const out: Date[][] = [];
     let cur = new Date(gridStart);
     for (let r = 0; r < 6; r++) {
@@ -47,8 +50,8 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
     return out;
   }, [gridStart]);
 
-  const weekData = React.useMemo<WeekRow[]>(() => {
-    return weeks.map((week) => {
+  const weekData: WeekRow[] = React.useMemo(() => {
+    return weeks.map((week: Date[]) => {
       const segs = (events || [])
         .flatMap((e) => segmentEventAcrossRange(e, week[0], week[6]))
         .sort((a, b) => {
@@ -66,10 +69,10 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
     });
   }, [weeks, events]);
 
-  const rowHeights = React.useMemo(() => {
-    return weekData.map((data) => {
+  const rowHeights: number[] = React.useMemo(() => {
+    return weekData.map((data: WeekRow) => {
       const maxLaneIndex = data.lanes.length;
-      // Height = Sticky Header Height + (Events * Height) + 10px bottom spacing
+      // Height = Header Height + (Events * Height) + 10px bottom spacing
       const contentH = DATE_HEADER_H + (maxLaneIndex * EVENT_H) + 10; 
       return Math.max(CELL_MIN_H, contentH);
     });
@@ -79,44 +82,53 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
     const payload = JSON.stringify({ segId: seg.id, evtId: seg.evt?.id });
     e.dataTransfer?.setData("application/json", payload);
   };
+  // --- END USEMEMO FIX ---
 
   return (
     <div className="calendar-root">
-      {/* 1. MAIN HEADER (Day Names ONLY) - We're removing this and putting the full header in the cells. */}
-      {/* Since the repeating sticky bar is designed to be the main header, we don't need this. */}
-      
+      {/* 1. MAIN HEADER (Day Names ONLY - Sticks to viewport top) */}
+      <div className="calendar-header sticky-header blue-header">
+        {weeks[0].map((d: Date, i: number) => (
+          <div key={i} className="calendar-header__cell">
+            <div className="header-content">
+              <div className="header-day-name">
+                {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][i]}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
       <div className="calendar-grid">
-        {weekData.map((row, rIdx) => (
+        {weekData.map((row: WeekRow, rIdx: number) => (
           <div 
             key={rIdx} 
             className="calendar-row" 
             style={{ ["--cols" as any]: 7, height: rowHeights[rIdx] }}
           >
-            {row.week.map((d, i) => (
+            {row.week.map((d: Date, i: number) => (
               <div
                 key={i}
                 className="calendar-cell"
               >
-                {/* 2. STICKY REPLACING HEADER (Day Name + Date Number) */}
-                <div className="sticky-date-replacer blue-header">
-                  <div className="header-content">
-                    <div className="header-day-name">
-                      {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][i]}
-                    </div>
-                    <div className="header-date-num">
-                      {d.getDate()}
-                    </div>
-                  </div>
+                {/* 2. DATE NUMBER - Sticky below the main header */}
+                <div className="monthview-date-num-in-cell">
+                    {d.getDate()}
                 </div>
+                
+                {/* 3. SPACER: Only needed on the first week to push events down */}
+                {rIdx === 0 && (
+                    <div style={{height: `${DATE_HEADER_H}px`}}></div>
+                )}
               </div>
             ))}
 
             <div className="absolute inset-0 pointer-events-none">
-              {row.lanes.map((lane, laneIdx) =>
-                lane.map((seg, bi) => {
+              {row.lanes.map((lane: any[], laneIdx: number) =>
+                lane.map((seg: any, bi: number) => {
                   const e = seg.evt;
                   
-                  // Position events below the sticky header bar (starts after DATE_HEADER_H)
+                  // Position events below the header/spacer.
                   const top = DATE_HEADER_H + (laneIdx * EVENT_H);
                   const left = (seg.offset / 7) * 100;
                   const width = (seg.span / 7) * 100;
@@ -140,7 +152,7 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                       onDragStart={onDragStart(seg)}
                       title={e.title}
                     >
-                      <EventPillMonth
+                      <EventPillMonth // Correct component usage
                         ev={e}
                         className={e.colorClass || "event--blue"}
                         style={{ width: "100%", ...e.colour ? {["--c"]: e.colour} : {} }}

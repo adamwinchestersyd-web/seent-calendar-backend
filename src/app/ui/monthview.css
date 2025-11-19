@@ -9,14 +9,20 @@
     min-height: 100%;
 }
 
-/* NEW: The repeating, sticky, replacing header */
-.calendar-root .sticky-date-replacer {
-    position: sticky; /* Make the bar sticky */
-    top: 0; /* Locks it to the top of the calendar-cell */
+/* FIX: Sticky Date Number Styling */
+.calendar-root .monthview-date-num-in-cell {
+    position: sticky; /* Make the date sticky */
+    top: 45px; /* Sticks 45px below the main Day Name header (DATE_HEADER_H) */
     left: 0;
-    z-index: 30; /* Below the modals, above the events */
-    width: 100%;
-    box-sizing: border-box;
-    text-align: center;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    z-index: 30; /* Below main header (40), above pills (10) */
+    
+    font-size: 20px; 
+    font-weight: 900;
+    line-height: 1.1; 
+    color: var(--text); 
+    padding: 5px; 
+    width: 100%; /* Must fill the width of the cell */
+    box-sizing: border-box; 
+    text-align: right; /* Align right for a cleaner look */
+    background: var(--panel); /* Give it a background so it doesn't show events underneath */
 }
