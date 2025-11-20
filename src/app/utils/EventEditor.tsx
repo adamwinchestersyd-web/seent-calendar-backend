@@ -1,5 +1,5 @@
 // EventEditor.tsx
-// CACHE BUST v69 - ROBUST DYNAMIC MODAL POSITIONING (TS Fix and Final Logic)
+// CACHE BUST v70 - FIX: Add window scrollY to clientY for document-relative positioning
 import React, { CSSProperties } from "react"; 
 import { useEscapeKey } from "../../hooks/useEscapeKey";
 
@@ -11,7 +11,7 @@ type Coordinates = {
 
 type Props = {
   open: boolean;
-  clickEvent?: Coordinates; // Accepts coordinates object from the event pill
+  clickEvent?: Coordinates; 
   ev?: any;
   onClose: () => void;
   onChangeDates: (id: string, eventData: any) => void;
@@ -37,7 +37,7 @@ function usePopupPosition(open: boolean, clickEvent?: Coordinates) {
     // DEBUG LOGS
     console.log("--- Modal Positioning Check (Start) ---");
     console.log(`Open State: ${open}`);
-    console.log(`Click Coords: (${clientX}, ${clientY})`);
+    console.log(`Click Coords (Viewport): (${clientX}, ${clientY})`);
     // END DEBUG LOGS
 
     // 1. Hide and reset position if not open
@@ -64,6 +64,10 @@ function usePopupPosition(open: boolean, clickEvent?: Coordinates) {
         // --- Dynamic Positioning Logic ---
         console.log("Status: Valid coordinates detected. Applying dynamic positioning.");
 
+        // Get current vertical scroll offset (for document-relative positioning)
+        const scrollY = window.pageYOffset || window.scrollY;
+        console.log(`Scroll Offset (Y): ${scrollY}`);
+
         // Use actual height if ref is ready, otherwise use a safe estimate.
         const actualHeight = ref.current ? ref.current.offsetHeight : 0;
         const modalHeight = actualHeight || 300; 
@@ -75,8 +79,9 @@ function usePopupPosition(open: boolean, clickEvent?: Coordinates) {
         
         // Initial calculation: clientX/clientY are guaranteed to be numbers here
         left = clientX - (modalWidth / 2); 
-        top = clientY + clickPointOffset; 
-        console.log(`Initial Position: (L:${left}, T:${top})`);
+        // FIX APPLIED HERE: Add scrollY to clientY to get the correct document-relative top position
+        top = clientY + scrollY + clickPointOffset; 
+        console.log(`Initial Position (Document): (L:${left}, T:${top})`);
 
         // --- Viewport boundary checks ---
         
@@ -93,9 +98,10 @@ function usePopupPosition(open: boolean, clickEvent?: Coordinates) {
         }
         
         // 3. Keep bottom edge visible (prefer opening upwards if near the bottom of the viewport)
-        if (top + modalHeight + margin > window.innerHeight) {
+        // We use window.innerHeight here because top is now document-relative.
+        if (top + modalHeight + margin > (window.innerHeight + scrollY)) {
             // Recalculate top to open above the click point
-            top = clientY - modalHeight - clickPointOffset; 
+            top = clientY + scrollY - modalHeight - clickPointOffset; 
             console.log(`Boundary Adjust: Opening upwards. New Top: ${top}`);
 
             // If it still goes off the top, place it at the top margin
