@@ -1,24 +1,18 @@
 // EventEditor.tsx
-// CACHE BUST v66 - RESTORE DYNAMIC MODAL POSITIONING (Fix to place at cursor)
+// CACHE BUST v64 - FINAL MODAL POSITIONING (Absolute Center Fix)
 import React from "react";
 import { useEscapeKey } from "../../hooks/useEscapeKey";
 
-// Define a type for the coordinates object passed from EventPill components
-type Coordinates = { 
-  clientX: number; 
-  clientY: number; 
-};
-
 type Props = {
   open: boolean;
-  clickEvent?: Coordinates; // Changed type from React.MouseEvent | null
+  clickEvent?: React.MouseEvent | null;
   ev?: any;
   onClose: () => void;
   onChangeDates: (id: string, eventData: any) => void;
 };
 
-// Positioning hook - now accepts clickEvent for dynamic positioning
-function usePopupPosition(open: boolean, clickEvent?: Coordinates) { 
+// Positioning hook
+function usePopupPosition(open: boolean) {
   const ref = React.useRef<HTMLDivElement>(null);
   const [pos, setPos] = React.useState<React.CSSProperties>({
     top: -9999,
@@ -28,59 +22,21 @@ function usePopupPosition(open: boolean, clickEvent?: Coordinates) {
   });
 
   React.useLayoutEffect(() => {
-    // Check for open, ref, and coordinates from clickEvent
-    if (!open || !ref.current || !clickEvent || !clickEvent.clientX || !clickEvent.clientY) {
+    if (!open || !ref.current) {
        setPos({ top: -9999, left: -9999, opacity: 0, position: 'absolute' });
        return;
     }
-
-    const modalWidth = 360; // Estimate fixed width for centering calculation
-    // Get actual height after rendering/open for better boundary check
-    const modalHeight = ref.current.offsetHeight || 300; 
-    const margin = 10;
-    const clickPointOffset = 10; // Offset to place the modal slightly below/above the cursor
     
-    let { clientX, clientY } = clickEvent;
-    
-    // Initial position: center modal horizontally on the click X, and 10px below click Y
-    let left = clientX - (modalWidth / 2);
-    let top = clientY + clickPointOffset; 
-
-    // --- Viewport boundary checks ---
-    
-    // 1. Keep left edge visible
-    if (left < margin) {
-      left = margin;
-    }
-
-    // 2. Keep right edge visible
-    if (left + modalWidth + margin > window.innerWidth) {
-      left = window.innerWidth - modalWidth - margin;
-    }
-    
-    // 3. Keep bottom edge visible (prefer opening upwards if near the bottom of the viewport)
-    if (top + modalHeight + margin > window.innerHeight) {
-        // Recalculate top to open above the click point
-        top = clientY - modalHeight - clickPointOffset; 
-
-        // If it still goes off the top (unlikely with this logic, but safe), just place it at the top margin
-        if (top < margin) {
-            top = margin;
-        }
-    }
-    
-    // Final calculated position
+    // --- FINAL FIX: Use absolute positioning and place at a fixed visible offset ---
+    // This bypasses unreliable coordinate reading and viewport centering crashes.
     setPos({
       position: 'absolute',
-      top: Math.round(top),
-      left: Math.round(left),
-      width: modalWidth,
-      transform: 'none', // Remove the horizontal centering transform
+      top: 100, // Fixed offset from the top (ensures visibility)
+      left: '50%',
+      transform: 'translateX(-50%)', // Center horizontally
       opacity: 1,
-      zIndex: 1000 // Ensure it's on top
     });
-
-  }, [open, clickEvent]); // Now depends on 'open' AND 'clickEvent'
+  }, [open]);
 
   return { ref, style: pos };
 }
@@ -89,8 +45,8 @@ function usePopupPosition(open: boolean, clickEvent?: Coordinates) {
 export default function EventEditor({ open, clickEvent, ev, onClose, onChangeDates }: Props) {
   const [start, setStart] = React.useState(ev?.start ?? "");
   const [end, setEnd] = React.useState(ev?.end ?? "");
-  // --- FIXED: Pass clickEvent to hook, which now handles dynamic positioning ---
-  const { ref, style: positionStyle } = usePopupPosition(open, clickEvent); 
+  // --- FIXED: Do not pass clickEvent to hook, rely solely on 'open' ---
+  const { ref, style: positionStyle } = usePopupPosition(open); 
 
   useEscapeKey(onClose); // Close on Escape key
   
