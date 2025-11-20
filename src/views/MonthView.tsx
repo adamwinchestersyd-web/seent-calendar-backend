@@ -1,5 +1,5 @@
 // MonthView.tsx
-// CACHE BUST v51 - FINAL SOLUTION: SEPARATE REPEATER STRUCTURE (Full Drop-in)
+// CACHE BUST v52 - FIX: Correctly pass clientX/clientY from EventPillMonth
 import React from "react";
 import EventPillMonth from "../components/EventPillMonth.jsx"; 
 import {
@@ -154,7 +154,11 @@ export default function MonthView({ date, events, onMove, onResize, onOpenEditor
                                         className={e.colorClass || "event--blue"}
                                         style={{ width: "100%", ...e.colour ? {["--c"]: e.colour} : {} }}
                                         onOpenEditor={(ev: any, rect: any) => {
-                                            if (rect) onOpenEditor?.(ev, { clientY: rect.top, clientX: rect.left } as any);
+                                            // *** DEBUG LOGGING ADDED ***
+                                            console.log(`[CLICK DEBUG] Pill ID: ${e.id}, Title: ${e.title}, Coords: (${rect.clientX}, ${rect.clientY})`);
+
+                                            // FIXED: Pass clientY and clientX (from EventPillMonth)
+                                            if (rect) onOpenEditor?.(ev, { clientY: rect.clientY, clientX: rect.clientX } as any);
                                         }}
                                     />
                                 </div>
