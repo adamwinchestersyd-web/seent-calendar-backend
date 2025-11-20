@@ -1,5 +1,5 @@
 // EventEditor.tsx
-// CACHE BUST v66 - RESTORE DYNAMIC MODAL POSITIONING (Fix to place at cursor with boundary check)
+// CACHE BUST v67 - ROBUST DYNAMIC MODAL POSITIONING (Ensures modal always opens, favoring cursor position)
 import React from "react";
 import { useEscapeKey } from "../../hooks/useEscapeKey";
 
@@ -17,7 +17,7 @@ type Props = {
   onChangeDates: (id: string, eventData: any) => void;
 };
 
-// Positioning hook - now accepts clickEvent for dynamic positioning
+// Positioning hook - uses dynamic position if coordinates are available, otherwise falls back to fixed center.
 function usePopupPosition(open: boolean, clickEvent?: Coordinates) { 
   const ref = React.useRef<HTMLDivElement>(null);
   const [pos, setPos] = React.useState<React.CSSProperties>({
@@ -34,70 +34,74 @@ function usePopupPosition(open: boolean, clickEvent?: Coordinates) {
        return;
     }
 
-    // 2. If open, but coordinates are missing (fall back to fixed center position)
-    if (!clickEvent || typeof clickEvent.clientX !== 'number' || typeof clickEvent.clientY !== 'number') {
-        // This is the fallback to the previous fixed-center position
-        setPos({
-            position: 'absolute',
-            top: 100, 
-            left: '50%',
-            transform: 'translateX(-50%)', 
-            opacity: 1,
-        });
-        return;
-    }
-    
-    // --- Dynamic Positioning Logic ---
-    
-    // Modal dimensions and offsets
+    // --- Default Fallback Position (Top Center) ---
+    // These values are used if dynamic positioning fails or coordinates are unavailable.
+    let left: number | string = '50%';
+    let top: number = 100;
+    let transform: string = 'translateX(-50%)';
+    let width: number | string = 'auto'; // Let the modal determine its width normally
     const modalWidth = 360; 
-    // Use actual height if ref is ready (after first render), otherwise use a safe estimate.
-    const modalHeight = ref.current ? ref.current.offsetHeight : 300; 
-    const margin = 10; // Minimum margin from viewport edges
-    const clickPointOffset = 10; // Offset to place the modal slightly below the cursor
-    
-    let { clientX, clientY } = clickEvent;
-    
-    // Initial position: center modal horizontally on the click X, and 10px below click Y
-    let left = clientX - (modalWidth / 2);
-    let top = clientY + clickPointOffset; 
 
-    // --- Viewport boundary checks ---
-    
-    // 1. Keep left edge visible
-    if (left < margin) {
-      left = margin;
-    }
+    // Check if we have valid coordinates to use dynamic positioning
+    const hasValidCoords = clickEvent && 
+                           typeof clickEvent.clientX === 'number' && 
+                           typeof clickEvent.clientY === 'number' &&
+                           (clickEvent.clientX > 0 || clickEvent.clientY > 0); // Exclude [0, 0] which may be an error state
 
-    // 2. Keep right edge visible
-    if (left + modalWidth + margin > window.innerWidth) {
-      // Shift left to fit in viewport
-      left = window.innerWidth - modalWidth - margin;
-    }
-    
-    // 3. Keep bottom edge visible (prefer opening upwards if near the bottom of the viewport)
-    if (top + modalHeight + margin > window.innerHeight) {
-        // Recalculate top to open above the click point
-        top = clientY - modalHeight - clickPointOffset; 
+    if (hasValidCoords) {
+        // --- Dynamic Positioning Logic ---
+        
+        // Use actual height if ref is ready, otherwise use a safe estimate.
+        const modalHeight = ref.current ? ref.current.offsetHeight : 300; 
+        const margin = 10; 
+        const clickPointOffset = 10; 
+        
+        let { clientX, clientY } = clickEvent;
+        
+        // Initial position: center modal horizontally on the click X, and 10px below click Y
+        left = clientX - (modalWidth / 2);
+        top = clientY + clickPointOffset; 
 
-        // If it still goes off the top (unlikely), just place it at the top margin
-        if (top < margin) {
-            top = margin;
+        // --- Viewport boundary checks ---
+        
+        // 1. Keep left edge visible
+        if (left < margin) {
+          left = margin;
         }
+
+        // 2. Keep right edge visible
+        if (left + modalWidth + margin > window.innerWidth) {
+          left = window.innerWidth - modalWidth - margin;
+        }
+        
+        // 3. Keep bottom edge visible (prefer opening upwards if near the bottom of the viewport)
+        if (top + modalHeight + margin > window.innerHeight) {
+            // Recalculate top to open above the click point
+            top = clientY - modalHeight - clickPointOffset; 
+
+            // If it still goes off the top, place it at the top margin
+            if (top < margin) {
+                top = margin;
+            }
+        }
+        
+        // Override default fallback values
+        transform = 'none'; // Remove the horizontal centering transform
+        width = modalWidth; // Set explicit width for boundary check consistency
     }
     
-    // Final calculated position
+    // Final calculated position (either dynamic or fallback)
     setPos({
       position: 'absolute',
       top: Math.round(top),
-      left: Math.round(left),
-      width: modalWidth, // Set explicit width
-      transform: 'none', // Remove the horizontal centering transform
+      left: left,
+      width: width,
+      transform: transform,
       opacity: 1,
-      zIndex: 1000 // Ensure it's on top of other calendar elements
+      zIndex: 1000 // Ensure it's on top
     });
 
-  }, [open, clickEvent]); // Depends on 'open' AND 'clickEvent'
+  }, [open, clickEvent]); // Dependencies: runs when modal opens/closes or click coordinates change
 
   return { ref, style: pos };
 }
