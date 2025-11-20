@@ -1,5 +1,5 @@
 // EventEditor.tsx
-// CACHE BUST v67 - ROBUST DYNAMIC MODAL POSITIONING (Ensures modal always opens, favoring cursor position)
+// CACHE BUST v68 - DEBUG VERSION (Includes extensive console logging for positioning)
 import React from "react";
 import { useEscapeKey } from "../../hooks/useEscapeKey";
 
@@ -28,14 +28,19 @@ function usePopupPosition(open: boolean, clickEvent?: Coordinates) {
   });
 
   React.useLayoutEffect(() => {
+    console.log("--- Modal Positioning Check (Start) ---");
+    console.log(`Open State: ${open}`);
+    console.log(`Click Coords: ${clickEvent ? `(${clickEvent.clientX}, ${clickEvent.clientY})` : 'N/A'}`);
+
     // 1. Hide and reset position if not open
     if (!open) {
+       console.log("Action: Modal is closed. Resetting position.");
        setPos({ top: -9999, left: -9999, opacity: 0, position: 'absolute' });
+       console.log("--- Modal Positioning Check (End) ---");
        return;
     }
 
     // --- Default Fallback Position (Top Center) ---
-    // These values are used if dynamic positioning fails or coordinates are unavailable.
     let left: number | string = '50%';
     let top: number = 100;
     let transform: string = 'translateX(-50%)';
@@ -46,62 +51,79 @@ function usePopupPosition(open: boolean, clickEvent?: Coordinates) {
     const hasValidCoords = clickEvent && 
                            typeof clickEvent.clientX === 'number' && 
                            typeof clickEvent.clientY === 'number' &&
-                           (clickEvent.clientX > 0 || clickEvent.clientY > 0); // Exclude [0, 0] which may be an error state
+                           (clickEvent.clientX > 0 || clickEvent.clientY > 0); 
 
     if (hasValidCoords) {
         // --- Dynamic Positioning Logic ---
-        
+        console.log("Status: Valid coordinates detected. Applying dynamic positioning.");
+
         // Use actual height if ref is ready, otherwise use a safe estimate.
-        const modalHeight = ref.current ? ref.current.offsetHeight : 300; 
+        const actualHeight = ref.current ? ref.current.offsetHeight : 0;
+        const modalHeight = actualHeight || 300; 
+        console.log(`Modal DOM Ref Ready: ${!!ref.current}`);
+        console.log(`Modal Height (Actual/Estimate): ${actualHeight || '300 (Estimate)'}`);
+        
         const margin = 10; 
         const clickPointOffset = 10; 
         
         let { clientX, clientY } = clickEvent;
         
-        // Initial position: center modal horizontally on the click X, and 10px below click Y
+        // Initial calculation
         left = clientX - (modalWidth / 2);
         top = clientY + clickPointOffset; 
+        console.log(`Initial Position: (L:${left}, T:${top})`);
 
         // --- Viewport boundary checks ---
         
         // 1. Keep left edge visible
         if (left < margin) {
           left = margin;
+          console.log(`Boundary Adjust: Left clipped to ${left}`);
         }
 
         // 2. Keep right edge visible
-        if (left + modalWidth + margin > window.innerWidth) {
+        if (typeof left === 'number' && left + modalWidth + margin > window.innerWidth) {
           left = window.innerWidth - modalWidth - margin;
+          console.log(`Boundary Adjust: Right clipped to ${left}`);
         }
         
         // 3. Keep bottom edge visible (prefer opening upwards if near the bottom of the viewport)
         if (top + modalHeight + margin > window.innerHeight) {
             // Recalculate top to open above the click point
             top = clientY - modalHeight - clickPointOffset; 
+            console.log(`Boundary Adjust: Opening upwards. New Top: ${top}`);
 
             // If it still goes off the top, place it at the top margin
             if (top < margin) {
                 top = margin;
+                console.log(`Boundary Adjust: Top clipped to ${top}`);
             }
         }
         
         // Override default fallback values
-        transform = 'none'; // Remove the horizontal centering transform
-        width = modalWidth; // Set explicit width for boundary check consistency
+        transform = 'none'; 
+        width = modalWidth; 
+    } else {
+        console.log("Status: Coordinates not valid/available. Falling back to fixed center position (100px from top).");
+        // Use the existing default/fallback values
     }
     
     // Final calculated position (either dynamic or fallback)
-    setPos({
+    const finalPos = {
       position: 'absolute',
       top: Math.round(top),
-      left: left,
+      left: typeof left === 'number' ? Math.round(left) : left, // Keep '50%' if it's the fallback
       width: width,
       transform: transform,
       opacity: 1,
-      zIndex: 1000 // Ensure it's on top
-    });
+      zIndex: 1000 
+    };
+    
+    console.log("Final Calculated Style:", finalPos);
+    setPos(finalPos);
+    console.log("--- Modal Positioning Check (End) ---");
 
-  }, [open, clickEvent]); // Dependencies: runs when modal opens/closes or click coordinates change
+  }, [open, clickEvent]); 
 
   return { ref, style: pos };
 }
