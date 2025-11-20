@@ -1,5 +1,5 @@
 // WeekView.tsx
-// CACHE BUST v60 - DEBUGGING ENABLED (Full Drop-in)
+// CACHE BUST v61 - FIX: Correctly pass clientX/clientY from EventPillWeek
 import React from "react";
 import EventPillWeek from "../components/EventPillWeek.jsx"; 
 import {
@@ -152,8 +152,6 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
     setPendingResize(null);
   };
 
-  // --- CRITICAL FIX: The logic here is stable as it relies on 'top = laneTops[li] || 0;' ---
-
   return (
     <div className="calendar-root">
       {/* 1. TOP STICKY HEADER (Day Names AND Date Numbers combined) */}
@@ -232,7 +230,8 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
                      // *** DEBUG LOGGING ADDED ***
                      console.log(`[CLICK DEBUG] Pill ID: ${e.id}, Title: ${e.title}, Coords: (${rect.clientX}, ${rect.clientY})`);
                      
-                     if (rect) onOpenEditor?.(ev, { clientY: rect.top, clientX: rect.left } as any);
+                     // FIXED: Pass clientY and clientX (from EventPillWeek) instead of undefined rect.top/rect.left
+                     if (rect) onOpenEditor?.(ev, { clientY: rect.clientY, clientX: rect.clientX } as any);
                   }}
                 />
                 </div>

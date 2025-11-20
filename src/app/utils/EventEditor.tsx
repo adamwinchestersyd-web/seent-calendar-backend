@@ -1,6 +1,6 @@
 // EventEditor.tsx
-// CACHE BUST v68 - DEBUG VERSION (Includes extensive console logging for positioning)
-import React from "react";
+// CACHE BUST v69 - ROBUST DYNAMIC MODAL POSITIONING (TS Fix and Final Logic)
+import React, { CSSProperties } from "react"; 
 import { useEscapeKey } from "../../hooks/useEscapeKey";
 
 // Define a type for the coordinates object passed from EventPill components
@@ -20,7 +20,13 @@ type Props = {
 // Positioning hook - uses dynamic position if coordinates are available, otherwise falls back to fixed center.
 function usePopupPosition(open: boolean, clickEvent?: Coordinates) { 
   const ref = React.useRef<HTMLDivElement>(null);
-  const [pos, setPos] = React.useState<React.CSSProperties>({
+  
+  // Extract coordinates outside of the effect to use them in the dependency array
+  const clientX = clickEvent?.clientX;
+  const clientY = clickEvent?.clientY;
+
+  // Use CSSProperties for type safety
+  const [pos, setPos] = React.useState<CSSProperties>({
     top: -9999,
     left: -9999,
     opacity: 0,
@@ -28,9 +34,11 @@ function usePopupPosition(open: boolean, clickEvent?: Coordinates) {
   });
 
   React.useLayoutEffect(() => {
+    // DEBUG LOGS
     console.log("--- Modal Positioning Check (Start) ---");
     console.log(`Open State: ${open}`);
-    console.log(`Click Coords: ${clickEvent ? `(${clickEvent.clientX}, ${clickEvent.clientY})` : 'N/A'}`);
+    console.log(`Click Coords: (${clientX}, ${clientY})`);
+    // END DEBUG LOGS
 
     // 1. Hide and reset position if not open
     if (!open) {
@@ -43,15 +51,14 @@ function usePopupPosition(open: boolean, clickEvent?: Coordinates) {
     // --- Default Fallback Position (Top Center) ---
     let left: number | string = '50%';
     let top: number = 100;
-    let transform: string = 'translateX(-50%)';
-    let width: number | string = 'auto'; // Let the modal determine its width normally
+    let transform: CSSProperties['transform'] = 'translateX(-50%)'; 
+    let width: number | string = 'auto'; 
     const modalWidth = 360; 
+    let position: CSSProperties['position'] = 'absolute'; 
 
     // Check if we have valid coordinates to use dynamic positioning
-    const hasValidCoords = clickEvent && 
-                           typeof clickEvent.clientX === 'number' && 
-                           typeof clickEvent.clientY === 'number' &&
-                           (clickEvent.clientX > 0 || clickEvent.clientY > 0); 
+    const hasValidCoords = typeof clientX === 'number' && typeof clientY === 'number' &&
+                           (clientX > 0 || clientY > 0); 
 
     if (hasValidCoords) {
         // --- Dynamic Positioning Logic ---
@@ -66,10 +73,8 @@ function usePopupPosition(open: boolean, clickEvent?: Coordinates) {
         const margin = 10; 
         const clickPointOffset = 10; 
         
-        let { clientX, clientY } = clickEvent;
-        
-        // Initial calculation
-        left = clientX - (modalWidth / 2);
+        // Initial calculation: clientX/clientY are guaranteed to be numbers here
+        left = clientX - (modalWidth / 2); 
         top = clientY + clickPointOffset; 
         console.log(`Initial Position: (L:${left}, T:${top})`);
 
@@ -109,10 +114,10 @@ function usePopupPosition(open: boolean, clickEvent?: Coordinates) {
     }
     
     // Final calculated position (either dynamic or fallback)
-    const finalPos = {
-      position: 'absolute',
+    const finalPos: CSSProperties = {
+      position: position, 
       top: Math.round(top),
-      left: typeof left === 'number' ? Math.round(left) : left, // Keep '50%' if it's the fallback
+      left: typeof left === 'number' ? Math.round(left) : left, 
       width: width,
       transform: transform,
       opacity: 1,
@@ -123,7 +128,7 @@ function usePopupPosition(open: boolean, clickEvent?: Coordinates) {
     setPos(finalPos);
     console.log("--- Modal Positioning Check (End) ---");
 
-  }, [open, clickEvent]); 
+  }, [open, clientX, clientY]); 
 
   return { ref, style: pos };
 }
@@ -132,7 +137,7 @@ function usePopupPosition(open: boolean, clickEvent?: Coordinates) {
 export default function EventEditor({ open, clickEvent, ev, onClose, onChangeDates }: Props) {
   const [start, setStart] = React.useState(ev?.start ?? "");
   const [end, setEnd] = React.useState(ev?.end ?? "");
-  // FIXED: Pass clickEvent to hook for dynamic positioning
+  // Pass clickEvent to hook for dynamic positioning
   const { ref, style: positionStyle } = usePopupPosition(open, clickEvent); 
 
   useEscapeKey(onClose); // Close on Escape key
