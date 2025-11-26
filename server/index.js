@@ -54,7 +54,7 @@ const CLIENT_ID     = process.env.ZOHO_CLIENT_ID;
 const CLIENT_SECRET = process.env.ZOHO_CLIENT_SECRET;
 const REDIRECT_URI  = process.env.ZOHO_REDIRECT_URI;
 
-const ZOHO_FULL_SCOPE = "ZohoCRM.modules.ALL,ZohoCRM.users.READ,ZohoProjects.projects.ALL,ZohoCreator.report.READ,ZohoCreator.form.CREATE";
+const ZOHO_FULL_SCOPE = "ZohoCRM.modules.ALL,ZohoCRM.users.READ,ZohoProjects.projects.ALL,ZohoCreator.report.READ,ZohoCreator.report.UPDATE,ZohoCreator.report.DELETE,ZohoCreator.form.CREATE";
 const ZOHO_WEBHOOK_SECRET = process.env.ZOHO_WEBHOOK_SECRET; 
 const { CREATOR_APP_OWNER, CREATOR_APP_NAME, CREATOR_FORM_NAME, CREATOR_REPORT_NAME } = process.env;
 
