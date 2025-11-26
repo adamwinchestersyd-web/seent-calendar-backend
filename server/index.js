@@ -249,11 +249,55 @@ async function createManualEntry(eventData) {
 }
 
 async function updateManualEntry(creatorId, eventData) {
-  // Placeholder
-  console.log("Update Creator entry logic goes here.");
-  return { success: true };
-}
+  const accessToken = await getAccessToken();
+  if (!accessToken) return { error: 'Could not get access token' };
 
+  // Strip "creator_" prefix
+  const realId = creatorId.replace("creator_", "");
+
+  // Zoho Creator V2 Report Endpoint for Updates
+  const url = `https://creator.zoho.com/api/v2/${CREATOR_APP_OWNER}/${CREATOR_APP_NAME}/report/${CREATOR_REPORT_NAME}/${realId}`;
+
+  // Map internal field names to Zoho Creator field names
+  const payload = {
+    data: {
+      ...(eventData.title && { "Title": eventData.title }),
+      ...(eventData.wipManager && { "WIP_Manager": eventData.wipManager }),
+      ...(eventData.caseOwner && { "Owner": eventData.caseOwner }),
+      ...(eventData.installer && { "Installer": eventData.installer }),
+      ...(eventData.pmNotes && { "PM_Notes": eventData.pmNotes }),
+      ...(eventData.start && { "Start_Date": toCreatorDate(eventData.start) }),
+      ...(eventData.end && { "End_Date": toCreatorDate(eventData.end) }),
+      ...(eventData.startTime && { "Start_Time": eventData.startTime }),
+      ...(eventData.state && { "State": eventData.state }),
+    }
+  };
+
+  try {
+    const res = await fetchWithTimeout(url, {
+      method: 'PATCH',
+      headers: { 
+        'Authorization': `Zoho-oauthtoken ${accessToken}`,
+        'Content-Type': 'application/json' 
+      },
+      body: JSON.stringify(payload)
+    });
+    
+    const data = await res.json();
+    
+    // Zoho V2 success code is often 3000
+    if (data.code === 3000) {
+      console.log(`[creator] Updated ${realId} successfully.`);
+      return { success: true };
+    } else {
+      console.error('[creator] Update failed:', data);
+      return { error: 'Update failed', details: data };
+    }
+  } catch (e) {
+    console.error('[creator] update fetch error:', e.message);
+    return { error: e.message };
+  }
+}
 
 // ==========================================
 // ZOHO PROJECT LOGIC
@@ -558,6 +602,69 @@ app.post("/api/webhook/crm-case-updated", async (req, res) => {
 });
 
 app.get("/healthz", (req, res) => res.json({ ok: true }));
+
+// --- MISSING ROUTE: UPDATE MANUAL ENTRY ---
+app.patch("/api/manual-entry/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const eventData = req.body;
+
+    console.log(`[manual-entry] Patching ${id}`, eventData);
+
+    // 1. Update Zoho Creator
+    const result = await updateManualEntry(id, eventData);
+    
+    if (result.error) {
+      return res.status(500).json(result);
+    }
+
+    // 2. Update Local Cache
+    let found = false;
+    CASES_CACHE.events = CASES_CACHE.events.map((e) => {
+      if (e.id !== id) return e;
+      found = true;
+      return { ...e, ...eventData, modified_time: new Date().toISOString() };
+    });
+
+    if (found) await persistCache();
+
+    res.json({ success: true });
+  } catch (e) {
+    console.error("Patch manual entry error:", e);
+    res.status(500).json({ error: String(e) });
+  }
+});
+
+// --- MISSING ROUTE: DELETE MANUAL ENTRY ---
+app.delete("/api/manual-entry/:id", async (req, res) => {
+  try {
+    let { id } = req.params;
+    const realId = id.replace("creator_", "");
+    
+    console.log(`[manual-entry] Deleting ${id}`);
+
+    const accessToken = await getAccessToken();
+    const url = `https://creator.zoho.com/api/v2/${CREATOR_APP_OWNER}/${CREATOR_APP_NAME}/report/${CREATOR_REPORT_NAME}/${realId}`;
+
+    const response = await fetchWithTimeout(url, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Zoho-oauthtoken ${accessToken}` }
+    });
+
+    const data = await response.json();
+    
+    if (data.code === 3000) {
+      // Remove from cache
+      CASES_CACHE.events = CASES_CACHE.events.filter(e => e.id !== id);
+      await persistCache();
+      res.json({ success: true });
+    } else {
+      res.status(500).json({ error: "Failed to delete", details: data });
+    }
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
