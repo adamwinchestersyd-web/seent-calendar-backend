@@ -54,32 +54,34 @@ function firstWord(v) {
   return s ? s.split(/\s+/)[0] : "";
 }
 
+function localYMD(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 function toYMD(input) {
   if (!input) return "";
   if (typeof input === "string") {
     const s = input.trim();
-    // Pass-through if already YYYY-MM-DD
     if (/^\d{4}-\d{2}-\d{2}$/.test(s.slice(0, 10))) {
       return s.slice(0, 10);
     }
-    // Check for Creator format "DD-Mon-YYYY"
     if (/^\d{2}-[A-Za-z]{3}-\d{4}$/.test(s)) {
-      // Append " UTC" to parse it as a UTC date, not local
-      const d = new Date(s + " UTC"); 
-      return Number.isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
+      const d = new Date(s + " UTC");
+      return Number.isNaN(d.getTime()) ? "" : localYMD(d);
     }
-    // Fallback for other string formats (like full ISO strings)
     const d = new Date(s);
-    return Number.isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
+    return Number.isNaN(d.getTime()) ? "" : localYMD(d);
   }
-  // Handle if it's already a Date object
   const d = input instanceof Date ? input : new Date(input);
-  return Number.isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
+  return Number.isNaN(d.getTime()) ? "" : localYMD(d);
 }
 
 // Creates a blank event object for the editor
 function createNewEvent() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localYMD(new Date());
   return {
     id: `new_${Date.now()}`,
     title: "",
@@ -616,7 +618,7 @@ const handleOpenEditor = React.useCallback((ev, clickEvent) => {
 
       {/* --- NEW: VISIBLE VERSION NUMBER --- */}
       <div style={versionStyle}>
-        Version PROD - v1.6
+        Version PROD - v1.7
       </div>
     </div>
   );

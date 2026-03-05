@@ -28,6 +28,8 @@ app.use(cors({
     if (!origin) return cb(null, true);
     if (allowList.includes(origin)) return cb(null, true);
     if (origin.startsWith("http://localhost:5173")) return cb(null, true);
+    if (origin.endsWith(".onrender.com")) return cb(null, true);
+    if (origin.endsWith(".zoho.com")) return cb(null, true);
     return cb(new Error(`Not allowed by CORS: ${origin}`));
   },
   methods: ["GET","POST","PATCH","OPTIONS","DELETE"],
@@ -38,6 +40,13 @@ app.use(cors({
 // 2. Webhook Parsers (UrlEncoded MUST be extended: true for Zoho)
 app.use(express.urlencoded({ extended: true, limit: "10mb" })); 
 app.use(express.json({ limit: "10mb" }));
+
+app.get("/healthz", (_req, res) => res.json({ ok: true }));
+
+const _BOOT_PORT = Number(process.env.PORT) || 4000;
+app.listen(_BOOT_PORT, "0.0.0.0", () => {
+  console.log(`[api] listening on http://localhost:${_BOOT_PORT}`);
+});
 
 // --- CONSTANTS ---
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -84,21 +93,29 @@ async function fetchWithTimeout(url, options = {}, timeout = 15000) {
   }
 }
 
+function localYMD(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 function toYMD(v) {
   if (!v) return "";
   if (typeof v === "string") {
     const s = v.trim();
     if (/^\d{4}-\d{2}-\d{2}$/.test(s.slice(0, 10))) return s.slice(0, 10);
     const d = new Date(s);
-    return Number.isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
+    return Number.isNaN(d.getTime()) ? "" : localYMD(d);
   }
   const d = v instanceof Date ? v : new Date(v);
-  return Number.isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
+  return Number.isNaN(d.getTime()) ? "" : localYMD(d);
 }
 
 function toCreatorDate(ymdString) {
   if (!ymdString) return "";
-  const d = new Date(ymdString); 
+  const safe = /^\d{4}-\d{2}-\d{2}$/.test(ymdString) ? ymdString + "T00:00:00" : ymdString;
+  const d = new Date(safe); 
   if (Number.isNaN(d.getTime())) return "";
   const day = String(d.getDate()).padStart(2, '0');
   const month = d.toLocaleString('en-US', { month: 'short' });
@@ -351,7 +368,7 @@ async function fetchCasesFromZoho() {
   const token = await getAccessToken(); 
   const fields = [
     "id", "Subject", "Install_Date", "Install_End_Date", "Install_Start_Time",
-    "State", "Owner", "Case_Number", "Description", "WIP_Manager",
+    "Due_Date", "State", "Owner", "Case_Number", "Description", "WIP_Manager",
     "WIP_Manager1", "Installer", "Modified_Time", "Created_Time"
   ].join(",");
 
@@ -398,8 +415,17 @@ async function fetchCasesFromZoho() {
     return {
       id: row.id,
       title: row.Subject || `Case ${row.Case_Number || ""}`,
-      start: toYMD(row.Install_Date || row.Created_Time),
-      end: toYMD(row.Install_End_Date || row.Install_Date || row.Modified_Time || row.Created_Time),
+      start: toYMD(row.Install_Date) || toYMD(row.Due_Date) || toYMD(row.Created_Time),
+      end: (() => {
+        if (row.Install_Date) {
+          return toYMD(row.Install_End_Date) || toYMD(row.Install_Date);
+        }
+        const fallbackStart = toYMD(row.Due_Date) || toYMD(row.Created_Time);
+        if (!fallbackStart) return "";
+        const d = new Date(fallbackStart + "T00:00:00");
+        d.setDate(d.getDate() + 1);
+        return localYMD(d);
+      })(),
       startTime: row.Install_Start_Time || "",
       state: row.State || "",
       wipManager: wipMgrName,
@@ -472,7 +498,7 @@ async function loadCacheOnBoot() {
     lastUpdated: Number(file.lastUpdated) || 0,
   };
 }
-await loadCacheOnBoot();
+const _cacheReady = loadCacheOnBoot();
 
 async function persistCache() {
   const payload = { events: CASES_CACHE.events, lastUpdated: Date.now() };
@@ -601,7 +627,6 @@ app.post("/api/webhook/crm-case-updated", async (req, res) => {
   }
 });
 
-app.get("/healthz", (req, res) => res.json({ ok: true }));
 
 // --- MISSING ROUTE: UPDATE MANUAL ENTRY ---
 app.patch("/api/manual-entry/:id", async (req, res) => {
@@ -666,10 +691,24 @@ app.delete("/api/manual-entry/:id", async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => {
-  console.log(`[api] listening on http://localhost:${PORT}`);
-});
+if (process.env.NODE_ENV === "production") {
+  const publicDir = path.resolve(process.cwd(), "dist", "public");
+  app.use(express.static(publicDir, { maxAge: "1h" }));
+  app.use((_req, res, next) => {
+    if (res.headersSent) return next();
+    if (_req.path === "/healthz") return next();
+    if (/\.\w+$/.test(_req.path)) return next();
+    const indexPath = path.join(publicDir, "index.html");
+    res.sendFile(indexPath, (err) => {
+      if (err) next();
+    });
+  });
+}
 
-cron.schedule("*/10 * * * *", () => refreshCases("cron"));
-refreshCases("boot").catch(() => {});
+_cacheReady.then(() => {
+  cron.schedule("*/10 * * * *", () => refreshCases("cron"));
+  refreshCases("boot").catch(() => {});
+}).catch(() => {
+  cron.schedule("*/10 * * * *", () => refreshCases("cron"));
+  refreshCases("boot").catch(() => {});
+});

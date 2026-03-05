@@ -49,8 +49,8 @@ export default function WeekView({ date, events, onOpenEditor }: Props) {
     () =>
       (events || [])
         .filter((e) => {
-          const start = new Date(e.start);
-          const end = new Date(e.end);
+          const start = new Date(e.start + "T00:00:00");
+          const end = new Date(e.end + "T00:00:00");
           if (end < weekStart) return false;
           if (start >= nextWeekStart) return false;
           return true;

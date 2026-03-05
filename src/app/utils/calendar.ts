@@ -3,7 +3,12 @@ export const toDate = (s: string) => new Date(s + "T00:00:00");
 export const addDays = (d: Date, n: number) =>
   new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
 
-export const fmtKey = (d: Date) => d.toISOString().slice(0, 10);
+export const fmtKey = (d: Date) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
 
 export const startOfWeek = (d: Date, weekStartsOn = 1) => {
   const day = d.getDay();

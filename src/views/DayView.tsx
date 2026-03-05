@@ -16,8 +16,8 @@ const isSameDay = (d1: Date, d2: Date) => {
 export default function DayView({ date, events }: Props) {
   // Filter events for this specific day
   const visible = events.filter((e) => {
-    const eventStart = new Date(e.start);
-    const eventEnd = new Date(e.end);
+    const eventStart = new Date(e.start + "T00:00:00");
+    const eventEnd = new Date(e.end + "T00:00:00");
 
     // CRITICAL FIX: Convert target date to its start-of-day boundary
     const targetStartOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());

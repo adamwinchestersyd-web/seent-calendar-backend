@@ -23,7 +23,7 @@ const DEMO_EVENTS: CalendarEvent[] = [
 export const demoDataSource: CalendarDataSource = {
   async listEvents(range: DateRange): Promise<CalendarEvent[]> {
     const { start, end } = range;
-    const overlaps = (ev: CalendarEvent) => !(new Date(ev.end) < start || new Date(ev.start) > end);
+    const overlaps = (ev: CalendarEvent) => !(new Date(ev.end + "T00:00:00") < start || new Date(ev.start + "T00:00:00") > end);
     // mimic latency
     await new Promise(r => setTimeout(r, 50));
     return DEMO_EVENTS.filter(overlaps);
