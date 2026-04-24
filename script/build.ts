@@ -9,8 +9,13 @@ async function buildAll() {
   // instead of esbuild. Rolldown ignores the `esbuild.jsxFactory` config in
   // vite.config.js and refuses to parse JSX inside `.tsx` files, breaking
   // the production build. Vite 7 still uses esbuild and works as expected.
+  // Don't pass --outDir here. The output directory is configured in
+  // vite.config.js as `dist-v2`, which is the same path Render's
+  // "Publish directory" service setting expects, and the same path
+  // server/index.js serves static assets from in production. Adding
+  // a CLI override here causes the three places to drift out of sync.
   console.log("building client...");
-  execSync("npx --yes vite@^7.3.1 build --outDir dist/public", { stdio: "inherit" });
+  execSync("npx --yes vite@^7.3.1 build", { stdio: "inherit" });
 
   // Pin esbuild similarly so future major releases can't silently break
   // the server bundle.

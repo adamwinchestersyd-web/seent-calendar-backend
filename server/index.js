@@ -733,7 +733,7 @@ app.delete("/api/manual-entry/:id", async (req, res) => {
 });
 
 if (process.env.NODE_ENV === "production") {
-  const publicDir = path.resolve(process.cwd(), "dist", "public");
+  const publicDir = path.resolve(process.cwd(), "dist-v2");
   app.use(express.static(publicDir, { maxAge: "1h" }));
   app.use((_req, res, next) => {
     if (res.headersSent) return next();
