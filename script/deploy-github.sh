@@ -85,7 +85,7 @@ find "$DEPLOY_DIR" -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
 cd "$SOURCE_DIR"
 for item in *; do
   case "$item" in
-    node_modules|dist|.cache|.local|.config|.upm|attached_assets|generated-icon.png|.replit|replit.nix|replit.md|.DS_Store)
+    node_modules|dist|dist-v2|.cache|.local|.config|.upm|attached_assets|generated-icon.png|.replit|replit.nix|replit.md|.DS_Store)
       continue
       ;;
     *)
