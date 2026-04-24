@@ -190,6 +190,18 @@ export default function Calendar() {
   const [error, setError] = React.useState(null);
   const [busy, setBusy] = React.useState(false);
 
+  // Lazy-loading window: tracks the earliest date currently loaded into state.
+  // Initial fetch returns the server default (last ~90 days + future); we
+  // approximate that here so navigating before the window triggers a back-fill.
+  const initialEarliest = React.useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 90);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
+  const [earliestLoaded, setEarliestLoaded] = React.useState(initialEarliest);
+  const loadingMoreRef = React.useRef(false);
+
   // Filter state
   const [filterWip, setFilterWip] = React.useState("");
   const [filterInstaller, setFilterInstaller] = React.useState("");
@@ -204,10 +216,11 @@ export default function Calendar() {
   // Load + normalize data from API
   const api = import.meta.env.VITE_API_URL || "";
 
-  // --- UPDATED: Added push notifications ---
-  const loadData = React.useCallback(async (reason = "init") => {
+  // --- UPDATED: Added push notifications + lazy history loading ---
+  const loadData = React.useCallback(async (reason = "init", fromDate = null) => {
     if (reason === "init") setLoading(true);
     if (reason === "manual_refresh") setBusy(true); // Show visual feedback for refresh
+    if (reason === "load_more_history") loadingMoreRef.current = true;
     setError(null);
     
     try {
@@ -218,36 +231,111 @@ export default function Calendar() {
         }
         console.log("[Calendar] Auth check passed (loaded in iframe).");
       }
-      
-      console.log(`[Calendar] Fetching data from ${api}/api/cases`);
-      const res = await fetch(`${api}/api/cases`, { cache: "no-store" });
+
+      // Manual refresh: trigger a backend pull from Zoho first so we get fresh data.
+      if (reason === "manual_refresh") {
+        try {
+          await fetch(`${api}/api/cases/refresh`, { method: "POST", cache: "no-store" });
+        } catch (refreshErr) {
+          console.warn("[Calendar] Backend refresh failed, falling back to cached data:", refreshErr);
+        }
+      }
+
+      // Build URL: pass `from` for lazy-loading older events, `all` for manual refresh.
+      let url = `${api}/api/cases`;
+      if (fromDate instanceof Date) {
+        url += `?from=${localYMD(fromDate)}`;
+      } else if (reason === "manual_refresh") {
+        url += `?from=all`;
+      }
+
+      console.log(`[Calendar] Fetching data from ${url}`);
+      const res = await fetch(url, { cache: "no-store" });
       if (!res.ok) throw new Error(`API ${res.status}`);
       
       const data = await res.json();
       const list = Array.isArray(data) ? data : Array.isArray(data?.events) ? data.events : [];
+      const normalized = list.map(normalizeEvent);
       
-      setEvents(list.map(normalizeEvent));
+      if (reason === "load_more_history") {
+        // Merge: server returned everything from `fromDate` onwards, so it's a
+        // superset of what we already have for that range. Dedupe by id.
+        setEvents((prev) => {
+          const map = new Map();
+          prev.forEach((e) => map.set(e.id, e));
+          normalized.forEach((e) => map.set(e.id, e));
+          return Array.from(map.values());
+        });
+        if (fromDate) setEarliestLoaded(fromDate);
+        push({ message: `Loaded ${normalized.length} events including older history.`, timeoutMs: 2000 });
+      } else {
+        setEvents(normalized);
+        // For full refresh, the entire 12-month window is now loaded.
+        if (reason === "manual_refresh") {
+          const d = new Date();
+          d.setDate(d.getDate() - 365);
+          d.setHours(0, 0, 0, 0);
+          setEarliestLoaded(d);
+        }
+      }
       console.log("[Calendar] Data loaded successfully.");
 
       // --- ADDED: Success notification ---
       if (reason === "manual_refresh") {
-        push({ message: `Refresh complete. Loaded ${list.length} events.`, timeoutMs: 2500 });
+        push({ message: `Refresh complete. Loaded ${normalized.length} events.`, timeoutMs: 2500 });
       }
 
     } catch (e) {
       console.error("[Calendar] Load failed:", e);
-      setError(String(e));
-      setEvents([]);
+      if (reason !== "load_more_history") {
+        setError(String(e));
+        setEvents([]);
+      }
       
       // --- ADDED: Error notification ---
       if (reason === "manual_refresh") {
         push({ message: `Refresh failed: ${e.message}`, timeoutMs: 4000 });
+      } else if (reason === "load_more_history") {
+        push({ message: `Failed to load older events: ${e.message}`, timeoutMs: 4000 });
       }
     } finally {
       if (reason === "init") setLoading(false);
       if (reason === "manual_refresh") setBusy(false);
+      if (reason === "load_more_history") loadingMoreRef.current = false;
     }
   }, [api, push]); // Added `push`
+
+  // Lazy-load older history when the user navigates to a date earlier than what's loaded.
+  React.useEffect(() => {
+    if (loading || loadingMoreRef.current) return;
+
+    // Hard floor: server only retains 12 months of cache.
+    const hardFloor = new Date();
+    hardFloor.setDate(hardFloor.getDate() - 365);
+    hardFloor.setHours(0, 0, 0, 0);
+
+    // If we've already loaded back to (or past) the hard floor, there's nothing more
+    // to fetch — bail out to avoid a perpetual retry loop at the boundary.
+    if (earliestLoaded <= hardFloor) return;
+
+    // Compute the earliest date the current view will display.
+    const viewStart = new Date(date);
+    viewStart.setHours(0, 0, 0, 0);
+    if (view === "month") {
+      viewStart.setDate(1);
+      viewStart.setDate(viewStart.getDate() - viewStart.getDay()); // first cell of grid
+    } else if (view === "week") {
+      viewStart.setDate(viewStart.getDate() - viewStart.getDay());
+    }
+
+    if (viewStart < earliestLoaded) {
+      // Fetch with a 60-day buffer further back so quick paging doesn't refetch constantly.
+      const newFrom = new Date(viewStart);
+      newFrom.setDate(newFrom.getDate() - 60);
+      if (newFrom < hardFloor) newFrom.setTime(hardFloor.getTime());
+      loadData("load_more_history", newFrom);
+    }
+  }, [date, view, earliestLoaded, loading, loadData]);
 
   // --- NEW: Fetch modal lists on load ---
   React.useEffect(() => {

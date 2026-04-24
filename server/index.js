@@ -51,7 +51,9 @@ app.listen(_BOOT_PORT, "0.0.0.0", () => {
 // --- CONSTANTS ---
 const DATA_DIR = path.join(process.cwd(), "data");
 const CASES_PATH = path.join(DATA_DIR, "cases.json");
-const PRUNE_DAYS = 30;
+const LOOKBACK_DAYS = 365;          // 12 months of history retained in cache
+const DEFAULT_WINDOW_DAYS = 90;     // initial slice returned when no `from` query is provided
+const MAX_FETCH_PAGES = 25;         // up to 5,000 cases per refresh (200 per page)
 const ZOHO_ORG_ID = process.env.ZOHO_ORG_ID || "org640578001"; 
 const ZOHO_PORTAL_ID = process.env.ZOHO_PORTAL_ID; 
 const ZOHO_DEFAULT_PROJECT_ID = process.env.ZOHO_DEFAULT_PROJECT_ID;
@@ -394,7 +396,7 @@ async function fetchCasesFromZoho() {
         allRows = allRows.concat(rows);
 
         // Stop if we get a short page or hit limit
-        if (rows.length < 200 || page >= 5) {
+        if (rows.length < 200 || page >= MAX_FETCH_PAGES) {
             hasMore = false;
         } else {
             page++;
@@ -483,11 +485,23 @@ async function readJSONSafe(file, fallback) {
 }
 
 function pruneOld(events) {
-  const cutoff = Date.now() - PRUNE_DAYS * 24 * 60 * 60 * 1000;
+  const cutoff = Date.now() - LOOKBACK_DAYS * 24 * 60 * 60 * 1000;
   return events.filter((e) => {
     const key = e.end || e.start || e.created_time;
     const t = key ? new Date(key).getTime() : 0;
     return t === 0 || t >= cutoff;
+  });
+}
+
+// Sort events with future/most-recent first (descending by start date).
+function sortRecentFirst(events) {
+  return [...events].sort((a, b) => {
+    const da = a.start || a.end || "";
+    const db = b.start || b.end || "";
+    if (da === db) return 0;
+    if (!da) return 1;
+    if (!db) return -1;
+    return db.localeCompare(da);
   });
 }
 
@@ -537,8 +551,35 @@ app.get("/oauth/callback", async (req, res) => {
   res.send("Token logic active.");
 });
 
-app.get("/api/cases", (_req, res) => {
-  res.json(CASES_CACHE.events);
+app.get("/api/cases", (req, res) => {
+  // Optional `from=YYYY-MM-DD` query param for lazy-loading older history.
+  // If omitted, returns the default window (last DEFAULT_WINDOW_DAYS + all future).
+  // Pass `from=all` (or `all=1`) to return the entire cached window.
+  const fromRaw = String(req.query.from || "").trim();
+  const wantAll = fromRaw === "all" || req.query.all === "1";
+
+  let cutoffYMD = "";
+  if (wantAll) {
+    cutoffYMD = "";
+  } else if (/^\d{4}-\d{2}-\d{2}$/.test(fromRaw)) {
+    cutoffYMD = fromRaw;
+  } else {
+    const d = new Date();
+    d.setDate(d.getDate() - DEFAULT_WINDOW_DAYS);
+    cutoffYMD = localYMD(d);
+  }
+
+  let events = CASES_CACHE.events;
+  if (cutoffYMD) {
+    events = events.filter((e) => {
+      // Match pruneOld semantics so long-running jobs (start before window,
+      // end inside it) are still returned.
+      const key = e.end || e.start || (e.created_time ? String(e.created_time).slice(0, 10) : "");
+      return !key || key >= cutoffYMD;
+    });
+  }
+
+  res.json(sortRecentFirst(events));
 });
 
 app.post("/api/cases/refresh", async (_req, res) => {
