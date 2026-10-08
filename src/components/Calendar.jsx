@@ -189,6 +189,8 @@ export default function Calendar() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState(null);
   const [busy, setBusy] = React.useState(false);
+  const [syncMessage, setSyncMessage] = React.useState("");
+  const syncingRef = React.useRef(false);
 
   // Lazy-loading window: tracks the earliest date currently loaded into state.
   // Initial fetch returns the server default (last ~90 days + future); we
@@ -218,6 +220,8 @@ export default function Calendar() {
 
   // --- UPDATED: Added push notifications + lazy history loading ---
   const loadData = React.useCallback(async (reason = "init", fromDate = null) => {
+    if (syncingRef.current) return;
+    if (reason === "manual_refresh") syncingRef.current = true;
     if (reason === "init") setLoading(true);
     if (reason === "manual_refresh") setBusy(true); // Show visual feedback for refresh
     if (reason === "load_more_history") loadingMoreRef.current = true;
@@ -232,12 +236,28 @@ export default function Calendar() {
         console.log("[Calendar] Auth check passed (loaded in iframe).");
       }
 
-      // Manual refresh: trigger a backend pull from Zoho first so we get fresh data.
+      let syncResult;
+      // Start a background import and poll: large calendars can outlast HTTP proxy timeouts.
       if (reason === "manual_refresh") {
-        try {
-          await fetch(`${api}/api/cases/refresh`, { method: "POST", cache: "no-store" });
-        } catch (refreshErr) {
-          console.warn("[Calendar] Backend refresh failed, falling back to cached data:", refreshErr);
+        setSyncMessage("Re-syncing all accessible cases from Zoho…");
+        const started = await fetch(`${api}/api/cases/refresh?async=1`, {
+          method: "POST", cache: "no-store", signal: AbortSignal.timeout(30000),
+        });
+        if (!started.ok) throw new Error(`Could not start sync (HTTP ${started.status}).`);
+        syncResult = await started.json();
+        const deadline = Date.now() + 15 * 60 * 1000;
+        while (syncResult.state === "running") {
+          setSyncMessage(`Syncing: ${syncResult.fetched || 0} cases read across ${syncResult.pages || 0} pages…`);
+          if (Date.now() > deadline) throw new Error("Still processing on the server. Try again shortly to check the result.");
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          const status = await fetch(`${api}/api/cases/refresh/status`, {
+            cache: "no-store", signal: AbortSignal.timeout(30000),
+          });
+          if (!status.ok) throw new Error(`Could not check sync (HTTP ${status.status}).`);
+          syncResult = await status.json();
+        }
+        if (syncResult.state !== "complete" || !syncResult.ok) {
+          throw new Error(syncResult.error || "Sync was interrupted. Please retry.");
         }
       }
 
@@ -282,25 +302,31 @@ export default function Calendar() {
 
       // --- ADDED: Success notification ---
       if (reason === "manual_refresh") {
-        push({ message: `Refresh complete. Loaded ${normalized.length} events.`, timeoutMs: 2500 });
+        const message = `Sync complete: ${syncResult.casesFetched} cases read, ${syncResult.casesIncluded} within the calendar window; ${syncResult.excludedByHistory} excluded by the 12-month history limit. ${normalized.length} total events loaded. Existing display filters still apply.${syncResult.warnings?.length ? " " + syncResult.warnings.join(" ") : ""}`;
+        setSyncMessage(message);
+        push({ message: "Case re-sync complete.", timeoutMs: 2500 });
       }
 
     } catch (e) {
       console.error("[Calendar] Load failed:", e);
-      if (reason !== "load_more_history") {
+      if (reason === "init") {
         setError(String(e));
         setEvents([]);
       }
       
       // --- ADDED: Error notification ---
       if (reason === "manual_refresh") {
-        push({ message: `Refresh failed: ${e.message}`, timeoutMs: 4000 });
+        setSyncMessage(`Sync could not finish: ${e.message} Your displayed calendar has been kept.`);
+        push({ message: `Sync failed: ${e.message}`, timeoutMs: 4000 });
       } else if (reason === "load_more_history") {
         push({ message: `Failed to load older events: ${e.message}`, timeoutMs: 4000 });
       }
     } finally {
       if (reason === "init") setLoading(false);
-      if (reason === "manual_refresh") setBusy(false);
+      if (reason === "manual_refresh") {
+        syncingRef.current = false;
+        setBusy(false);
+      }
       if (reason === "load_more_history") loadingMoreRef.current = false;
     }
   }, [api, push]); // Added `push`
@@ -655,7 +681,11 @@ const handleOpenEditor = React.useCallback((ev, clickEvent) => {
         onNav={onNav}
         onAddNew={handleAddNew}
         onRefresh={() => loadData("manual_refresh")} // <-- WIRED UP
+        syncing={busy}
       />
+      {syncMessage && <div role="status" aria-live="polite" style={{ padding: "8px 12px", fontSize: 13 }}>
+        {syncMessage}
+      </div>}
 
       <FiltersBar
         wipOptions={wipOptions}

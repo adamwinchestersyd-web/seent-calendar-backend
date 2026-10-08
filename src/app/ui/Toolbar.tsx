@@ -10,6 +10,7 @@ type Props = {
   onNav: (dir: -1 | 0 | 1) => void;
   onAddNew: () => void;
   onRefresh?: () => void; // admin action
+  syncing?: boolean;
   onPurge?: () => void;   // admin action
 };
 
@@ -53,11 +54,13 @@ function Btn({
   onClick,
   title,
   active = false,
+  disabled = false,
 }: {
   children: React.ReactNode;
   onClick?: () => void;
   title?: string;
   active?: boolean;
+  disabled?: boolean;
 }) {
   const { border, bg, text } = paletteVars();
 
@@ -73,12 +76,13 @@ function Btn({
     color: text,
     fontSize: 14,
     lineHeight: "16px",
-    cursor: "pointer",
+    cursor: disabled ? "wait" : "pointer",
+    opacity: disabled ? 0.65 : 1,
     userSelect: "none",
   };
 
   return (
-    <button type="button" title={title} style={base} onClick={onClick}>
+    <button type="button" title={title} style={base} onClick={onClick} disabled={disabled}>
       {children}
     </button>
   );
@@ -97,6 +101,7 @@ export default function Toolbar({
   onNav,
   onAddNew,
   onRefresh,
+  syncing = false,
   onPurge,
 }: Props) {
   const root = document.documentElement;
@@ -128,7 +133,9 @@ export default function Toolbar({
         <div style={styles.right}>
           
           {/* --- REFRESH BUTTON RE-ADDED --- */}
-          {onRefresh && <Btn title="Refresh from Zoho" onClick={onRefresh}>Refresh</Btn>}
+          {onRefresh && <Btn title="Re-read all accessible Zoho cases. Calendar retains 12 months of history and all future jobs." onClick={onRefresh} disabled={syncing}>
+            {syncing ? "Syncing…" : "Re-sync all cases"}
+          </Btn>}
           
           <Btn title="Add New Manual Entry" onClick={onAddNew}>Add New</Btn>
 

@@ -8,6 +8,7 @@ import cors from "cors";
 import fetch from "node-fetch";
 import qs from "querystring";
 import express from "express";
+import { fetchAllCaseRows } from "./case-pagination.js";
 
 const app = express(); 
 
@@ -53,7 +54,6 @@ const DATA_DIR = path.join(process.cwd(), "data");
 const CASES_PATH = path.join(DATA_DIR, "cases.json");
 const LOOKBACK_DAYS = 365;          // 12 months of history retained in cache
 const DEFAULT_WINDOW_DAYS = 90;     // initial slice returned when no `from` query is provided
-const MAX_FETCH_PAGES = 25;         // up to 5,000 cases per refresh (200 per page)
 const ZOHO_ORG_ID = process.env.ZOHO_ORG_ID || "org640578001"; 
 const ZOHO_PORTAL_ID = process.env.ZOHO_PORTAL_ID; 
 const ZOHO_DEFAULT_PROJECT_ID = process.env.ZOHO_DEFAULT_PROJECT_ID;
@@ -196,7 +196,7 @@ async function getAccessToken() {
 
 async function fetchManualEntries() {
   const accessToken = await getAccessToken();
-  if (!accessToken) return [];
+  if (!accessToken) throw new Error("No access token for manual entries");
 
   const creatorApiUrl = `https://creator.zoho.com/api/v2/${CREATOR_APP_OWNER}/${CREATOR_APP_NAME}/report/${CREATOR_REPORT_NAME}`;
 
@@ -205,6 +205,10 @@ async function fetchManualEntries() {
       headers: { 'Authorization': `Zoho-oauthtoken ${accessToken}` }
     });
     const data = await res.json();
+    if (!res.ok || (data.code !== 3000 && data.code !== 3100)) {
+      throw new Error(`Manual entry import failed (HTTP ${res.status})`);
+    }
+    if (data.code === 3100) return [];
 
     return (data.data || []).map(item => ({
       id: `creator_${item.ID}`, 
@@ -223,7 +227,7 @@ async function fetchManualEntries() {
     }));
   } catch (e) {
     console.error('[creator] fetch error:', e.message);
-    return [];
+    throw e;
   }
 }
 
@@ -374,38 +378,10 @@ async function fetchCasesFromZoho() {
     "WIP_Manager1", "Installer", "Modified_Time", "Created_Time"
   ].join(",");
 
-  let allRows = [];
-  let page = 1;
-  let hasMore = true;
-  
-  const baseUrl = `${ZOHO_DOMAIN}/crm/v2/Cases?fields=${encodeURIComponent(fields)}&sort_by=Modified_Time&sort_order=desc`;
-
-  while (hasMore) {
-    const url = `${baseUrl}&per_page=200&page=${page}`;
-    console.log(`[cases] Fetching page ${page}...`);
-    
-    try {
-        const r = await fetchWithTimeout(url, { headers: { Authorization: `Zoho-oauthtoken ${token}` } });
-        if (!r.ok) {
-            console.warn(`[cases] Page ${page} failed: ${r.status}`);
-            break;
-        }
-
-        const json = await r.json();
-        const rows = json.data || [];
-        allRows = allRows.concat(rows);
-
-        // Stop if we get a short page or hit limit
-        if (rows.length < 200 || page >= MAX_FETCH_PAGES) {
-            hasMore = false;
-        } else {
-            page++;
-        }
-    } catch (e) {
-        console.error(`[cases] Error fetching page ${page}: ${e.message}`);
-        break; // Stop on network error
-    }
-  }
+  const allRows = await fetchAllCaseRows({
+    domain: ZOHO_DOMAIN, token, fields, fetchPage: fetchWithTimeout,
+    onProgress: (progress) => Object.assign(SYNC_STATUS, progress),
+  });
   
   console.log(`[cases] Total rows fetched: ${allRows.length}`);
 
@@ -520,25 +496,49 @@ async function persistCache() {
   CASES_CACHE.lastUpdated = payload.lastUpdated;
 }
 
-async function refreshCases(reason = "manual") {
+let activeRefresh = null;
+let SYNC_STATUS = { state: "idle", fetched: 0, pages: 0 };
+
+function refreshCases(reason = "manual") {
+  if (activeRefresh) return activeRefresh;
+  SYNC_STATUS = { state: "running", fetched: 0, pages: 0, startedAt: Date.now() };
+  activeRefresh = performRefresh(reason).finally(() => { activeRefresh = null; });
+  return activeRefresh;
+}
+
+async function performRefresh(reason) {
   console.log(`[cases] refresh starting (${reason})`);
   try {
+    await _cacheReady;
+    const warnings = [];
     const [crmCases, manualEntries] = await Promise.all([
       fetchCasesFromZoho(),
-      fetchManualEntries()
+      fetchManualEntries().catch(() => {
+        warnings.push("Manual entries could not be refreshed; their previous values were kept.");
+        return CASES_CACHE.events.filter(e => e.isManual);
+      })
     ]);
 
     const prunedCrm = pruneOld(crmCases);
     const prunedCreator = pruneOld(manualEntries);
 
-    CASES_CACHE.events = [...prunedCrm, ...prunedCreator];
-    await persistCache();
+    const snapshot = { events: [...prunedCrm, ...prunedCreator], lastUpdated: Date.now() };
+    await writeJSONAtomic(CASES_PATH, snapshot);
+    CASES_CACHE = snapshot;
     
     console.log(`[cases] refresh ok (${reason}) events=${CASES_CACHE.events.length}`);
-    return { ok: true, count: CASES_CACHE.events.length, lastUpdated: CASES_CACHE.lastUpdated };
+    const result = {
+      ok: true, count: snapshot.events.length, casesFetched: crmCases.length,
+      casesIncluded: prunedCrm.length, excludedByHistory: crmCases.length - prunedCrm.length,
+      lastUpdated: snapshot.lastUpdated, warnings,
+    };
+    SYNC_STATUS = { ...SYNC_STATUS, ...result, state: "complete" };
+    return result;
   } catch (e) {
     console.error("[cases] refresh error:", e);
-    return { ok: false, error: String(e) };
+    const result = { ok: false, error: e.message || String(e) };
+    SYNC_STATUS = { ...SYNC_STATUS, ...result, state: "failed" };
+    return result;
   }
 }
 
@@ -583,8 +583,14 @@ app.get("/api/cases", (req, res) => {
 });
 
 app.post("/api/cases/refresh", async (_req, res) => {
-  const out = await refreshCases("manual");
+  const pending = refreshCases("manual");
+  if (_req.query.async === "1") return res.status(202).json(SYNC_STATUS);
+  const out = await pending;
   res.status(out.ok ? 200 : 500).json(out);
+});
+
+app.get("/api/cases/refresh/status", (_req, res) => {
+  res.set("Cache-Control", "no-store").json(SYNC_STATUS);
 });
 
 app.patch("/api/cases/:id", async (req, res) => {
